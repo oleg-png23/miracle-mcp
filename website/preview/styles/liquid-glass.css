@@ -1,0 +1,269 @@
+/* Optical material: refraction is supplied by dashboard-glass.js, independently
+ * of the tint and specular rim. Sources: Apple WWDC25/219, and
+ * https://kube.io/blog/liquid-glass-css-svg/ (rounded lens optics). */
+
+.glass,
+.welcome-connect {
+  --glass-wash-top: .57;
+  --glass-wash-bottom: .34;
+  background: transparent;
+  border-color: rgb(255 255 255 / .64);
+  box-shadow:
+    0 14px 35px -20px rgb(7 35 48 / .45),
+    0 2px 7px -4px rgb(7 35 48 / .28),
+    inset 0 1px 0 rgb(255 255 255 / .92),
+    inset 0 -1px 0 rgb(255 255 255 / .24);
+}
+
+.glass::before,
+.hero-card::before,
+.sidebar.glass::before,
+.welcome-connect::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background-color: transparent;
+  background-image: linear-gradient(
+    125deg,
+    rgb(246 255 254 / var(--glass-wash-top)),
+    rgb(235 250 250 / var(--glass-wash-bottom)) 72%,
+    rgb(240 255 253 / calc(var(--glass-wash-bottom) + .05))
+  );
+  -webkit-backdrop-filter: var(--glass-filter, blur(7px)) blur(.55px) saturate(1.12);
+  backdrop-filter: var(--glass-filter, blur(7px)) blur(.55px) saturate(1.12);
+}
+
+.glass::after,
+.sidebar.glass::after,
+.welcome-connect::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image:
+    var(--glass-specular, none),
+    radial-gradient(
+      ellipse at var(--card-glow-x, 22%) var(--card-glow-y, 8%),
+      rgb(255 255 255 / .14),
+      transparent 64%
+    );
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  box-shadow:
+    inset 1px 1px 1px rgb(255 255 255 / .78),
+    inset -1px -1px 1px rgb(255 255 255 / .28),
+    inset 0 -2px 5px -4px rgb(11 52 64 / .5);
+}
+
+.hero-card {
+  --glass-wash-top: .52;
+  --glass-wash-bottom: .14;
+  border-color: rgb(255 255 255 / .7);
+}
+
+.hero-card::before {
+  background-image: linear-gradient(
+    104deg,
+    rgb(246 255 252 / .62),
+    rgb(239 253 250 / .46) 35%,
+    rgb(230 250 249 / .12) 78%,
+    rgb(242 255 253 / .2)
+  );
+}
+
+.panel {
+  --glass-wash-top: .72;
+  --glass-wash-bottom: .56;
+}
+
+.metric {
+  --glass-wash-top: .69;
+  --glass-wash-bottom: .52;
+}
+
+/* Content cards keep the material's tint and rim without a full-size live
+ * backdrop texture. Refraction is reserved for navigation and the focal lens. */
+.glass[data-glass-passive="true"]::before {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.panel[data-glass-passive="true"] { --glass-wash-top: .78; --glass-wash-bottom: .64; }
+.metric[data-glass-passive="true"] { --glass-wash-top: .7; --glass-wash-bottom: .56; }
+
+body[data-wallpaper="aurora"] .page-heading,
+body[data-wallpaper="forest"] .page-heading {
+  color: #f0fff9;
+  text-shadow: 0 2px 16px #041b2c80;
+}
+body[data-wallpaper="aurora"] .page-heading :is(p, .breadcrumb),
+body[data-wallpaper="forest"] .page-heading :is(p, .breadcrumb) { color: #dfefed; }
+
+.metric-top,
+.metric-description,
+.panel .panel-heading p,
+.panel .field-hint {
+  color: #365862;
+}
+
+.sidebar.glass {
+  --glass-wash-top: .4;
+  --glass-wash-bottom: .3;
+  border-color: rgb(255 255 255 / .72);
+  box-shadow: 0 12px 32px rgb(11 38 51 / .17), inset 0 1px 0 rgb(255 255 255 / .9);
+}
+
+.refresh-button {
+  --glass-wash-top: .3;
+  --glass-wash-bottom: .12;
+}
+
+.welcome-connect {
+  --glass-wash-top: .28;
+  --glass-wash-bottom: .18;
+  color: #f4ffff;
+  border-color: rgb(255 255 255 / .45);
+  text-shadow: 0 1px 5px rgb(2 21 32 / .3);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow:
+    0 26px 70px -22px rgb(2 19 32 / .52),
+    inset 0 1px 0 rgb(255 255 255 / .52),
+    inset 0 -1px 0 rgb(255 255 255 / .2);
+}
+
+.welcome-connect::before {
+  background-image: linear-gradient(135deg, rgb(10 38 49 / .5), rgb(8 34 48 / .27) 60%, rgb(18 57 68 / .37));
+}
+
+.welcome-connect::after {
+  background-image:
+    var(--glass-specular, none),
+    radial-gradient(ellipse at var(--card-glow-x, 20%) var(--card-glow-y, 10%), rgb(222 255 255 / .15), transparent 65%);
+}
+
+body[data-glass-mode="frosted"] .glass::before,
+body[data-glass-mode="frosted"] .welcome-connect::before {
+  background-image: linear-gradient(130deg, rgb(246 255 253 / .65), rgb(235 249 248 / .45));
+  -webkit-backdrop-filter: blur(18px) saturate(1.18);
+  backdrop-filter: blur(18px) saturate(1.18);
+}
+
+body[data-glass-mode="frosted"] .welcome-connect::before {
+  background-image: linear-gradient(135deg, rgb(10 38 49 / .6), rgb(8 34 48 / .4));
+}
+
+body[data-glass-mode="light"] .glass::before,
+body[data-glass-mode="light"] .sidebar.glass::before,
+body[data-glass-mode="light"] .welcome-connect::before {
+  background: #edf7f3f5;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+body[data-glass-mode="light"] .welcome-connect::before {
+  background: #163141;
+}
+
+body[data-glass-mode="light"] .glass::after,
+body[data-glass-mode="light"] .welcome-connect::after,
+body[data-glass-mode="frosted"] .glass::after,
+body[data-glass-mode="frosted"] .welcome-connect::after {
+  background-image: none;
+}
+
+html[data-glass-engine="fallback"] .glass::before,
+html[data-glass-engine="fallback"] .sidebar.glass::before,
+html[data-glass-engine="fallback"] .welcome-connect::before {
+  -webkit-backdrop-filter: blur(12px) saturate(1.12);
+  backdrop-filter: blur(12px) saturate(1.12);
+}
+
+html[data-glass-engine="fallback"] .glass {
+  --glass-wash-top: .68;
+  --glass-wash-bottom: .46;
+}
+
+/* A sleeping surface keeps its tint without retaining a filtered layer. */
+html[data-glass-engine="refraction"] body .glass[data-glass-active="false"]::before,
+html[data-glass-engine="refraction"] body .welcome-connect[data-glass-active="false"]::before {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass::after,
+  .welcome-connect::after {
+    background-position: center;
+    transition: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .glass { --glass-wash-top: .9; --glass-wash-bottom: .84; }
+  .hero-card::before { background: rgb(242 251 248 / .9); }
+  .welcome-connect::before { background: rgb(9 33 46 / .92); }
+  .glass,
+  .welcome-connect { border-width: 2px; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  body:not([data-glass-choice="clear"]) .glass::before,
+  body:not([data-glass-choice="clear"]) .sidebar.glass::before,
+  body:not([data-glass-choice="clear"]) .welcome-connect::before {
+    background: #edf7f3 !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body:not([data-glass-choice="clear"]) .welcome-connect::before { background: #163141 !important; }
+  body:not([data-glass-choice="clear"]) .glass::after,
+  body:not([data-glass-choice="clear"]) .welcome-connect::after { background-image: none; }
+
+  /* The Appearance choice takes precedence over the OS default. The legacy
+   * rail sheet has an important solid background, so restore its optical wash. */
+  body[data-glass-choice="clear"] .sidebar.glass::before {
+    background: linear-gradient(
+      125deg,
+      rgb(246 255 254 / var(--glass-wash-top)),
+      rgb(235 250 250 / var(--glass-wash-bottom)) 72%,
+      rgb(240 255 253 / calc(var(--glass-wash-bottom) + .05))
+    ) !important;
+    -webkit-backdrop-filter: var(--glass-filter, blur(12px)) blur(.55px) saturate(1.12) !important;
+    backdrop-filter: var(--glass-filter, blur(12px)) blur(.55px) saturate(1.12) !important;
+  }
+  html[data-glass-engine="refraction"] body[data-glass-choice="clear"] .sidebar.glass[data-glass-active="false"]::before {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body[data-glass-choice="clear"] .welcome-connect { background: transparent; }
+}
+
+@media (forced-colors: active) {
+  body .glass,
+  body .sidebar.glass,
+  body .welcome-connect {
+    color: CanvasText;
+    border: 1px solid CanvasText;
+    box-shadow: none;
+    text-shadow: none;
+  }
+  body .glass::before,
+  body .sidebar.glass::before,
+  body .welcome-connect::before,
+  body[data-glass-choice] .glass::before,
+  body[data-glass-choice] .sidebar.glass::before,
+  body[data-glass-choice] .welcome-connect::before,
+  html[data-glass-engine] body .glass::before,
+  html[data-glass-engine] body .sidebar.glass::before,
+  html[data-glass-engine] body .welcome-connect::before {
+    background: Canvas !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body .glass::after,
+  body .welcome-connect::after { display: none; }
+}

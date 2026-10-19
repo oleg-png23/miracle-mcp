@@ -12,7 +12,7 @@
   <link rel="icon" type="image/svg+xml" href="assets/mark.svg">
   <link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/bg/coast-new.webp" as="image" fetchpriority="high">
-  <link rel="stylesheet" href="site.css">
+  <link rel="stylesheet" href="site.css"><link rel="stylesheet" href="demo-cards.css">
   <script src="site.js" defer></script>
   <script src="optics.js" defer></script>
 </head>
@@ -34,7 +34,7 @@
   <header class="header" id="header">
     <nav class="nav glass" aria-label="Main navigation">
       <a href="#" class="brand" aria-label="Miracle home"><span class="mark" aria-hidden="true">m<span>✦</span></span><span>miracle<span class="brand-period">.</span></span></a>
-      <div class="nav-links"><a href="#experience">Experience</a><a href="#setup">Get started</a><a href="#questions">Questions</a></div>
+      <div class="nav-links"><a href="#preview">Live preview</a><a href="#experience">Experience</a><a href="#setup">Get started</a><a href="#questions">Questions</a></div>
       <a class="nav-download" href="https://github.com/oleg-png23/miracle-mcp/releases/latest">Get Miracle <svg class="icon"><use href="#i-arrow"/></svg></a>
     </nav>
   </header>
@@ -47,7 +47,7 @@
           <p class="eyebrow light"><span class="live-dot"></span> A LOCAL BRIDGE FOR ROBLOX STUDIO</p>
           <h1 id="hero-title">A conversation.<br>A whole <em>new world.</em></h1>
           <p class="hero-description">Bring your favorite AI chat into Roblox Studio.<br>Less back and forth. More room to create.</p>
-          <div class="hero-actions"><a class="button button-light" href="https://github.com/oleg-png23/miracle-mcp/releases/latest">Download Miracle <svg class="icon"><use href="#i-download"/></svg></a><a class="text-link light" href="#experience">Take a closer look <svg class="icon"><use href="#i-arrow"/></svg></a></div>
+          <div class="hero-actions"><a class="button button-light" href="https://github.com/oleg-png23/miracle-mcp/releases/latest">Download Miracle <svg class="icon"><use href="#i-download"/></svg></a><a class="text-link light" href="preview/dashboard.html">Explore dashboard <svg class="icon"><use href="#i-arrow"/></svg></a></div>
           <p class="hero-note">Open source <span>·</span> Runs locally <span>·</span> Made for Windows</p>
         </div>
 
@@ -78,6 +78,16 @@
     </section>
 
     <section class="atmosphere" aria-labelledby="atmosphere-title"><div class="wrap"><div class="atmosphere-heading"><div><p class="eyebrow">A DIFFERENT KIND OF WORKSPACE</p><h2 id="atmosphere-title">A little more breathing room.</h2></div><p>Clear glass. Quiet landscapes.<br>A view that feels like yours.</p></div><div class="landscape-grid"><button class="landscape-card" type="button" data-scene="coast"><img src="assets/bg/coast-new.webp" alt="A calm coastal landscape" width="1672" height="941" loading="lazy"><span>01 <strong>Coast</strong><span aria-hidden="true">↗</span></span></button><button class="landscape-card" type="button" data-scene="alpine"><img src="assets/bg/alpine-new.webp" alt="A quiet alpine landscape" width="1672" height="941" loading="lazy"><span>02 <strong>Alpine</strong><span aria-hidden="true">↗</span></span></button><button class="landscape-card" type="button" data-scene="aurora"><img src="assets/bg/aurora-new.webp" alt="Aurora over a night landscape" width="1672" height="941" loading="lazy"><span>03 <strong>Aurora</strong><span aria-hidden="true">↗</span></span></button></div><p class="atmosphere-note">Choose a landscape to preview it at the top. These wallpapers are also included with Miracle.</p></div></section>
+
+    <section id="preview" class="section wrap" aria-labelledby="preview-title">
+      <p class="eyebrow">TRY MIRACLE IN YOUR BROWSER</p>
+      <h2 id="preview-title">Two ways in.<br>One creative workspace.</h2>
+      <p>Explore the actual interface before installing. Sample connection and usage data; no Studio connection required.</p>
+      <div class="demo-grid">
+        <a class="demo-card" href="preview/welcome.html"><img src="assets/bg/coast-new.webp" alt="" loading="lazy"><div><span>01 / START PAGE</span><h3>A little less switching.<br>A lot more making.</h3><p>Your welcome, a starting prompt and a clear connection guide.</p><strong>Open start page ↗</strong></div></a>
+        <a class="demo-card" href="preview/dashboard.html"><img src="assets/bg/aurora-new.webp" alt="" loading="lazy"><div><span>02 / DASHBOARD</span><h3>Your Studio.<br>Everything in view.</h3><p>Explore the editor, sample usage, glass materials and eight landscapes.</p><strong>Explore dashboard ↗</strong></div></a>
+      </div>
+    </section>
 
     <section id="setup" class="setup section wrap" aria-labelledby="setup-title"><div class="setup-intro"><p class="eyebrow">AN IDEA IS A GOOD START</p><h2 id="setup-title">Three steps.<br><span>A world of potential.</span></h2><p>You'll need Windows 10 or 11, Python 3.10+, Chrome or Edge, and Roblox Studio with built-in MCP support.</p><a class="button button-dark" href="https://github.com/oleg-png23/miracle-mcp/releases/latest">Get the latest release <svg class="icon"><use href="#i-download"/></svg></a><a class="setup-source" href="https://github.com/oleg-png23/miracle-mcp"><svg class="icon"><use href="#i-github"/></svg> Browse the source on GitHub <span aria-hidden="true">↗</span></a></div><ol class="setup-steps"><li><span class="step-number">01</span><div><h3>Give Studio the green light.</h3><p>Open a place in Roblox Studio. In Assistant, select <strong>… → Manage MCP Servers → Enable Studio as MCP Server.</strong></p></div></li><li><span class="step-number">02</span><div><h3>Start your local connection.</h3><p>Download and extract Miracle, then run <code>run.bat</code>. Keep the bridge running while you work.</p><button class="copy-command" type="button" data-copy="run.bat"><code>run.bat</code><span>Copy <svg class="icon"><use href="#i-copy"/></svg></span></button></div></li><li><span class="step-number">03</span><div><h3>Load it. Open a chat. Create.</h3><p>Open your browser's Extensions page, enable <strong>Developer mode</strong>, and <strong>Load unpacked</strong> from the extracted folder. In a supported chat, choose <strong>Miracle → Start session.</strong></p><a class="inline-link" href="https://github.com/oleg-png23/miracle-mcp#start">Read the setup guide <span aria-hidden="true">↗</span></a></div></li></ol></section>
 

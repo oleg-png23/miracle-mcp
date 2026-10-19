@@ -3,6 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import runpy
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,6 +43,7 @@ def build():
     backgrounds = set(re.findall(r"(?:file|thumb):'([^']+)'", registry)) | {'PHOTO-SOURCES.md'}
     runtime = [file for file in runtime if file.parent != ROOT / 'assets' / 'bg' or file.name in backgrounds]
     outputs = [archive(f'miracle-mcp-{VERSION}.zip', [(file, file.relative_to(ROOT)) for file in runtime], 'miracle-mcp')]
+    runpy.run_path(str(ROOT / 'scripts' / 'build-site-preview.py'), run_name='__main__')
     site = files_under('website')
     site.append(ROOT / 'website' / '.nojekyll')
     if not (ROOT / 'website' / 'index.html').is_file():

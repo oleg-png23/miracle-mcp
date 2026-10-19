@@ -4,7 +4,7 @@ A local bridge between AI chats and Roblox Studio's built-in MCP server.
 
 The workspace includes a compact glass navigation rail, a welcome page, optimized local landscape wallpapers, an optional Luau editor and usage statistics. The white **Miracle** button in supported AI chats starts and stops Studio tool sessions.
 
-[Website](https://oleg-png23.github.io/miracle-mcp/) · [Download the latest release](https://github.com/oleg-png23/miracle-mcp/releases/latest)
+[Website](https://oleg-png23.github.io/miracle-mcp/) · [Dashboard preview](https://oleg-png23.github.io/miracle-mcp/preview/dashboard.html) · [Start page preview](https://oleg-png23.github.io/miracle-mcp/preview/welcome.html) · [Download the latest release](https://github.com/oleg-png23/miracle-mcp/releases/latest)
 
 ## Requirements
 
