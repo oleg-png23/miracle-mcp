@@ -90,6 +90,12 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
       assert(Math.abs(tilted.y - before.y) > .5);
       await page.mouse.move(0, 0);
       await page.waitForFunction(() => getComputedStyle(document.querySelector('.hero-card')).transform === 'none');
+      await page.locator('[data-material="light"]').click();
+      await hero.hover({ position: { x: 30, y: 30 } });
+      await page.waitForTimeout(400);
+      assert.match(await hero.evaluate(el => getComputedStyle(el).transform), /^matrix3d/);
+      assert.equal(await hero.evaluate(el => getComputedStyle(el, '::before').backdropFilter), 'none');
+      await page.mouse.move(0, 0);
     });
     await check('scrolling gently trails the rail while the logo stays fixed', async () => {
       const logoBefore = await page.locator('.rail-brand').boundingBox();

@@ -12,7 +12,7 @@
       card.style.setProperty('--card-rx','0deg');card.style.setProperty('--card-ry','0deg');
       card.classList.remove('pointer-tracking');
     }
-    function allowed(event){return event.pointerType!=='touch'&&fine.matches&&!reduced.matches&&document.body.dataset.glassMode!=='light'&&!card.matches(':focus-within');}
+    function allowed(event){return event.pointerType!=='touch'&&fine.matches&&!reduced.matches&&!card.matches(':focus-within');}
     card.addEventListener('pointerenter',event=>{if(allowed(event))rect=card.getBoundingClientRect();});
     card.addEventListener('pointermove',event=>{
       if(!allowed(event)){reset();return;}
