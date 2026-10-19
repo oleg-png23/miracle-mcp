@@ -1,0 +1,10 @@
+[data-type-line]{display:block;min-height:1.15em;white-space:nowrap}
+[data-type-line].is-current::after{content:'';display:inline-block;width:.035em;height:.72em;margin-left:.08em;background:currentColor;vertical-align:-.025em;border-radius:2px;animation:miracle-type-caret 1.05s steps(1,end) infinite}
+.motion-toggle{display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:500 10px/1.4 Inter,system-ui,sans-serif;cursor:pointer;opacity:.8;transition:opacity .2s,background .2s}
+.motion-toggle:hover{opacity:1;background:#ffffff18}.motion-toggle:focus-visible{outline:2px solid currentColor;outline-offset:4px}.motion-toggle:disabled{cursor:default;opacity:.6}.motion-toggle[hidden]{display:none}
+.page-heading h1[data-typewriter]{min-height:1.2em}.page-heading h1[data-typewriter]>span{color:inherit}
+.hero h1[data-typewriter] [data-type-line]{min-height:1.1em}.hero h1[data-typewriter] em{color:#eff5ff}
+.page-heading .motion-toggle{margin-top:10px}.hero-copy>.motion-toggle{margin-top:12px}
+@keyframes miracle-type-caret{0%,48%{opacity:1}49%,100%{opacity:0}}
+@media(prefers-reduced-motion:reduce){[data-type-line]::after{display:none}.motion-toggle{transition:none}}
+@media(forced-colors:active){.motion-toggle{color:ButtonText;background:ButtonFace}[data-type-line].is-current::after{background:CanvasText}}

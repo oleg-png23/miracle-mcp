@@ -8,14 +8,14 @@
   <title>Preview · Miracle · Workspace</title>
   <link rel="icon" href="assets/icons/miracle.svg">
   <link rel="preload" as="image" href="assets/bg/coast-new.webp">
-  <link rel="stylesheet" href="styles/dashboard.css">
+  <link rel="stylesheet" href="styles/dashboard.css"><link rel="stylesheet" href="styles/typewriter.css">
   <link rel="stylesheet" href="styles/sidebar.css">
   <link rel="stylesheet" href="styles/surfaces.css">
   <link rel="stylesheet" href="styles/liquid-glass.css">
   
   <script src="scripts/bridge-client.js" defer></script>
   <script src="scripts/setup-guide.js" defer></script>
-  <script src="scripts/appearance.js" defer></script>
+  <script src="scripts/appearance.js" defer></script><script src="scripts/typewriter.js" defer></script>
   <script src="scripts/dashboard.js" defer></script>
   <script src="scripts/rail.js" defer></script>
   <script src="scripts/usage.js" defer></script>
@@ -61,7 +61,7 @@
 <span class="rail-group-divider" aria-hidden="true"></span><a class="nav-link" href="#usage" aria-label="Token Transfared" title="Token Transfared"><span class="nav-icon"><svg aria-hidden="true" class="icon"><use href="#i-arrow"/></svg></span></a>
 <a class="nav-link" href="#events" aria-label="Events" title="Events"><span class="nav-icon"><svg aria-hidden="true" class="icon"><use href="#i-activity"/></svg></span><span id="eventCount" class="rail-count">0</span></a></nav><span class="rail-divider" aria-hidden="true"></span><button class="rail-action" id="openHelp" type="button" aria-label="Setup guide" title="Setup guide"><svg aria-hidden="true" class="icon"><use href="#i-info"/></svg></button><span id="sidebarVersion" hidden>MCP</span><span id="sidebarConnection" hidden></span></aside>
     <main id="main" class="main-content">
-      <header class="page-heading" id="overview"><div><div class="breadcrumb">Miracle <span>/</span> Workspace</div><h1 data-greeting>Good morning.</h1><p>Connect Studio, then start a session in your AI chat.</p></div><button class="icon-button glass refresh-button" id="refreshStatus" aria-label="Refresh status" title="Refresh status"><svg aria-hidden="true" class="icon"><use href="#i-refresh"/></svg></button></header>
+      <header class="page-heading" id="overview"><div><div class="breadcrumb">Miracle <span>/</span> Workspace</div><h1 data-typewriter="dashboard" data-type-phrases="[[&quot;Good morning.&quot;], [&quot;Build with AI.&quot;], [&quot;Make it yours.&quot;], [&quot;Create in Studio.&quot;]]" aria-label="Welcome to Miracle workspace."><span data-type-line aria-hidden="true">Good morning.</span></h1><p>Connect Studio, then start a session in your AI chat.</p><button class="motion-toggle" data-motion-toggle type="button" aria-pressed="false" hidden>Pause motion</button></div><button class="icon-button glass refresh-button" id="refreshStatus" aria-label="Refresh status" title="Refresh status"><svg aria-hidden="true" class="icon"><use href="#i-refresh"/></svg></button></header>
       <section class="hero-card glass" data-glass data-glass-bevel="24" aria-labelledby="bridgeTitle">
         <div class="hero-top"><span class="section-kicker"><svg aria-hidden="true" class="icon"><use href="#i-plug"/></svg>LOCAL BRIDGE</span><button type="button" class="status-pill" id="dashPill" title="Check connection"><span class="status-dot"></span><span id="pillText">Checking connection</span></button></div>
         <div class="hero-content"><div class="hero-copy"><h2 id="bridgeTitle">Roblox Studio</h2><p id="bridgeDescription">Checking the bridge and Studio.</p><a class="button button-primary" href="#setupGuide">Setup guide<svg aria-hidden="true" class="icon"><use href="#i-arrow"/></svg></a></div><div class="bridge-visual" aria-label="Miracle connection to Roblox Studio"><div class="connection-node"><div class="node-orb miracles-orb"><span class="orb-monogram">m<span>✦</span></span></div><strong>Miracle</strong><span>AI chat</span></div><div class="connection-wire"><span class="wire-line"></span><span class="wire-symbol"><svg aria-hidden="true" class="icon"><use href="#i-plug"/></svg></span><span class="wire-line"></span><span class="connection-flow"></span></div><div class="connection-node"><div class="node-orb studio-orb"><span class="studio-mark"></span></div><strong>Roblox Studio</strong><span id="studioVisualStatus">Checking…</span></div></div></div>

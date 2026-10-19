@@ -20,7 +20,7 @@ def build():
     scripts = preview / 'scripts'
     scripts.mkdir(exist_ok=True)
     names = ['setup-guide', 'appearance', 'dashboard', 'welcome', 'rail', 'usage',
-             'chat-prompt', 'executor', 'dashboard-glass', 'surfaces', 'welcome-motion']
+             'chat-prompt', 'executor', 'dashboard-glass', 'surfaces', 'welcome-motion', 'typewriter']
     for name in names:
         source = (ROOT / 'scripts' / f'{name}.js').read_text()
         if name == 'dashboard':
@@ -41,6 +41,8 @@ def build():
         if page == 'dashboard':
             html = html.replace('Run in Studio ', 'Preview only ')
         (preview / f'{page}.html').write_text(html)
+    shutil.copy2(ROOT / 'scripts/typewriter.js', site / 'typewriter.js')
+    shutil.copy2(ROOT / 'styles/typewriter.css', site / 'typewriter.css')
     # GitHub Pages serves /docs; keep its source identical to the standalone site.
     shutil.copytree(site, ROOT / 'docs', dirs_exist_ok=True)
 

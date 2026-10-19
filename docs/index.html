@@ -12,8 +12,8 @@
   <link rel="icon" type="image/svg+xml" href="assets/mark.svg">
   <link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/bg/coast-new.webp" as="image" fetchpriority="high">
-  <link rel="stylesheet" href="site.css"><link rel="stylesheet" href="demo-cards.css">
-  <script src="site.js" defer></script>
+  <link rel="stylesheet" href="site.css"><link rel="stylesheet" href="demo-cards.css"><link rel="stylesheet" href="typewriter.css">
+  <script src="site.js" defer></script><script src="typewriter.js" defer></script>
   <script src="optics.js" defer></script>
 </head>
 <body>
@@ -45,10 +45,10 @@
       <div class="hero-content wrap">
         <div class="hero-copy">
           <p class="eyebrow light"><span class="live-dot"></span> A LOCAL BRIDGE FOR ROBLOX STUDIO</p>
-          <h1 id="hero-title">A conversation.<br>A whole <em>new world.</em></h1>
+          <h1 id="hero-title" data-typewriter="site" data-type-phrases="[[&quot;A conversation.&quot;, &quot;A new world.&quot;], [&quot;One idea.&quot;, &quot;A whole world.&quot;], [&quot;Your AI chat.&quot;, &quot;Your next idea.&quot;], [&quot;Less switching.&quot;, &quot;More creating.&quot;]]" aria-label="A conversation. A whole new world."><span data-type-line aria-hidden="true">A conversation.</span><em data-type-line aria-hidden="true">A new world.</em></h1>
           <p class="hero-description">Bring your favorite AI chat into Roblox Studio.<br>Less back and forth. More room to create.</p>
           <div class="hero-actions"><a class="button button-light" href="https://github.com/oleg-png23/miracle-mcp/releases/latest">Download Miracle <svg class="icon"><use href="#i-download"/></svg></a><a class="text-link light" href="preview/dashboard.html">Explore dashboard <svg class="icon"><use href="#i-arrow"/></svg></a></div>
-          <p class="hero-note">Open source <span>·</span> Runs locally <span>·</span> Made for Windows</p>
+          <p class="hero-note">Open source <span>·</span> Runs locally <span>·</span> Made for Windows</p><button class="motion-toggle" data-motion-toggle type="button" aria-pressed="false" hidden>Pause motion</button>
         </div>
 
         <div class="product-preview" aria-label="Illustrative preview of the Miracle workspace">
