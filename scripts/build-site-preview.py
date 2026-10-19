@@ -20,7 +20,7 @@ def build():
     scripts = preview / 'scripts'
     scripts.mkdir(exist_ok=True)
     names = ['setup-guide', 'appearance', 'dashboard', 'welcome', 'rail', 'usage',
-             'chat-prompt', 'executor', 'dashboard-glass', 'surfaces']
+             'chat-prompt', 'executor', 'dashboard-glass', 'surfaces', 'welcome-motion']
     for name in names:
         source = (ROOT / 'scripts' / f'{name}.js').read_text()
         if name == 'dashboard':
