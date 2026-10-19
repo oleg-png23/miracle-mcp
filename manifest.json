@@ -1,0 +1,106 @@
+{
+  "manifest_version": 3,
+  "name": "Miracle — Local Bridge for Roblox Studio",
+  "short_name": "Miracle",
+  "version": "2.0",
+  "description": "Connect AI chats to Roblox Studio through a local MCP bridge.",
+  "author": "Miracles Lab",
+  "minimum_chrome_version": "114",
+  "action": {
+    "default_title": "Open Miracle",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "http://[::1]/*",
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*",
+    "https://chat.deepseek.com/*",
+    "https://chat.qwen.ai/*",
+    "https://qwen.ai/*",
+    "https://lmarena.ai/*",
+    "https://arena.ai/*",
+    "https://chat.z.ai/*",
+    "https://grok.com/*",
+    "https://copilot.microsoft.com/*",
+    "https://perplexity.ai/*",
+    "https://www.perplexity.ai/*",
+    "https://chat.mistral.ai/*",
+    "https://lechat.mistral.ai/*",
+    "https://poe.com/*",
+    "https://kimi.moonshot.cn/*",
+    "https://kimi.com/*",
+    "https://www.kimi.com/*",
+    "https://you.com/*",
+    "https://kimi.ai/*",
+    "https://www.kimi.ai/*",
+    "https://meta.ai/*",
+    "https://www.meta.ai/*",
+    "https://notion.so/*",
+    "https://www.notion.so/*",
+    "https://notion.com/*",
+    "https://www.notion.com/*",
+    "https://app.clickup.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*",
+        "https://chat.deepseek.com/*",
+        "https://chat.qwen.ai/*",
+        "https://qwen.ai/*",
+        "https://lmarena.ai/*",
+        "https://arena.ai/*",
+        "https://chat.z.ai/*",
+        "https://grok.com/*",
+        "https://copilot.microsoft.com/*",
+        "https://perplexity.ai/*",
+        "https://www.perplexity.ai/*",
+        "https://chat.mistral.ai/*",
+        "https://lechat.mistral.ai/*",
+        "https://poe.com/*",
+        "https://kimi.moonshot.cn/*",
+        "https://kimi.com/*",
+        "https://www.kimi.com/*",
+        "https://you.com/*",
+        "https://kimi.ai/*",
+        "https://www.kimi.ai/*",
+        "https://meta.ai/*",
+        "https://www.meta.ai/*",
+        "https://notion.so/*",
+        "https://www.notion.so/*",
+        "https://notion.com/*",
+        "https://www.notion.com/*",
+        "https://app.clickup.com/*"
+      ],
+      "js": [
+        "scripts/chat-prompt.js",
+        "content/site-adapters.js",
+        "content/miracle.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}
