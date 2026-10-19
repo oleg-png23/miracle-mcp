@@ -28,7 +28,41 @@
 @media(max-width:720px){.welcome-topbar{padding:24px}.welcome-wordmark{font-size:20px}.welcome-wordmark img{width:34px;height:34px}.welcome-wordmark-label{font-size:6px;letter-spacing:1.1px}.welcome-top-link{font-size:10px;padding:9px 12px;gap:12px}.welcome-clock{display:none}.welcome-shell{grid-template-columns:1fr;padding:38px 28px 26px;gap:34px;min-height:0}.welcome-copy{max-width:none}.welcome-copy h1{font-size:78px;letter-spacing:-4.5px}.welcome-eyebrow{margin-bottom:22px;font-size:8px!important;letter-spacing:1.2px}.welcome-description{font-size:14px;line-height:1.8;margin-top:21px}.welcome-actions{gap:19px;margin-top:25px}.welcome-enter{padding:14px 18px 14px 21px;font-size:11px}.welcome-help{font-size:10px}.welcome-idea{max-width:none;margin-top:30px}.welcome-prompt{font-size:11px;padding:16px 15px}.welcome-idea-label{font-size:8px}.welcome-connect{width:100%;padding:23px 24px;border-radius:26px}.welcome-connect h2{font-size:22px}.welcome-bridge-visual{padding:22px 12px 27px}.welcome-orb{width:63px;height:63px;border-radius:20px}.welcome-bridge-line{margin-top:31px}.welcome-status-detail{min-height:0}.welcome-steps li{padding:14px 0}.welcome-steps small{font-size:10px}.welcome-card-link{padding-top:12px}.welcome-capabilities{grid-column:auto;grid-template-columns:1fr;gap:18px;padding-top:23px;margin-top:0}.welcome-capabilities>div{gap:14px}.welcome-capabilities>div+div{border:0;padding:0}.welcome-capabilities svg{width:21px;height:21px}.welcome-capabilities strong{font-size:11px}.welcome-capabilities p>span{font-size:10px;margin-top:2px}.welcome-footer{padding:12px 28px 25px;flex-wrap:wrap;gap:18px;font-size:7px;letter-spacing:.8px}.welcome-footer nav{gap:21px;font-size:10px}.welcome-page .wallpaper-veil{background:linear-gradient(90deg,#071e2c85,#071e2c35),linear-gradient(0deg,#07182098,transparent 60%)}}
 @media(max-width:720px){.welcome-copy h1{font-size:64px;letter-spacing:-3.7px}}
 @media(max-width:365px){.welcome-topbar{padding:21px}.welcome-copy h1{font-size:54px;letter-spacing:-3.1px}.welcome-shell{padding:32px 23px 24px}.welcome-connect{padding:20px}.welcome-connect h2{font-size:21px}.welcome-actions{gap:14px}.welcome-enter{gap:17px}.welcome-help{font-size:9px}.welcome-prompt{gap:8px;font-size:10px}.welcome-prompt-spark{font-size:21px}.welcome-top-link{padding:8px 11px}}
-@media(prefers-reduced-motion:no-preference){.welcome-copy,.welcome-connect{animation:welcome-arrive .55s cubic-bezier(.2,.7,.2,1) both}.welcome-connect{animation-delay:.08s}@keyframes welcome-arrive{from{opacity:0;translate:0 10px}to{opacity:1;translate:0 0}}}
-@media(prefers-reduced-motion:reduce){.welcome-page *,.welcome-page *::after{animation:none!important;transition:none!important}}
+.welcome-motion-toggle{font:inherit;font-size:10px;color:#e7f9f4;background:#ffffff10;border:1px solid #ffffff45;border-radius:999px;padding:9px 12px;cursor:pointer;white-space:nowrap}
+.welcome-motion-toggle:hover{background:#ffffff25}.welcome-motion-toggle:focus-visible{outline:2px solid #ddffef;outline-offset:4px}.welcome-motion-toggle:disabled{opacity:.6;cursor:default}
+@media(max-width:720px){.welcome-topbar{flex-wrap:wrap;gap:12px}.welcome-top-right{gap:9px}.welcome-motion-toggle{font-size:9px;padding:8px}.welcome-top-link{gap:7px}}
+@media(prefers-reduced-motion:no-preference){
+  .welcome-topbar{animation:welcome-reveal .9s cubic-bezier(.2,.8,.2,1) both}
+  .welcome-copy>*{animation:welcome-reveal 1s cubic-bezier(.2,.8,.2,1) both}
+  .welcome-copy>:nth-child(1){animation-delay:.12s}.welcome-copy>:nth-child(2){animation-delay:.24s}.welcome-copy>:nth-child(3){animation-delay:.38s}.welcome-copy>:nth-child(4){animation-delay:.5s}.welcome-copy>:nth-child(5){animation-delay:.64s}
+  .welcome-page .welcome-connect{animation:welcome-panel-in 1.2s ease .3s both,welcome-float 7s ease-in-out 1.5s infinite}
+  .welcome-capabilities>div{animation:welcome-reveal .9s cubic-bezier(.2,.8,.2,1) both;animation-delay:.7s}
+  .welcome-capabilities>div:nth-child(2){animation-delay:.82s}.welcome-capabilities>div:nth-child(3){animation-delay:.94s}
+  .welcome-footer{animation:welcome-panel-in 1s ease .9s both}
+  .welcome-orb{animation:welcome-orb-glow 4s ease-in-out infinite}.welcome-connection-node:last-child .welcome-orb{animation-delay:2s}
+  .welcome-eyebrow>span{animation:welcome-beacon 3s ease-in-out infinite}
+  .welcome-page[data-studio-ready="true"] .welcome-bridge-line::after{left:0;animation:welcome-transfer 3.4s ease-in-out infinite}
+  .welcome-refresh[aria-busy="true"] svg{animation:welcome-spin 1s linear infinite}
+  .welcome-enter svg,.welcome-card-link>span,.welcome-prompt-spark{transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+  .welcome-enter:hover svg{transform:translateX(4px)}.welcome-card-link:hover>span{transform:translate(2px,-2px)}.welcome-prompt:hover .welcome-prompt-spark{transform:rotate(90deg) scale(1.15)}
+  .welcome-page[data-motion-paused="true"] .welcome-connect,
+  .welcome-connect[data-motion-visible="false"],
+  .welcome-page[data-page-hidden="true"] .welcome-connect{animation-play-state:running,paused}
+  .welcome-page[data-motion-paused="true"] :is(.welcome-orb,.welcome-eyebrow>span),
+  .welcome-page[data-page-hidden="true"] :is(.welcome-orb,.welcome-eyebrow>span),
+  .welcome-connect[data-motion-visible="false"] .welcome-orb{animation-play-state:paused}
+  .welcome-page[data-motion-paused="true"] .welcome-bridge-line::after,
+  .welcome-page[data-page-hidden="true"] .welcome-bridge-line::after,
+  .welcome-connect[data-motion-visible="false"] .welcome-bridge-line::after{animation-play-state:paused}
+  .welcome-connect:focus-within{animation-play-state:running,paused}
+  @keyframes welcome-reveal{from{opacity:0;translate:0 22px}to{opacity:1;translate:0 0}}
+  @keyframes welcome-panel-in{from{opacity:0}to{opacity:1}}
+  @keyframes welcome-float{0%,100%{translate:0 0}50%{translate:0 -7px}}
+  @keyframes welcome-orb-glow{0%,100%{box-shadow:inset 0 1px #ffffff45,0 9px 19px #041b2320}50%{box-shadow:inset 0 1px #ffffff80,0 0 28px #b2eed125}}
+  @keyframes welcome-beacon{0%,100%{opacity:.65;scale:.9}50%{opacity:1;scale:1.15}}
+  @keyframes welcome-transfer{0%{left:0;opacity:0;scale:.7}15%{opacity:1}85%{opacity:1}100%{left:100%;opacity:0;scale:1}}
+  @keyframes welcome-spin{to{rotate:360deg}}
+}
+@media(prefers-reduced-motion:reduce){.welcome-page *,.welcome-page *::before,.welcome-page *::after{animation:none!important;transition:none!important}}
 @media(prefers-reduced-transparency:reduce){.welcome-connect{background:#163141;backdrop-filter:none}.welcome-top-link,.welcome-prompt{background:#163141;backdrop-filter:none}}
 @media(forced-colors:active){.welcome-page{background:Canvas;color:CanvasText}.welcome-copy :is(h1,h1 span,p),.welcome-wordmark,.welcome-help,.welcome-footer,.welcome-clock time,.welcome-capabilities strong,.welcome-capabilities p>span{color:CanvasText;text-shadow:none}.welcome-connect,.welcome-prompt{background:Canvas;color:CanvasText;border-color:CanvasText}.welcome-status,.welcome-status-detail,.welcome-steps small,.welcome-step-number,.welcome-card-label,.welcome-card-link,.welcome-connection-node,.welcome-idea-label{color:CanvasText}.welcome-enter,.welcome-refresh,.welcome-top-link{background:ButtonFace;color:ButtonText;border-color:ButtonText}.welcome-wordmark img,.welcome-orb img{filter:none}.welcome-studio-mark{border-color:CanvasText}.welcome-capabilities{border-color:CanvasText}}
