@@ -2,7 +2,9 @@
 
 A local bridge between AI chats and Roblox Studio's built-in MCP server.
 
-The workspace includes a compact glass navigation rail, a welcome page, local 4K photographs, an optional Luau editor and usage statistics. The white **Miracle** button in supported AI chats starts and stops Studio tool sessions.
+The workspace includes a compact glass navigation rail, a welcome page, optimized local landscape wallpapers, an optional Luau editor and usage statistics. The white **Miracle** button in supported AI chats starts and stops Studio tool sessions.
+
+[Website](https://oleg-png23.github.io/miracle-mcp/) · [Download the latest release](https://github.com/oleg-png23/miracle-mcp/releases/latest)
 
 ## Requirements
 
@@ -22,17 +24,21 @@ Python uses the standard library. Node.js is needed only for development and bro
 
 The bridge creates its access token locally. It does not belong in Studio, an AI chat, or source control. Keep the bridge running while using the extension. After an update, restart the bridge, reload the extension and refresh open chat tabs.
 
-The m✦ logo in the navigation rail opens `/ui/welcome.html`. A new extension installation opens the welcome page automatically.
+The m✦ logo in the navigation rail opens `/ui/welcome.html`. Installation and the first extension launch open the welcome page. Browser startup or a later launch can show it again after five hours. During the cooldown, toolbar clicks open the workspace and browser startup stays quiet. Existing welcome/workspace tabs are reused.
 
 ## Appearance
 
-All eight wallpapers are local photographs, 4096 pixels wide without upscaling. Full images and thumbnails are separate files. Sources are recorded in `assets/bg/PHOTO-SOURCES.md`.
+The new Coast, Alps and Aurora wallpapers are optimized original landscape illustrations, 1672 × 941 pixels, together about 459 KB. The remaining five landscapes use lightweight 1920-pixel derivatives; all eight active backgrounds total about 1.27 MB. The original 4K collection remains in the source repository. Wallpapers and thumbnails are separate files; provenance and actual dimensions are recorded in `assets/bg/PHOTO-SOURCES.md`.
 
-Automatic mode follows local time: Ocean in the morning, Coast in the afternoon, Sunset in the evening, Dusk after 20:00 and Aurora after 21:00. Selecting a photograph enables manual mode. Turn on **Match time of day** to restore automatic changes.
+Automatic mode follows local time: Alps in the morning, Coast in the afternoon and Aurora in the evening/night. Selecting a landscape enables manual mode. Turn on **Match time of day** to restore automatic changes.
 
 The desktop rail trails scrolling by at most 16 pixels and settles when scrolling stops. The mobile dock stays fixed. Reduced-motion preferences disable these animations. Tooltips use the browser's top layer so cards cannot cover them.
 
-Cards tilt gently toward the cursor and settle when it leaves. The rail logo stays still, sections have subtle dividers, and instructions expand smoothly. The workspace uses more horizontal space on wide screens.
+Cards tilt gently toward the cursor and settle when it leaves. The logo remains anchored inside the rail, sections have subtle dividers, and instructions expand smoothly. The workspace uses more horizontal space on wide screens.
+
+**Clear** uses rounded refractive lenses on the main card, rail and welcome panel in Chrome and Edge. Content cards retain their translucent tint and rim without a live filter. Each lens uses at most 65,536 map pixels, a cached optical profile, RGB dispersion and a separate highlight. Only two surfaces run on the dashboard; offscreen lenses suspend their filters. The depth slider changes refraction strength. **Frosted** uses a soft blur, and **Light** disables backdrop effects. The initial choice follows system transparency preferences; explicitly choosing Clear takes precedence. Other browsers use a frosted fallback.
+
+Optics references: [Liquid Glass in the Browser](https://kube.io/blog/liquid-glass-css-svg/), [Apple: Meet Liquid Glass](https://developer.apple.com/videos/play/wwdc2025/219/), and [SVG displacement maps](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/feDisplacementMap).
 
 ## Usage
 
@@ -82,9 +88,15 @@ In another terminal:
 
 ```sh
 npm run test:ui
+npm run test:glass
+npm run test:launch
 ```
 
 UI tests use local synthetic chats and a fake Studio transport. They do not send messages to real AI services or change a real Studio place. Edge must be installed. Set `MIRACLES_QUICK_QA=1` for the smaller host-injection matrix, or `MIRACLES_DASHBOARD_ONLY=1` to run only dashboard and welcome-page checks.
+
+The glass check compares pixels with refraction enabled and zeroed against a checkerboard backdrop, verifies the stable lens interior, depth, material switches, responsive map sizes, offscreen suspension, system transparency, forced colors and the unsupported-engine fallback. Screenshots are saved in `.mcp_cache/qa/`.
+
+`python scripts/build-release.py` creates the extension, standalone website, wallpaper archives and SHA-256 checksums in `.mcp_cache/release/` from an explicit allowlist. The site source is in `website/`; `docs/` is its GitHub Pages publication copy. The archives exclude local tokens, caches, user data, tests and unrelated workspace folders.
 
 ## License
 

@@ -22,7 +22,7 @@ except ImportError:  # direct execution: python python/mcp_server.py
     from studio_mcp import StudioMCP, StudioMCPError
     from usage_stats import UsageStats
 
-VERSION = "2.0"
+VERSION = "2.1.0"
 INSTANCE_ID = secrets.token_hex(8)
 START = time.time()
 TOKEN = ""

@@ -1,22 +1,22 @@
-/* Shared local photographs and clock-based appearance for both entry pages. */
+/* Shared local landscapes and clock-based appearance for both entry pages. */
 (() => {
   'use strict';
   const wallpapers = {
-    fjord:{file:'fjord.webp',thumb:'fjord-thumb.webp',name:'Ocean',hue:198},
-    alpine:{file:'alpine.webp',thumb:'alpine-thumb.webp',name:'Alps',hue:158},
-    coast:{file:'coast.webp',thumb:'coast-thumb.webp',name:'Coast',hue:185},
-    aurora:{file:'aurora.webp',thumb:'aurora-thumb.webp',name:'Aurora',hue:166},
-    dunes:{file:'dunes.webp',thumb:'dunes-thumb.webp',name:'Canyon',hue:27},
-    lavender:{file:'lavender.webp',thumb:'lavender-thumb.webp',name:'Sunset',hue:30},
-    forest:{file:'forest.webp',thumb:'forest-thumb.webp',name:'Forest',hue:150},
-    sunset:{file:'sunset.webp',thumb:'sunset-thumb.webp',name:'Dusk',hue:345}
+    fjord:{file:'fjord-optimized.webp',thumb:'fjord-thumb.webp',name:'Ocean',hue:198},
+    alpine:{file:'alpine-new.webp',thumb:'alpine-new-thumb.webp',name:'Alps',hue:177},
+    coast:{file:'coast-new.webp',thumb:'coast-new-thumb.webp',name:'Coast',hue:190},
+    aurora:{file:'aurora-new.webp',thumb:'aurora-new-thumb.webp',name:'Aurora',hue:166},
+    dunes:{file:'dunes-optimized.webp',thumb:'dunes-thumb.webp',name:'Canyon',hue:27},
+    lavender:{file:'lavender-optimized.webp',thumb:'lavender-thumb.webp',name:'Sunset',hue:30},
+    forest:{file:'forest-optimized.webp',thumb:'forest-thumb.webp',name:'Forest',hue:150},
+    sunset:{file:'sunset-optimized.webp',thumb:'sunset-thumb.webp',name:'Dusk',hue:345}
   };
   let requestId=0,mode='auto',timer=0;
   function clock(hour=new Date().getHours()) {
-    if(hour>=5&&hour<12) return {greeting:'Good morning.',wallpaper:'fjord',period:'Morning'};
+    if(hour>=5&&hour<12) return {greeting:'Good morning.',wallpaper:'alpine',period:'Morning'};
     if(hour>=12&&hour<17) return {greeting:'Good afternoon.',wallpaper:'coast',period:'Afternoon'};
-    if(hour>=17&&hour<20) return {greeting:'Good evening.',wallpaper:'lavender',period:'Evening'};
-    if(hour>=20&&hour<21) return {greeting:'Good evening.',wallpaper:'sunset',period:'Dusk'};
+    if(hour>=17&&hour<20) return {greeting:'Good evening.',wallpaper:'aurora',period:'Evening'};
+    if(hour>=20&&hour<21) return {greeting:'Good evening.',wallpaper:'aurora',period:'Dusk'};
     return {greeting:'Good evening.',wallpaper:'aurora',period:'Night'};
   }
   function tint(image,fallbackHue) {
@@ -35,15 +35,21 @@
     document.documentElement.style.setProperty('--sidebar-accent',`hsl(${hue.toFixed(1)} 55% 82%)`);
   }
   async function apply(key) {
-    const current=++requestId,choice=wallpapers[key]||wallpapers.fjord;
-    const image=new Image();image.src=`assets/bg/${choice.file}`;
+    key=wallpapers[key]?key:'coast';
+    const photo=document.getElementById('bgPhoto');
+    if(!photo)return false;
+    const current=++requestId;
+    if(document.body.dataset.wallpaper===key&&photo.complete&&photo.naturalWidth)return true;
+    const choice=wallpapers[key];
+    const image=new Image();image.decoding='async';image.src=`assets/bg/${choice.file}`;
     try { await image.decode(); }
     catch { if(current===requestId) window.MiraclesBridge?.report('The photograph could not load. Please try again.');return false; }
     if(current!==requestId)return false;
-    const photo=document.getElementById('bgPhoto');photo.src=image.src;
-    document.body.dataset.wallpaper=Object.keys(wallpapers).find(k=>wallpapers[k]===choice);
+    photo.src=image.src;
+    document.body.dataset.wallpaper=key;
     tint(image,choice.hue);
-    if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&photo.animate)photo.animate([{opacity:.45},{opacity:1}],{duration:650,easing:'ease-out'});
+    photo.getAnimations?.().forEach(animation=>animation.cancel());
+    if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&photo.animate)photo.animate([{opacity:.45},{opacity:1}],{duration:450,easing:'ease-out'});
     const label=document.getElementById('wallpaperName');if(label)label.textContent=choice.name;
     document.querySelectorAll('.wallpaper-option').forEach(button=>{
       const selected=wallpapers[button.dataset.wallpaper]===choice;
@@ -53,11 +59,12 @@
   }
   function refreshClock() {
     clearTimeout(timer);
+    if(document.hidden)return;
     const state=clock();
     document.querySelectorAll('[data-greeting]').forEach(el=>el.textContent=state.greeting);
     const label=document.getElementById('timeAppearance');if(label)label.textContent=`${state.period} · local time`;
     if(mode==='auto'&&document.body.dataset.wallpaper!==state.wallpaper)apply(state.wallpaper);
-    if(!document.hidden){const date=new Date();timer=setTimeout(refreshClock,(60-date.getMinutes())*60000-date.getSeconds()*1000-date.getMilliseconds()+100);}
+    const date=new Date();timer=setTimeout(refreshClock,(60-date.getMinutes())*60000-date.getSeconds()*1000-date.getMilliseconds()+100);
   }
   function setMode(value,key) {
     mode=value==='manual'?'manual':'auto';document.body.dataset.wallpaperMode=mode;

@@ -1,7 +1,7 @@
 .workspace{max-width:1512px}.desktop-bar,.desktop-foot{max-width:1560px}
 .section-divider{height:1px;width:calc(100% - 12px);margin:26px auto;border:0;background:linear-gradient(90deg,transparent,#d8efef9e 10%,#ffffffbd 50%,#d8efef9e 90%,transparent);box-shadow:0 1px #244b5814}
 .rail-group-divider{display:block;width:20px;height:1px;margin:2px auto;background:#32545f25;pointer-events:none}
-.rail-brand,.rail-brand:hover{transform:translateY(calc(-1 * var(--rail-drift,0px)));transition:none}
+.rail-brand,.rail-brand:hover{transform:none;transition:none}
 .pointer-card{--card-rx:0deg;--card-ry:0deg;--card-glow-x:50%;--card-glow-y:50%;transform-origin:center;transition:transform .35s cubic-bezier(.2,.8,.25,1),box-shadow .35s}
 @media(hover:hover) and (pointer:fine){
   .pointer-card:hover{transform:perspective(1200px) translateY(-1px) scale(.999)}

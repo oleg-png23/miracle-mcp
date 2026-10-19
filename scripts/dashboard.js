@@ -201,6 +201,7 @@
   function applyMaterial(value) {
     const mode = ['frosted', 'light'].includes(value) ? value : 'clear';
     document.body.dataset.glassMode = mode;
+    document.body.dataset.glassChoice = mode;
     $('#glassDepth').disabled = mode !== 'clear';
     $$('[data-material]').forEach(button => {
       const selected = button.dataset.material === mode;

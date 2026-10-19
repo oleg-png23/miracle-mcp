@@ -53,9 +53,14 @@ function worker(initialSettings = {}, options = {}) {
       throw new Error('Unexpected request ' + url);
     },
     chrome: {
-      runtime: { onInstalled: { addListener: fn => { listeners.install = fn; } }, onMessage: { addListener: fn => { listeners.message = fn; } }, getURL: file => 'chrome-extension://test/' + file },
+      runtime: { onInstalled: { addListener: fn => { listeners.install = fn; } }, onStartup: { addListener: fn => { listeners.startup = fn; } }, onMessage: { addListener: fn => { listeners.message = fn; } }, getURL: file => 'chrome-extension://test/' + file },
       action: { onClicked: { addListener: fn => { listeners.click = fn; } } },
-      tabs: { create: async () => {} },
+      tabs: {
+        create: async values => { calls.push({opened: values.url}); },
+        query: async () => options.tabs || [],
+        update: async (id, values) => { calls.push({tabId: id, ...values}); }
+      },
+      windows: {update: async (id, values) => { calls.push({windowId: id, ...values}); }},
       storage: { local: { get: async () => ({ ...settings }), set: async next => Object.assign(settings, next) } }
     }
   };
@@ -76,6 +81,38 @@ test('health bootstraps missing tokens and verifies stale tokens before readines
   assert.equal(second.code, 'READY');
   assert.equal(stale.settings.bridgeToken, 'fresh-token');
   assert.equal(stale.calls.filter(c => c.url.endsWith('/api/bootstrap')).length, 1);
+});
+
+test('launch welcome has a persistent five-hour cooldown and startup stays quiet during it', async () => {
+  const w = worker();
+  await w.context.openDashboard();
+  assert.equal(w.calls.at(-1).opened, 'chrome-extension://test/welcome.html');
+  const first = w.settings.welcomeLastShownAt;
+  assert(first > 0);
+  await w.context.openDashboard();
+  assert.equal(w.calls.at(-1).opened, 'chrome-extension://test/dashboard.html');
+  const before = w.calls.length;
+  await w.context.openDashboard('startup');
+  assert.equal(w.calls.length, before);
+  w.settings.welcomeLastShownAt = Date.now() - 5 * 60 * 60 * 1000 - 1;
+  await w.context.openDashboard('startup');
+  assert.equal(w.calls.at(-1).opened, 'chrome-extension://test/welcome.html');
+  assert(w.settings.welcomeLastShownAt >= first);
+});
+
+test('concurrent launches coalesce and reuse an existing welcome tab', async () => {
+  const w = worker({}, {tabs: [{id: 7, windowId: 3, url: 'chrome-extension://test/welcome.html'}]});
+  await Promise.all([w.context.openDashboard(), w.context.openDashboard()]);
+  assert.equal(w.calls.filter(call => call.tabId === 7).length, 1);
+  assert.equal(w.calls.filter(call => call.opened).length, 0);
+  assert.equal(w.calls.at(-1).windowId, 3);
+});
+
+test('launch never reuses an unrelated browser tab', async () => {
+  const w = worker({}, {tabs: [{id: 99, url: 'https://example.com/'}]});
+  await w.context.openDashboard();
+  assert.equal(w.calls.at(-1).opened, 'chrome-extension://test/welcome.html');
+  assert(!w.calls.some(call => call.tabId === 99));
 });
 
 test('native missing, disabled, and connecting states are not reported ready', async () => {

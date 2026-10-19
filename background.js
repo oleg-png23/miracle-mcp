@@ -2,10 +2,14 @@
 importScripts('config.js');
 const CFG = self.MIRACLES_CONFIG || {};
 const DEFAULT_HOST = `${CFG.MCP_HOST || '127.0.0.1'}:${CFG.MCP_PORT || 19731}`;
+const WELCOME_COOLDOWN_MS = 5 * 60 * 60 * 1000;
+let openingPage = null;
 
 chrome.runtime.onInstalled.addListener(details => {
-  if (details.reason === 'install') openDashboard(true).catch(console.error);
+  if (details.reason === 'install') openDashboard('welcome').catch(console.error);
+  else if (details.reason === 'update') openDashboard('startup').catch(console.error);
 });
+chrome.runtime.onStartup.addListener(() => openDashboard('startup').catch(console.error));
 chrome.action.onClicked.addListener(() => openDashboard().catch(console.error));
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
   if (!message || typeof message !== 'object') return;
@@ -32,8 +36,29 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
   }
 });
 
-async function openDashboard(welcome = false) {
-  await chrome.tabs.create({ url: chrome.runtime.getURL(welcome ? 'welcome.html' : 'dashboard.html') });
+function openDashboard(reason = 'launch') {
+  // Worker wakeups and simultaneous clicks share one launch decision.
+  if (openingPage) return openingPage;
+  openingPage = openPage(reason).finally(() => { openingPage = null; });
+  return openingPage;
+}
+async function openPage(reason) {
+  const saved = await chrome.storage.local.get('welcomeLastShownAt');
+  const now = Date.now(), last = Number(saved.welcomeLastShownAt);
+  const due = !Number.isFinite(last) || last <= 0 || now < last || now - last >= WELCOME_COOLDOWN_MS;
+  const welcome = reason === 'welcome' || due;
+  // Browser startup stays quiet during cooldown; a toolbar click still opens
+  // the workspace immediately. Timestamps persist across worker restarts.
+  if (reason === 'startup' && !due) return;
+  const file = welcome ? 'welcome.html' : 'dashboard.html';
+  const url = chrome.runtime.getURL(file);
+  const tabs = await chrome.tabs.query({url});
+  const existing = tabs.find(tab => Number.isInteger(tab.id) && (tab.url === url || tab.pendingUrl === url));
+  if (existing) {
+    await chrome.tabs.update(existing.id, {active: true});
+    if (Number.isInteger(existing.windowId)) await chrome.windows.update(existing.windowId, {focused: true});
+  } else await chrome.tabs.create({url});
+  if (welcome) await chrome.storage.local.set({welcomeLastShownAt: now});
 }
 
 async function checkBridgeHealth() {

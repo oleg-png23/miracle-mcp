@@ -53,7 +53,9 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
       const off = await hero.screenshot();
       const a = await sharp(on).ensureAlpha().raw().toBuffer(), b = await sharp(off).ensureAlpha().raw().toBuffer();
       let changed = 0; for (let i = 0; i < a.length; i += 4) if (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) > 6) changed++;
-      assert(changed > 100); assert.equal(await page.locator('feDisplacementMap').count(), 1);
+      assert(changed > 100);
+      assert.equal(await page.locator('[data-glass-active="true"]').count(), 2);
+      assert.equal(await page.locator('feDisplacementMap').count(), 6);
       await page.locator('[data-material="light"]').click();
       assert.equal(await hero.evaluate(el => getComputedStyle(el, '::before').backdropFilter), 'none');
     });
@@ -97,15 +99,21 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
       assert.equal(await hero.evaluate(el => getComputedStyle(el, '::before').backdropFilter), 'none');
       await page.mouse.move(0, 0);
     });
-    await check('scrolling gently trails the rail while the logo stays fixed', async () => {
-      const logoBefore = await page.locator('.rail-brand').boundingBox();
-      const railBefore = await page.locator('.sidebar').boundingBox();
+    await check('scrolling gently trails the rail with the logo anchored inside it', async () => {
+      const before = await page.evaluate(() => {
+        const logo = document.querySelector('.rail-brand').getBoundingClientRect();
+        const rail = document.querySelector('.sidebar').getBoundingClientRect();
+        return {offset: logo.top - rail.top, railY: rail.top};
+      });
       await page.evaluate(() => scrollBy({ top: 320, behavior: 'instant' }));
       await page.waitForTimeout(65);
-      const logoAfter = await page.locator('.rail-brand').boundingBox();
-      const railAfter = await page.locator('.sidebar').boundingBox();
-      assert(Math.abs(logoAfter.y - logoBefore.y) < .3);
-      assert(railAfter.y - railBefore.y > .3 && railAfter.y - railBefore.y <= 16);
+      const after = await page.evaluate(() => {
+        const logo = document.querySelector('.rail-brand').getBoundingClientRect();
+        const rail = document.querySelector('.sidebar').getBoundingClientRect();
+        return {offset: logo.top - rail.top, railY: rail.top};
+      });
+      assert(Math.abs(after.offset - before.offset) < .1);
+      assert(after.railY - before.railY > .3 && after.railY - before.railY <= 16);
       await page.waitForFunction(() => Math.abs(parseFloat(getComputedStyle(document.querySelector('.sidebar')).getPropertyValue('--rail-drift'))) < .1);
       await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
     });

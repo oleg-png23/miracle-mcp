@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eaf0e9">
+  <meta name="description" content="Bring your AI chats into Roblox Studio. Miracle is an open-source, local MCP bridge with a calm glass workspace.">
+  <meta property="og:title" content="Miracle — From conversation to creation">
+  <meta property="og:description" content="Your favorite AI chat. Your Roblox world. One local connection.">
+  <meta property="og:type" content="website">
+  <title>Miracle — From conversation to creation</title>
+  <link rel="icon" type="image/svg+xml" href="assets/mark.svg">
+  <link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/bg/coast-new.webp" as="image" fetchpriority="high">
+  <link rel="stylesheet" href="site.css">
+  <script src="site.js" defer></script>
+  <script src="optics.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <svg class="symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m7 6-6 6 6 6m10-12 6 6-6 6M14 3l-4 18"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 3 7v6c0 5 9 8 9 8s9-3 9-8V7l-9-4Z"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></symbol>
+    <symbol id="i-github" viewBox="0 0 24 24"><path d="M9 19c-4 1-4-2-6-2m12 5v-4c0-1 .1-1.5-.5-2 3-.3 6-1.5 6-6a5 5 0 0 0-1.5-3.5A5 5 0 0 0 19 3s-1-.3-3.5 1.5a12 12 0 0 0-7 0C6 2.7 5 3 5 3a5 5 0 0 0 0 3.5A5 5 0 0 0 3.5 10c0 4.5 3 5.7 6 6-.6.5-.6 1-.5 2v4"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 1v2m0 18v2M1 12h2m18 0h2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4m0-15.6-1.4 1.4M5.6 18.4l-1.4 1.4"/></symbol>
+    <symbol id="i-connect" viewBox="0 0 24 24"><path d="m8 10 6 6m-4-8 6 6M7 13l-2 2a3 3 0 0 0 4 4l2-2M13 7l2-2a3 3 0 0 1 4 4l-2 2"/></symbol>
+  </defs></svg>
+
+  <header class="header" id="header">
+    <nav class="nav glass" aria-label="Main navigation">
+      <a href="#" class="brand" aria-label="Miracle home"><span class="mark" aria-hidden="true">m<span>✦</span></span><span>miracle<span class="brand-period">.</span></span></a>
+      <div class="nav-links"><a href="#experience">Experience</a><a href="#setup">Get started</a><a href="#questions">Questions</a></div>
+      <a class="nav-download" href="https://github.com/oleg-png23/miracle-mcp/releases/latest">Get Miracle <svg class="icon"><use href="#i-arrow"/></svg></a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-landscape" aria-hidden="true"><img id="heroWallpaper" src="assets/bg/coast-new.webp" width="1672" height="941" alt="" fetchpriority="high"><div class="hero-shade"></div></div>
+      <div class="hero-content wrap">
+        <div class="hero-copy">
+          <p class="eyebrow light"><span class="live-dot"></span> A LOCAL BRIDGE FOR ROBLOX STUDIO</p>
+          <h1 id="hero-title">A conversation.<br>A whole <em>new world.</em></h1>
+          <p class="hero-description">Bring your favorite AI chat into Roblox Studio.<br>Less back and forth. More room to create.</p>
+          <div class="hero-actions"><a class="button button-light" href="https://github.com/oleg-png23/miracle-mcp/releases/latest">Download Miracle <svg class="icon"><use href="#i-download"/></svg></a><a class="text-link light" href="#experience">Take a closer look <svg class="icon"><use href="#i-arrow"/></svg></a></div>
+          <p class="hero-note">Open source <span>·</span> Runs locally <span>·</span> Made for Windows</p>
+        </div>
+
+        <div class="product-preview" aria-label="Illustrative preview of the Miracle workspace">
+          <div class="preview-top"><span class="preview-title"><span class="mark" aria-hidden="true">m<span>✦</span></span> Your creative space</span><span class="preview-dots" aria-hidden="true">•••</span></div>
+          <div class="preview-shell glass">
+            <aside class="preview-rail" aria-hidden="true"><span class="rail-home"><span class="mark">m<span>✦</span></span></span><svg class="icon"><use href="#i-connect"/></svg><svg class="icon"><use href="#i-code"/></svg><svg class="icon"><use href="#i-sun"/></svg><span class="rail-end">✦</span></aside>
+            <div class="preview-main"><div class="preview-breadcrumb">YOUR WORKSPACE <span>↗</span></div><h2>Ideas meet possibility.</h2><p>Your chat and Studio, a little closer.</p>
+              <div class="bridge-demo"><div class="demo-node"><span class="chat-orb"><span class="mark" aria-hidden="true">m<span>✦</span></span></span><strong>Your AI chat</strong><small>Where ideas begin</small></div><div class="demo-line" aria-hidden="true"><span></span><svg class="icon"><use href="#i-connect"/></svg><span></span></div><div class="demo-node"><span class="studio-orb"><span class="studio-logo" aria-hidden="true"></span></span><strong>Roblox Studio</strong><small>Where worlds take shape</small></div></div>
+              <div class="preview-pill"><svg class="icon"><use href="#i-shield"/></svg> One local connection. Your workflow.</div>
+            </div>
+          </div>
+          <div class="chat-note"><span class="note-spark">✦</span><div><span>START WITH AN IDEA</span><p>“Let's build something worth exploring.”</p></div><span class="note-arrow" aria-hidden="true">↗</span></div>
+          <p class="preview-caption">Illustrative workflow · Actual tools depend on Studio</p>
+        </div>
+      </div>
+      <div class="hero-bottom wrap"><a class="scroll-cue" href="#experience"><span>THOUGHTFULLY CONNECTED</span><span aria-hidden="true">↓</span></a><div class="scenery-switch glass" role="group" aria-label="Choose a landscape"><span>Find your view</span><button type="button" data-scene="coast" class="scene selected" aria-pressed="true"><span class="scene-swatch coast"></span>Coast</button><button type="button" data-scene="alpine" class="scene" aria-pressed="false"><span class="scene-swatch alpine"></span>Alpine</button><button type="button" data-scene="aurora" class="scene" aria-pressed="false"><span class="scene-swatch aurora"></span>Aurora</button></div></div>
+    </section>
+
+    <div class="compatibility"><div class="wrap compatibility-inner"><span>YOUR IDEAS, IN GOOD COMPANY</span><p>ChatGPT <span>Claude</span> Gemini <span>DeepSeek</span> Mistral <span>& more</span></p><a href="https://github.com/oleg-png23/miracle-mcp#supported-chats">See supported chats <span aria-hidden="true">↗</span></a></div></div>
+
+    <section id="experience" class="experience section wrap" aria-labelledby="experience-title">
+      <div class="section-heading"><p class="eyebrow">FEWER TABS. MORE POSSIBILITIES.</p><h2 id="experience-title">Stay in your flow.<br><span>Build what comes next.</span></h2><p class="section-intro">Miracle connects the conversation to the canvas. Your AI chat can discover Studio tools and use them through a bridge running on your computer.</p></div>
+      <div class="experience-layout">
+        <div class="workflow-illustration" aria-label="Connection from AI chat through Miracle to local Studio tools"><div class="workflow-label"><span class="live-dot"></span> THE LOCAL ROUTE</div><div class="workflow-row"><span class="workflow-symbol"><svg class="icon"><use href="#i-code"/></svg></span><div><strong>A thought in your chat</strong><span>Describe what you want to create</span></div><span class="workflow-step">01</span></div><div class="workflow-connector" aria-hidden="true">↓</div><div class="workflow-row focus"><span class="workflow-symbol"><span class="mark" aria-hidden="true">m<span>✦</span></span></span><div><strong>A connection through Miracle</strong><span>Tool calls travel through your local bridge</span></div><span class="workflow-step">02</span></div><div class="workflow-connector" aria-hidden="true">↓</div><div class="workflow-row"><span class="workflow-symbol"><span class="studio-logo" aria-hidden="true"></span></span><div><strong>A change in your world</strong><span>Studio runs the available MCP tools</span></div><span class="workflow-step">03</span></div><div class="workflow-foot"><svg class="icon"><use href="#i-shield"/></svg> The bridge stays on your machine.</div></div>
+        <div class="feature-list"><article><span class="feature-index">01 / CONNECT</span><h3>Your chat. Your choice.</h3><p>Start a Miracle session inside a supported AI chat. Keep working where the conversation already happens.</p></article><article><span class="feature-index">02 / CREATE</span><h3>Give ideas a place to land.</h3><p>Miracle discovers the tools advertised by Studio's built-in MCP server, passes tool calls along, and brings the results back.</p></article><article><span class="feature-index">03 / MAKE IT YOURS</span><h3>A calmer creative space.</h3><p>A glass workspace, scenic wallpapers, connection details, an optional Luau editor, and session usage — all in one place.</p></article></div>
+      </div>
+    </section>
+
+    <section class="atmosphere" aria-labelledby="atmosphere-title"><div class="wrap"><div class="atmosphere-heading"><div><p class="eyebrow">A DIFFERENT KIND OF WORKSPACE</p><h2 id="atmosphere-title">A little more breathing room.</h2></div><p>Clear glass. Quiet landscapes.<br>A view that feels like yours.</p></div><div class="landscape-grid"><button class="landscape-card" type="button" data-scene="coast"><img src="assets/bg/coast-new.webp" alt="A calm coastal landscape" width="1672" height="941" loading="lazy"><span>01 <strong>Coast</strong><span aria-hidden="true">↗</span></span></button><button class="landscape-card" type="button" data-scene="alpine"><img src="assets/bg/alpine-new.webp" alt="A quiet alpine landscape" width="1672" height="941" loading="lazy"><span>02 <strong>Alpine</strong><span aria-hidden="true">↗</span></span></button><button class="landscape-card" type="button" data-scene="aurora"><img src="assets/bg/aurora-new.webp" alt="Aurora over a night landscape" width="1672" height="941" loading="lazy"><span>03 <strong>Aurora</strong><span aria-hidden="true">↗</span></span></button></div><p class="atmosphere-note">Choose a landscape to preview it at the top. These wallpapers are also included with Miracle.</p></div></section>
+
+    <section id="setup" class="setup section wrap" aria-labelledby="setup-title"><div class="setup-intro"><p class="eyebrow">AN IDEA IS A GOOD START</p><h2 id="setup-title">Three steps.<br><span>A world of potential.</span></h2><p>You'll need Windows 10 or 11, Python 3.10+, Chrome or Edge, and Roblox Studio with built-in MCP support.</p><a class="button button-dark" href="https://github.com/oleg-png23/miracle-mcp/releases/latest">Get the latest release <svg class="icon"><use href="#i-download"/></svg></a><a class="setup-source" href="https://github.com/oleg-png23/miracle-mcp"><svg class="icon"><use href="#i-github"/></svg> Browse the source on GitHub <span aria-hidden="true">↗</span></a></div><ol class="setup-steps"><li><span class="step-number">01</span><div><h3>Give Studio the green light.</h3><p>Open a place in Roblox Studio. In Assistant, select <strong>… → Manage MCP Servers → Enable Studio as MCP Server.</strong></p></div></li><li><span class="step-number">02</span><div><h3>Start your local connection.</h3><p>Download and extract Miracle, then run <code>run.bat</code>. Keep the bridge running while you work.</p><button class="copy-command" type="button" data-copy="run.bat"><code>run.bat</code><span>Copy <svg class="icon"><use href="#i-copy"/></svg></span></button></div></li><li><span class="step-number">03</span><div><h3>Load it. Open a chat. Create.</h3><p>Open your browser's Extensions page, enable <strong>Developer mode</strong>, and <strong>Load unpacked</strong> from the extracted folder. In a supported chat, choose <strong>Miracle → Start session.</strong></p><a class="inline-link" href="https://github.com/oleg-png23/miracle-mcp#start">Read the setup guide <span aria-hidden="true">↗</span></a></div></li></ol></section>
+
+    <section id="questions" class="questions section wrap" aria-labelledby="questions-title"><div><p class="eyebrow">A FEW THINGS TO KNOW</p><h2 id="questions-title">Good questions.<br><span>Clear answers.</span></h2><p>Something else on your mind?<br><a class="inline-link" href="https://github.com/oleg-png23/miracle-mcp/issues">Open an issue on GitHub ↗</a></p></div><div class="faq-list"><details><summary>What does Miracle actually connect?<svg class="icon"><use href="#i-plus"/></svg></summary><p>It connects supported browser AI chats to Roblox Studio's built-in MCP server through a local Python bridge. Studio advertises the tools it makes available; Miracle passes tool requests and results between your chat and Studio.</p></details><details><summary>Do I need an API key?<svg class="icon"><use href="#i-plus"/></svg></summary><p>Miracle doesn't ask for an AI API key. You use your existing supported chat service and its account. The bridge generates a separate local access token automatically; keep that token on your computer.</p></details><details><summary>Does everything stay on my computer?<svg class="icon"><use href="#i-plus"/></svg></summary><p>The bridge runs locally. Studio tool requests and results are exchanged with the online AI chat you choose, so that service's data policies still apply. Local usage tracking stores aggregate counts and hostnames, without saving prompts, code, or tool results.</p></details><details><summary>Which systems are supported?<svg class="icon"><use href="#i-plus"/></svg></summary><p>The current launcher is for Windows 10 and 11, with Python 3.10+, Microsoft Edge or Google Chrome, and a Roblox Studio build that includes Studio MCP. Supported chat hosts are listed in the extension manifest and project documentation.</p></details><details><summary>Is Miracle open source?<svg class="icon"><use href="#i-plus"/></svg></summary><p>Yes. Miracle's source code is available on GitHub under the MIT license. Fonts, icons, and landscape assets retain their separate licenses and attribution files.</p></details></div></section>
+
+    <section class="closing wrap" aria-labelledby="closing-title"><div class="closing-copy"><p class="eyebrow">YOUR NEXT IDEA IS WAITING</p><h2 id="closing-title">Make room<br>for a <em>miracle.</em></h2><a class="button button-dark" href="https://github.com/oleg-png23/miracle-mcp/releases/latest">Let's get started <svg class="icon"><use href="#i-arrow"/></svg></a></div><div class="closing-mark" aria-hidden="true">m<span>✦</span></div><div class="closing-bottom"><span>Built for the way you create.</span><span>Local by design. Open by nature.</span></div></section>
+  </main>
+
+  <footer class="footer wrap"><a href="#" class="brand"><span class="mark" aria-hidden="true">m<span>✦</span></span><span>miracle.</span></a><p>An independent bridge for Roblox Studio.<br>Not affiliated with Roblox or AI chat providers.</p><div><a href="https://github.com/oleg-png23/miracle-mcp">GitHub ↗</a><a href="https://github.com/oleg-png23/miracle-mcp/releases/latest">Releases ↗</a><a href="https://github.com/oleg-png23/miracle-mcp/blob/main/LICENSE">License ↗</a></div><span class="footer-year">© <span id="year">2026</span> Miracle</span></footer>
+  <div class="announcement" id="announcement" role="status" aria-live="polite"></div>
+</body>
+</html>

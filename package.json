@@ -1,6 +1,6 @@
 {
   "name": "miracle-mcp",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Local AI chat bridge for Roblox Studio.",
   "license": "MIT",
@@ -8,7 +8,10 @@
   "scripts": {
     "test": "node --test scripts/test-background.cjs scripts/test-bridge-client.cjs scripts/test-chat-prompt.cjs scripts/test-site-adapters.cjs",
     "test:python": "python -m unittest discover -s python -p test_*.py",
-    "test:ui": "node scripts/test-ui.cjs"
+    "test:ui": "node scripts/test-ui.cjs",
+    "test:glass": "node scripts/test-liquid-glass.cjs",
+    "test:launch": "node scripts/test-launch.cjs",
+    "build:release": "python scripts/build-release.py"
   },
   "devDependencies": {
     "playwright": "1.62.1",
