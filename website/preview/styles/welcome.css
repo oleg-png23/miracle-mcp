@@ -66,3 +66,9 @@
 @media(prefers-reduced-motion:reduce){.welcome-page *,.welcome-page *::before,.welcome-page *::after{animation:none!important;transition:none!important}}
 @media(prefers-reduced-transparency:reduce){.welcome-connect{background:#163141;backdrop-filter:none}.welcome-top-link,.welcome-prompt{background:#163141;backdrop-filter:none}}
 @media(forced-colors:active){.welcome-page{background:Canvas;color:CanvasText}.welcome-copy :is(h1,h1 span,p),.welcome-wordmark,.welcome-help,.welcome-footer,.welcome-clock time,.welcome-capabilities strong,.welcome-capabilities p>span{color:CanvasText;text-shadow:none}.welcome-connect,.welcome-prompt{background:Canvas;color:CanvasText;border-color:CanvasText}.welcome-status,.welcome-status-detail,.welcome-steps small,.welcome-step-number,.welcome-card-label,.welcome-card-link,.welcome-connection-node,.welcome-idea-label{color:CanvasText}.welcome-enter,.welcome-refresh,.welcome-top-link{background:ButtonFace;color:ButtonText;border-color:ButtonText}.welcome-wordmark img,.welcome-orb img{filter:none}.welcome-studio-mark{border-color:CanvasText}.welcome-capabilities{border-color:CanvasText}}
+
+/* Two reserved lines keep the layout steady throughout typing and deletion. */
+.welcome-copy h1 .welcome-type-line{min-height:1.05em;white-space:nowrap;width:max-content;max-width:100%}
+.welcome-type-line.is-current::after{content:'';display:inline-block;width:.035em;height:.72em;margin-left:.08em;background:#d5ffea;vertical-align:-.025em;border-radius:2px;animation:welcome-caret 1.05s steps(1,end) infinite}
+@keyframes welcome-caret{0%,48%{opacity:1}49%,100%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.welcome-type-line::after{display:none}}
