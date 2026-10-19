@@ -1,0 +1,18 @@
+.workspace{max-width:1512px}.desktop-bar,.desktop-foot{max-width:1560px}
+.section-divider{height:1px;width:calc(100% - 12px);margin:26px auto;border:0;background:linear-gradient(90deg,transparent,#d8efef9e 10%,#ffffffbd 50%,#d8efef9e 90%,transparent);box-shadow:0 1px #244b5814}
+.rail-group-divider{display:block;width:20px;height:1px;margin:2px auto;background:#32545f25;pointer-events:none}
+.rail-brand,.rail-brand:hover{transform:none;transition:none}
+.pointer-card{--card-rx:0deg;--card-ry:0deg;--card-glow-x:50%;--card-glow-y:50%;transform-origin:center;transition:transform .35s cubic-bezier(.2,.8,.25,1),box-shadow .35s}
+@media(hover:hover) and (pointer:fine){
+  .pointer-card:hover{transform:perspective(1200px) translateY(-1px) scale(.999)}
+  .pointer-card.pointer-tracking{transform:perspective(1200px) rotateX(var(--card-rx)) rotateY(var(--card-ry)) translateY(-2px) scale(1.001)}
+  body .pointer-card:focus-within{transform:none!important}
+  .pointer-card::after{background:radial-gradient(ellipse at var(--card-glow-x) var(--card-glow-y),#ffffff16,transparent 62%)}
+}
+.fold-content{display:flow-root;min-height:0}.fold-content> :first-child{margin-top:10px}.asset-tools .fold-content>form{margin-top:12px}
+.welcome-connect{animation-fill-mode:backwards}.welcome-topbar,.welcome-footer{width:min(1560px,100%)}.welcome-shell{width:min(1480px,100%)}
+@media(min-width:1600px){.welcome-shell{width:min(1552px,100%)}}
+@media(max-width:650px){.rail-group-divider{width:1px;height:16px;margin:auto 3px;flex:none}}
+@media(max-width:365px){.sidebar .navigation{gap:2px}.sidebar .nav-link{width:40px;height:42px;min-height:42px}}
+@media(prefers-reduced-motion:reduce){.pointer-card,.pointer-card:hover,.pointer-card.pointer-tracking{transform:none!important;transition:none!important}}
+@media(forced-colors:active){.section-divider,.rail-group-divider{background:CanvasText;box-shadow:none}}
