@@ -41,7 +41,7 @@
     updateTime();
     try {
       settings = await client.storage.read();
-      const material = ['clear', 'frosted', 'light'].includes(settings.dashboardMaterial) ? settings.dashboardMaterial : client.defaults.dashboardMaterial;
+      const material = ['clear', 'beautify', 'frosted', 'light'].includes(settings.dashboardMaterial) ? settings.dashboardMaterial : client.defaults.dashboardMaterial;
       document.body.dataset.glassMode = material;
       document.body.dataset.glassChoice = material;
       window.MiracleAppearance.setMode(settings.dashboardWallpaperMode, settings.dashboardWallpaper);

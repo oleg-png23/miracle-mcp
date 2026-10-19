@@ -5,12 +5,8 @@
   'use strict';
   const root = document.documentElement;
   const hint = document.getElementById('glassEngineStatus');
-  const selector = '.hero-card, .sidebar.glass, .welcome-connect';
-  document.querySelectorAll('.glass').forEach(el => {
-    if (!el.matches(selector)) el.dataset.glassPassive = 'true';
-  });
-  const elements = [...document.querySelectorAll(selector)]
-    .filter(el => !el.parentElement?.closest(selector));
+  const primarySelector = '.hero-card, .sidebar.glass, .welcome-connect';
+  const elements = [...document.querySelectorAll('.glass, .welcome-connect')];
   if (!elements.length) return;
 
   const optics = Object.freeze({
@@ -53,25 +49,26 @@
   const surfaces = elements.map((el, index) => ({
     el, id: `miracle-lens-${index}`, visible: false, geometry: '',
     filter: null, map: null, displacements: [], scale: 0,
-    // Reserve RGB dispersion for the larger focal lens and navigation.
-    chromatic: el.matches('.hero-card, .sidebar, .welcome-connect')
+    primary: el.matches(primarySelector),
+    chromatic: true
   }));
   const byElement = new Map(surfaces.map(surface => [surface.el, surface]));
 
   function mode() {
-    if (contrast.matches || (transparency.matches && document.body.dataset.glassChoice !== 'clear')) return 'light';
+    if (contrast.matches || (transparency.matches && !['clear', 'beautify'].includes(document.body.dataset.glassChoice))) return 'light';
     return document.body.dataset.glassMode || 'clear';
   }
-  function enabled() { return supported && mode() === 'clear' && !document.hidden; }
+  function enabled() { return supported && ['clear', 'beautify'].includes(mode()) && !document.hidden; }
+  function eligible(surface) { return mode() === 'beautify' || surface.primary; }
   function setActive(surface, active) {
     surface.el.dataset.glassActive = String(active);
     if (active) surface.el.style.setProperty('--glass-filter', `url(#${surface.id})`);
     else surface.el.style.removeProperty('--glass-filter');
   }
   function updateScale(surface) {
-    const strength = 0.45 + depth / 100 * 0.9;
+    const strength = (0.45 + depth / 100 * 0.9) * (mode() === 'beautify' ? 1.7 : 1);
     surface.displacements.forEach((el, index) => {
-      const dispersion = surface.chromatic ? 1 + (index - 1) * optics.dispersion : 1;
+      const dispersion = surface.chromatic ? 1 + (index - 1) * (mode() === 'beautify' ? 0.065 : optics.dispersion) : 1;
       el.setAttribute('scale', (surface.scale * strength * dispersion).toFixed(2));
     });
   }
@@ -104,8 +101,10 @@
 
   function makeMaps(width, height, radius, bevel) {
     const started = performance.now();
-    const ratio = Math.min(1, optics.maxMapSide / width, optics.maxMapSide / height,
-      Math.sqrt(optics.maxMapPixels / (width * height)));
+    const maxSide = mode() === 'beautify' ? 768 : optics.maxMapSide;
+    const maxPixels = mode() === 'beautify' ? 262144 : optics.maxMapPixels;
+    const ratio = Math.min(1, maxSide / width, maxSide / height,
+      Math.sqrt(maxPixels / (width * height)));
     const canvas = document.createElement('canvas');
     canvas.width = Math.max(2, Math.floor(width * ratio));
     canvas.height = Math.max(2, Math.floor(height * ratio));
@@ -182,14 +181,14 @@
   }
 
   function update(surface) {
-    if (!enabled() || !surface.visible) return;
+    if (!enabled() || !surface.visible || !eligible(surface)) return;
     const width = Math.round(surface.el.clientWidth), height = Math.round(surface.el.clientHeight);
     if (!width || !height) { setActive(surface, false); return; }
     const style = getComputedStyle(surface.el);
     const radius = Math.min(parseFloat(style.borderTopLeftRadius) || 25, width / 2, height / 2);
-    const bevel = Math.max(2, Math.min(optics.maxBevel, radius * 0.9,
+    const bevel = Math.max(2, Math.min(mode() === 'beautify' ? 42 : optics.maxBevel, radius * 0.9,
       Math.max(optics.minBevel, Number(surface.el.dataset.glassBevel) || radius), Math.min(width, height) / 3));
-    const geometry = `${width}:${height}:${radius.toFixed(1)}:${bevel.toFixed(1)}`;
+    const geometry = `${mode()}:${width}:${height}:${radius.toFixed(1)}:${bevel.toFixed(1)}`;
     if (geometry !== surface.geometry) {
       let maps = cache.get(geometry);
       if (!maps) {
@@ -222,7 +221,7 @@
     if (pending.size) frame = requestAnimationFrame(drain);
   }
   function schedule(surface) {
-    if (!enabled() || !surface.visible) return;
+    if (!enabled() || !surface.visible || !eligible(surface)) return;
     pending.add(surface);
     if (!frame) frame = requestAnimationFrame(drain);
   }
@@ -231,11 +230,14 @@
     root.dataset.glassEngine = material === 'light' ? 'light'
       : material === 'frosted' ? 'frosted' : supported ? 'refraction' : 'fallback';
     surfaces.forEach(surface => {
-      if (enabled() && surface.visible) schedule(surface);
+      surface.el.dataset.glassPassive = String(!eligible(surface));
+      updateScale(surface);
+      if (enabled() && surface.visible && eligible(surface)) schedule(surface);
       else setActive(surface, false);
     });
     if (hint) hint.textContent = material === 'light' ? 'Effects off.'
       : material === 'frosted' ? 'Soft, frosted glass.'
+      : material === 'beautify' ? (supported ? 'Beautify · deep refraction, RGB light and liquid glass on every surface.' : 'Beautify · rich frosted glass. Live refraction needs Chrome or Edge.')
       : supported ? 'Liquid glass · live refraction and light.' : 'Soft glass · refraction needs Chrome or Edge.';
   }
   window.DashboardGlass = {

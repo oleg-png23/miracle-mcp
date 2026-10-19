@@ -195,6 +195,25 @@ html[data-glass-engine="refraction"] body .welcome-connect[data-glass-active="fa
   backdrop-filter: none;
 }
 
+/* Beautify is an explicit, richer material across every dashboard surface. */
+body[data-glass-mode="beautify"] .glass {
+  --glass-wash-top: .48;
+  --glass-wash-bottom: .28;
+  border-color: rgb(255 255 255 / .85);
+  box-shadow: 0 24px 60px -24px rgb(4 27 41 / .58), 0 5px 18px -8px rgb(7 35 48 / .3), inset 0 1px 1px #ffffffed, inset 0 -1px 1px #ffffff70;
+}
+body[data-glass-mode="beautify"] .glass::before {
+  background-image: linear-gradient(125deg, rgb(249 255 255 / .58), rgb(233 252 251 / .24) 55%, rgb(224 243 255 / .4));
+  -webkit-backdrop-filter: var(--glass-filter, blur(20px)) blur(1.2px) saturate(1.4);
+  backdrop-filter: var(--glass-filter, blur(20px)) blur(1.2px) saturate(1.4);
+}
+body[data-glass-mode="beautify"] .glass::after {
+  background-image: var(--glass-specular, none), radial-gradient(ellipse at var(--card-glow-x, 22%) var(--card-glow-y, 8%), #ffffff5c, transparent 65%);
+  box-shadow: inset 1px 1px 1px #ffffffd9, inset -1px -1px 1px #b3e9ff80, inset 0 -3px 10px -6px #103a5480;
+}
+body[data-glass-mode="beautify"] .segmented-control [data-material="beautify"] { font-weight: 700; }
+@media(max-width:420px){.segmented-control{flex-wrap:wrap}.segmented-control button{flex:1 0 40%}}
+
 @media (prefers-reduced-motion: reduce) {
   .glass::after,
   .welcome-connect::after {
@@ -212,20 +231,20 @@ html[data-glass-engine="refraction"] body .welcome-connect[data-glass-active="fa
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  body:not([data-glass-choice="clear"]) .glass::before,
-  body:not([data-glass-choice="clear"]) .sidebar.glass::before,
-  body:not([data-glass-choice="clear"]) .welcome-connect::before {
+  body:not(:is([data-glass-choice="clear"], [data-glass-choice="beautify"])) .glass::before,
+  body:not(:is([data-glass-choice="clear"], [data-glass-choice="beautify"])) .sidebar.glass::before,
+  body:not(:is([data-glass-choice="clear"], [data-glass-choice="beautify"])) .welcome-connect::before {
     background: #edf7f3 !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
   }
-  body:not([data-glass-choice="clear"]) .welcome-connect::before { background: #163141 !important; }
-  body:not([data-glass-choice="clear"]) .glass::after,
-  body:not([data-glass-choice="clear"]) .welcome-connect::after { background-image: none; }
+  body:not(:is([data-glass-choice="clear"], [data-glass-choice="beautify"])) .welcome-connect::before { background: #163141 !important; }
+  body:not(:is([data-glass-choice="clear"], [data-glass-choice="beautify"])) .glass::after,
+  body:not(:is([data-glass-choice="clear"], [data-glass-choice="beautify"])) .welcome-connect::after { background-image: none; }
 
   /* The Appearance choice takes precedence over the OS default. The legacy
    * rail sheet has an important solid background, so restore its optical wash. */
-  body[data-glass-choice="clear"] .sidebar.glass::before {
+  body:is([data-glass-choice="clear"], [data-glass-choice="beautify"]) .sidebar.glass::before {
     background: linear-gradient(
       125deg,
       rgb(246 255 254 / var(--glass-wash-top)),
@@ -235,11 +254,11 @@ html[data-glass-engine="refraction"] body .welcome-connect[data-glass-active="fa
     -webkit-backdrop-filter: var(--glass-filter, blur(12px)) blur(.55px) saturate(1.12) !important;
     backdrop-filter: var(--glass-filter, blur(12px)) blur(.55px) saturate(1.12) !important;
   }
-  html[data-glass-engine="refraction"] body[data-glass-choice="clear"] .sidebar.glass[data-glass-active="false"]::before {
+  html[data-glass-engine="refraction"] body:is([data-glass-choice="clear"], [data-glass-choice="beautify"]) .sidebar.glass[data-glass-active="false"]::before {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
   }
-  body[data-glass-choice="clear"] .welcome-connect { background: transparent; }
+  body:is([data-glass-choice="clear"], [data-glass-choice="beautify"]) .welcome-connect { background: transparent; }
 }
 
 @media (forced-colors: active) {

@@ -199,10 +199,10 @@
 
   const applyWallpaper = key => window.MiracleAppearance.apply(key);
   function applyMaterial(value) {
-    const mode = ['frosted', 'light'].includes(value) ? value : 'clear';
+    const mode = ['beautify', 'frosted', 'light'].includes(value) ? value : 'clear';
     document.body.dataset.glassMode = mode;
     document.body.dataset.glassChoice = mode;
-    $('#glassDepth').disabled = mode !== 'clear';
+    $('#glassDepth').disabled = !['clear', 'beautify'].includes(mode);
     $$('[data-material]').forEach(button => {
       const selected = button.dataset.material === mode;
       button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected));
