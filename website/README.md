@@ -16,6 +16,8 @@ The workspace preview is illustrative, rather than a live connection to Roblox S
 
 The landing page has its own pill theme and all-screen motion controller. Scroll entrances, the service strip and ambient hero effects also run on touch devices. Pointer tilt is limited to non-optical cards; glass containers stay stationary. Pause motion, reduced motion and hidden/offscreen state stop the effects. The setup section explains the two-folder ZIP and links to INSTALL.md.
 
+Scroll entrances are prepared before a block reaches the screen and run once with a short translation and fade. Touch and narrow layouts have no entrance stagger or overshoot. Touch press feedback waits for a completed tap; native swipes cancel it. Ambient effects pause offscreen without resetting their timelines. Scroll navigation caches section geometry until layout changes and updates only the progress indicator, avoiding page-wide inherited style changes on every scroll frame.
+
 Font license: `assets/fonts/OFL-Inter.txt`. Landscape sources: `assets/bg/PHOTO-SOURCES.md`. Source code follows the root project's MIT license.
 
 ## Interactive app previews
