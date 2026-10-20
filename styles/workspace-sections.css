@@ -21,3 +21,55 @@ body:is([data-wallpaper="aurora"],[data-wallpaper="forest"]) .section-view-headi
 }
 @media(prefers-reduced-transparency:reduce){.section-menu,.workspace-shortcuts a,.chat-services a,.tool-card{background:#edf5fb}.section-menu,.section-menu::backdrop{backdrop-filter:none;-webkit-backdrop-filter:none}}
 @media(forced-colors:active){.section-view-heading{color:CanvasText;text-shadow:none}.section-menu,.workspace-shortcuts a,.chat-services a,.tool-card,.section-search,.section-menu-links a{background:Canvas;color:CanvasText;border:1px solid CanvasText}.section-menu::backdrop{background:Canvas;backdrop-filter:none}.section-menu-links a.active{border-color:Highlight;color:Highlight}.sidebar .nav-more{color:ButtonText}}
+
+/* Soft pill controls and generous, concentric card corners. Optical maps read
+   these final radii once; the glass itself never moves during a reveal. */
+.workspace .hero-card { --radius: 40px; }
+.workspace .panel { --radius: 36px; }
+.workspace .metric { --radius: 28px; }
+.main-content .refresh-button { --radius: 999px; }
+.main-content :is(.button, .button-small, .icon-button, .input-wrap, .section-search,
+  .segmented-control, .segmented-control button, .subtle-badge, .count-badge,
+  .log-source, .empty-icon, .status-pill, .motion-toggle) { border-radius: 999px; }
+.main-content .button { padding-inline: 20px; }
+.main-content .segmented-control { padding: 5px; gap: 5px; }
+.main-content .segmented-control button { min-height: 34px; }
+.main-content .code-editor { border-radius: 24px; }
+.main-content :is(.execution-result, .log-empty, .guide-status, .tool-card) { border-radius: 24px; }
+.main-content .wallpaper-option { border-radius: 22px; }
+.main-content .node-orb, .main-content .node-orb::after { border-radius: 50%; }
+.main-content .workspace-shortcuts a { border-radius: 28px; }
+.main-content .chat-services a { border-radius: 28px; }
+.main-content .tool-card pre { border-radius: 18px; }
+.sidebar.glass, .sidebar .navigation::before, .sidebar .nav-link, .sidebar .nav-more { border-radius: 999px; }
+.section-menu { border-radius: 36px; }
+.section-menu-links a, .section-menu .icon-button { border-radius: 999px; }
+.section-menu-links a { padding-inline: 16px; }
+.section-swipe-hint { display: none; }
+.main-content :is(.workspace-shortcuts a, .chat-services a) {
+  transition: background .25s, box-shadow .25s, translate .3s var(--ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .main-content :is(.workspace-shortcuts a, .chat-services a):hover { translate: 0 -3px; box-shadow: 0 12px 26px #183c4e1c, inset 0 1px #fff; }
+}
+@media (max-width: 650px) {
+  .workspace .hero-card { --radius: 32px; }
+  .workspace .panel { --radius: 30px; }
+  .workspace .metric { --radius: 26px; }
+  .main-content .workspace-shortcuts a { border-radius: 999px; padding-inline: 21px; }
+  .main-content .chat-services a { border-radius: 24px; }
+  .section-menu { border-radius: 32px; }
+  .section-menu-links a { padding-inline: 13px; }
+  .section-swipe-hint { display: flex; align-items: center; align-self: flex-start; gap: 8px; margin: 0 0 18px; padding: 6px 12px; border: 1px solid #ffffffa8; border-radius: 999px; background: #f1faffb5; color: #365866; font-size: 10px; }
+  .section-swipe-hint > span:first-child { font-size: 16px; line-height: 1; }
+  #sectionPosition { padding-left: 9px; border-left: 1px solid #3658662e; font-variant-numeric: tabular-nums; }
+  #toasts { bottom: max(93px, calc(env(safe-area-inset-bottom) + 83px)); }
+}
+html[data-motion="paused"] :is(.pointer-card, .workspace-shortcuts a, .chat-services a) { translate: none !important; transform: none !important; transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .main-content :is(.workspace-shortcuts a, .chat-services a) { translate: none !important; transition: none; }
+}
+@media (forced-colors: active) {
+  .section-swipe-hint { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  #sectionPosition { border-color: CanvasText; }
+}

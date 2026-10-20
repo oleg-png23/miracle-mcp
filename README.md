@@ -30,7 +30,7 @@ The m✦ logo in the navigation rail opens `/ui/welcome.html`. Installation and 
 
 The dashboard opens one screen at a time: Home, Code, Tools, AI Chats, Connection, Appearance, Usage, Events and Setup Guide. Each screen keeps its controls and editor draft while you switch. Links such as `dashboard.html#appearance` open a section directly, and browser Back/Forward returns to the previous section.
 
-On phones, the fixed bottom bar has Home, Code, Tools, Chats and More. More opens the complete section menu. Desktop uses the same sections in its side rail. Individual sections can scroll when their contents are longer than the screen.
+On phones, the fixed bottom bar has Home, Code, Tools, Chats and More. More opens the complete section menu. Desktop uses the same sections in its side rail. On phones, swipe left or right through all nine sections; the position pill shows the current screen. Swipes leave browser edge gestures, vertical scrolling, text selection, editor inputs, sliders and nested scrolling areas available. Individual sections can scroll when their contents are longer than the screen. Pill-shaped controls and generously rounded cards share the glass style. Each visit reveals the heading and content in sequence, including cards loaded later. Only content moves, keeping Beautify lenses stable. Motion follows the Pause motion control and reduced-motion preferences.
 
 Tools loads the catalog advertised by the connected Studio and supports name/description search and schema inspection. It does not execute tools. AI Chats provides shortcuts to supported services and notes for Notion AI and ClickUp Brain. The hosted preview uses a clearly labeled sample tool catalog.
 

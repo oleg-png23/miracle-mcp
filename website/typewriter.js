@@ -52,6 +52,8 @@
     paint(s,canType(s));queue(s,!s.started?900:s.phase==='hold'?1800:120);s.started=true;
   }
   function render() {
+    document.documentElement?.setAttribute('data-motion',paused||reduced.matches?'paused':'running');
+    document.dispatchEvent?.(new CustomEvent('miracle:motion',{detail:{paused:paused||reduced.matches}}));
     controls.forEach(button=>{
       button.hidden=false;button.disabled=reduced.matches;
       button.setAttribute('aria-pressed',String(paused||reduced.matches));
