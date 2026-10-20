@@ -15,7 +15,7 @@ body.marketing-site { background:radial-gradient(ellipse at 100% 36%,#e3edff80,t
 .nav-links a:hover,.nav-links a[aria-current="location"] { background:#ffffff24; color:#fff; opacity:1; }
 .nav-download { min-height:48px; padding:12px 19px; color:#203452; background:#f1f7fff2; border-radius:999px; }
 .nav-progress { position:absolute; inset:auto 28px 4px; height:2px; overflow:hidden; border-radius:999px; pointer-events:none; }
-.nav-progress>span { display:block; height:100%; background:linear-gradient(90deg,#a6c6ff,#c7f4ff); scale:var(--page-progress,0) 1; transform-origin:left; }
+.nav-progress>span { display:block; height:100%; background:linear-gradient(90deg,#a6c6ff,#c7f4ff); transform:scaleX(0); transform-origin:left; }
 .hero { width:calc(100% - 32px); margin:16px; border-radius:56px; min-height:min(960px,calc(100svh - 32px)); background:#2e5271; }
 .hero-shade { background:linear-gradient(100deg,#0c2445c2,#1838566b 54%,#16335124),linear-gradient(0deg,#0c224f66,transparent 45%); }
 .hero-landscape>img { filter:saturate(.85) brightness(.92); }
