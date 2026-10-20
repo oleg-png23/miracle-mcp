@@ -41,33 +41,25 @@
   const css = `
     :host{all:initial;color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:13px;line-height:1.5}
     *{box-sizing:border-box}button,textarea{font:inherit}button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}button:disabled{cursor:wait;opacity:.58}[hidden]{display:none!important}
-    .widget{pointer-events:none;width:min(350px,calc(100vw - 28px));color:#e6f4f1;font:13px/1.55 Inter,ui-sans-serif,system-ui,sans-serif;overflow-wrap:anywhere}.panel,.toggle{pointer-events:auto}
-    .toggle{display:flex;align-items:center;gap:10px;margin-left:auto;max-width:100%;border:1px solid #7ce1c366;border-radius:15px;padding:8px 13px 8px 9px;background:linear-gradient(145deg,#123b3a,#102b32);color:#f3fffc;box-shadow:0 8px 30px #06191c99,inset 0 1px #ffffff12;text-align:left;font-size:12px;font-weight:650;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
-    .toggle:hover{transform:translateY(-2px);border-color:#7ce1c3aa;box-shadow:0 11px 32px #06191cbb,inset 0 1px #ffffff18}.toggle:active{transform:translateY(0)}.toggle-copy{display:block;line-height:1.25}.toggle small{display:block;margin-top:3px;font-size:10px;font-weight:450;color:#a9c9c4}.glyph{width:30px;height:30px;display:grid;place-items:center;border-radius:10px;background:#54d8b322;color:#8ff0d4;flex:none}.glyph svg{width:19px;height:19px;display:block}
-    .panel{margin-bottom:10px;border:1px solid #69c9b14a;border-radius:18px;background:linear-gradient(145deg,#102629f5,#111b23f5);box-shadow:0 20px 60px #020b0dcc,0 2px 10px #0006;backdrop-filter:blur(18px) saturate(135%);-webkit-backdrop-filter:blur(18px) saturate(135%);max-height:calc(100dvh - 110px);overflow:auto;padding:17px;color:#e6f4f1;overscroll-behavior:contain}
-    .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand-mark{width:34px;height:34px;display:grid;place-items:center;flex:none;border:1px solid #5be0bc3d;border-radius:11px;background:#51d7b31a;color:#7be6c8}.brand-mark svg{width:21px;height:21px}h2{font-size:15px;font-weight:680;letter-spacing:-.35px;margin:0;color:#f1fbf8}.eyebrow{display:block;margin-top:1px;color:#8aa9a6;font-size:10px;letter-spacing:.06em;text-transform:uppercase}.intro{margin:13px 0 15px;color:#a8c0bd;font-size:12px;line-height:1.55}.close{border:1px solid transparent;border-radius:9px;background:transparent;padding:4px 9px;font-size:18px;line-height:1.2;color:#9fb8b4}.close:hover{background:#ffffff0d;border-color:#ffffff12;color:#fff}
-    .actions{display:grid;gap:8px}.action{border:1px solid #526c6b80;border-radius:11px;padding:10px 12px;color:#d9eeea;background:#1a3034;text-align:left;font-size:12px;font-weight:570;transition:background .15s ease,border-color .15s ease,transform .15s ease}.action:hover{background:#213c3f;border-color:#668c85}.action:active{transform:translateY(1px)}.primary{background:linear-gradient(135deg,#41c9a2,#219d88);color:#06251f;border-color:#55dfb6;font-weight:700;box-shadow:0 5px 18px #2bb89424}.primary:hover{background:linear-gradient(135deg,#65dfba,#35b99c);border-color:#8ff3d3}.secondary{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    button:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid #76e5c5;outline-offset:3px}.status{margin:12px 0 0;border:1px solid #54797580;border-radius:11px;background:#152d30;padding:10px 12px;font-size:12px;white-space:pre-wrap;color:#c5ddda}.status[data-kind="error"]{background:#382622;border-color:#9c6556;color:#ffd0c2}.status[data-kind="success"]{background:#15372f;border-color:#4eaa86;color:#a8f0d2}.status[data-kind="waiting"]{background:#332f20;border-color:#9d8952;color:#f1dfa4}
-    details{margin-top:13px}summary{font-size:11px;color:#9bb8b4;cursor:pointer;padding:4px 0}textarea{display:block;width:100%;min-height:130px;margin-top:8px;resize:vertical;border:1px solid #486360;border-radius:9px;padding:9px;font-size:11px;line-height:1.6;color:#dff1ed;background:#0d1c20}
-    @media(max-width:450px){:host{font-size:14px}.widget{width:calc(100vw - 24px)}.panel{max-height:calc(100dvh - 96px);padding:15px}.toggle{padding:8px 12px 8px 8px}textarea{font-size:16px}}
+    .widget{pointer-events:none;width:min(350px,calc(100vw - 28px));color:#eef3ff;font:13px/1.55 Inter,ui-sans-serif,system-ui,sans-serif;overflow-wrap:anywhere}.panel,.toggle{pointer-events:auto;position:relative;isolation:isolate;background:transparent}
+    .panel::before,.toggle::before{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;background:var(--surface-wash);-webkit-backdrop-filter:var(--widget-lens,blur(18px)) blur(1px) saturate(1.15);backdrop-filter:var(--widget-lens,blur(18px)) blur(1px) saturate(1.15)}
+    .panel::after,.toggle::after{content:'';position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;box-shadow:inset 0 1px 1px #ffffffa0,inset 1px 0 1px #ffffff35,inset -1px -1px 1px #a9c8ff35;background:radial-gradient(ellipse at 18% 0%,#ffffff18,transparent 65%)}
+    .toggle{--surface-wash:linear-gradient(135deg,#ffffffd9,#eff4ff85 68%,#ffffffbf);display:flex;align-items:center;gap:10px;margin-left:auto;max-width:100%;border:1px solid #ffffffb8;border-radius:999px;padding:12px 20px 12px 14px;color:#202a40;box-shadow:0 8px 26px #0b142d28,0 2px 7px #111d3220;font-size:13px;font-weight:600;letter-spacing:-.2px;text-align:left;overflow:hidden;transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s,border-color .25s;animation:launcher-in .55s cubic-bezier(.2,.8,.2,1) both}
+    .toggle:hover{transform:translateY(-3px);border-color:#fff;box-shadow:0 14px 34px #0b142d35,0 0 20px #c8dbff20}.toggle:active{transform:translateY(0) scale(.96)}.toggle[aria-expanded="true"]{border-color:#c4d7ff;box-shadow:0 9px 30px #0b142d35,0 0 0 3px #ffffff20}.toggle-copy{line-height:1.2}.toggle small{display:none}
+    .toggle .glyph{position:relative;display:grid;place-items:center;flex:none;width:24px;height:24px;color:#26334f}.glyph svg{display:block}.monogram{position:relative;display:inline-block;font:600 29px/1 system-ui,sans-serif;letter-spacing:-3px;padding-right:5px;color:currentColor}.monogram>span{position:absolute;right:-3px;top:-2px;font:14px/1 system-ui,sans-serif;letter-spacing:0}.toggle .monogram{font-size:24px;transition:opacity .25s,transform .4s}.toggle .monogram>span{font-size:10px;top:-1px;right:-1px;transition:rotate .5s}.toggle:hover .monogram>span{rotate:90deg}
+    .panel{--surface-wash:linear-gradient(140deg,#171d2ce8,#232b3dd6 70%,#171d2ce6);margin-bottom:13px;border:1px solid #dce8ff55;border-radius:30px;box-shadow:0 24px 65px #050b1d66,0 4px 15px #050b1d38;max-height:calc(100dvh - 110px);overflow:auto;padding:22px;color:#edf3ff;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#aebcd255 transparent}.panel:not([hidden]){animation:panel-in .4s cubic-bezier(.2,.8,.2,1) both}
+    .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.brand{display:flex;align-items:center;gap:11px;min-width:0}.brand-mark{width:39px;height:39px;display:grid;place-items:center;flex:none;border:1px solid #d7e6ff52;border-radius:15px;background:linear-gradient(135deg,#ffffff20,#a9c6ff0d);color:#f0f5ff;box-shadow:inset 0 1px #ffffff40}.brand-mark .monogram{font-size:29px}h2{font-size:16px;font-weight:650;letter-spacing:-.4px;margin:0;color:#f6f8ff}.eyebrow{display:block;margin-top:2px;color:#aebbd2;font-size:9px;letter-spacing:.14em;text-transform:uppercase}.intro{margin:16px 0 17px;color:#bdc8dc;font-size:12px;line-height:1.65}.close{border:1px solid #ffffff20;border-radius:50%;background:#ffffff08;width:30px;height:30px;padding:0;font-size:19px;line-height:1;color:#bbc9df;transition:background .2s,rotate .3s}.close:hover{background:#ffffff19;color:#fff;rotate:90deg}
+    .actions{display:grid;gap:9px}.action{border:1px solid #c6d7f533;border-radius:16px;padding:11px 13px;color:#e2ebff;background:linear-gradient(135deg,#ffffff0e,#c8daff07);text-align:left;font-size:12px;font-weight:550;box-shadow:inset 0 1px #ffffff0d;transition:background .2s,border-color .2s,transform .3s}.action:hover{background:#c5d9ff1c;border-color:#c6d7f566;transform:translateY(-1px)}.action:active{transform:scale(.98)}.primary{background:linear-gradient(125deg,#ffffffeb,#dbe7ffde);color:#202c45;border-color:#f1f6ffbb;font-weight:700;box-shadow:0 6px 20px #0b142f25,inset 0 1px #fff}.primary:hover{background:linear-gradient(125deg,#fff,#e8efff);border-color:#fff}.secondary{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    button:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid #b9d5ff;outline-offset:3px}.status{margin:14px 0 0;border:1px solid #c2d5ff2e;border-radius:17px;background:#0f172b38;padding:12px 13px;font-size:11px;line-height:1.65;white-space:pre-wrap;color:#c4d1e7}.status[data-kind="error"]{background:#47273166;border-color:#f2a2b14d;color:#ffd3df}.status[data-kind="success"]{background:#263b5e66;border-color:#a1c6ff66;color:#d5e7ff}.status[data-kind="waiting"]{background:#483d2966;border-color:#eed1a44d;color:#f6dfb9}
+    details{margin-top:15px}summary{font-size:11px;color:#b3c2db;cursor:pointer;padding:4px 0}textarea{display:block;width:100%;min-height:130px;margin-top:9px;resize:vertical;border:1px solid #a9c4ef38;border-radius:15px;padding:12px;font-size:11px;line-height:1.6;color:#dfeaff;background:#0c142b70}
+    .toggle-state-icon{position:absolute;inset:0;width:24px!important;height:24px!important;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;overflow:visible}.state-ring{stroke:#6e85ab;stroke-dasharray:35 65;opacity:0;transform-origin:center}.state-check,.state-cross{stroke-dasharray:32;stroke-dashoffset:32;opacity:0;transition:stroke-dashoffset .45s cubic-bezier(.2,.8,.2,1),opacity .2s,transform .4s;transform:scale(.7);transform-origin:center}.state-check{stroke:#4771ba}.state-cross{stroke:#d64c70}
+    .toggle:is([data-state="waiting"],[data-state="success"],[data-state="active"],[data-state="error"]) .monogram{opacity:0;transform:scale(.7)}.toggle[data-state="waiting"] .state-ring{opacity:1;animation:state-spin .9s linear infinite}.toggle:is([data-state="success"],[data-state="active"]) .state-check,.toggle[data-state="error"] .state-cross{stroke-dashoffset:0;opacity:1;transform:scale(1)}.widget-optics{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
+    @keyframes state-spin{to{transform:rotate(360deg)}}@keyframes panel-in{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}@keyframes launcher-in{from{opacity:0;translate:0 14px}to{opacity:1;translate:0 0}}
+    @media(max-width:450px){.widget{width:calc(100vw - 24px)}.panel{max-height:calc(100dvh - 106px);padding:19px;border-radius:27px}textarea{font-size:16px}}
+    @media(prefers-reduced-transparency:reduce){.toggle::before{background:#f1f5ff}.panel::before{background:#20283a}.panel::before,.toggle::before{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
-    @media(forced-colors:active){.panel,.toggle,.action,.status{background:Canvas;color:CanvasText;border:1px solid CanvasText}}
-    .monogram{position:relative;display:inline-block;font:600 29px/1 system-ui,sans-serif;letter-spacing:-3px;padding-right:5px;color:currentColor}.monogram>span{position:absolute;right:-3px;top:-2px;font:14px/1 system-ui,sans-serif;letter-spacing:0}
-    .toggle{gap:9px;border-radius:999px;padding:11px 18px 11px 13px;background:#fffffff5;border:1px solid #ffffffb0;color:#263b42;box-shadow:0 5px 24px #0a152b25,inset 0 1px #fff;font-size:13px;font-weight:550;letter-spacing:-.15px;transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s,background .25s}
-    .toggle:hover{background:#fff;transform:translateY(-2px);border-color:#fff;box-shadow:0 9px 28px #0a152b30}.toggle:active{transform:scale(.96)}.toggle small{display:none}.toggle-copy{line-height:1.2}
-    .toggle .glyph{position:relative;width:23px;height:23px;border-radius:50%;background:transparent;color:#263b42}.toggle .monogram{font-size:23px;transition:opacity .25s,transform .4s}.toggle .monogram>span{font-size:10px;top:-1px;right:-1px}
-    .toggle-state-icon{position:absolute;inset:0;width:23px!important;height:23px!important;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
-    .state-ring{stroke:#95a2a8;stroke-dasharray:35 65;opacity:0;transform-origin:center}.state-check,.state-cross{stroke-dasharray:32;stroke-dashoffset:32;opacity:0;transition:stroke-dashoffset .45s cubic-bezier(.2,.8,.2,1),opacity .2s,transform .4s;transform:scale(.7);transform-origin:center}.state-check{stroke:#299d65}.state-cross{stroke:#ee5253}
-    .toggle:is([data-state="waiting"],[data-state="success"],[data-state="active"],[data-state="error"]) .monogram{opacity:0;transform:scale(.7)}
-    .toggle[data-state="waiting"] .state-ring{opacity:1;animation:state-spin .9s linear infinite}
-    .toggle:is([data-state="success"],[data-state="active"]) .state-check,.toggle[data-state="error"] .state-cross{stroke-dashoffset:0;opacity:1;transform:scale(1)}
-    .panel:not([hidden]){animation:panel-in .32s cubic-bezier(.2,.8,.2,1) both}.brand-mark{color:#e9faf3}.brand-mark .monogram{font-size:29px}
-    @keyframes state-spin{to{transform:rotate(360deg)}}@keyframes panel-in{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
-    @media(max-width:450px){.toggle{padding:11px 17px 11px 13px}}
-    @media(prefers-reduced-motion:reduce){.toggle,.toggle *,.panel:not([hidden]){animation:none!important;transition:none!important}}
-    @media(forced-colors:active){.toggle{background:ButtonFace;color:ButtonText;border:1px solid ButtonText}.state-check,.state-cross,.state-ring{stroke:ButtonText}}
-  `;
-  // Constructed sheets and DOM methods work with strict CSP/Trusted Types.
+    @media(forced-colors:active){.panel,.toggle,.action,.status,textarea,.brand-mark{background:Canvas;color:CanvasText;border:1px solid CanvasText;box-shadow:none}.panel::before,.toggle::before{background:Canvas;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}.panel::after,.toggle::after{display:none}.toggle .glyph,h2,.intro,.eyebrow,summary,.close{color:CanvasText}.state-check,.state-cross,.state-ring{stroke:ButtonText}}
+  `;  // Constructed sheets and DOM methods work with strict CSP/Trusted Types.
   // No host-page HTML sink, external stylesheet request, or page CSS dependency.
   try {
     const sheet = new CSSStyleSheet(); sheet.replaceSync(css);
@@ -103,6 +95,7 @@
     ['state-cross','path',{d:'m7 7 10 10m0-10L7 17'}]
   ]){const shape=document.createElementNS('http://www.w3.org/2000/svg',tag);shape.setAttribute('class',className);for(const[k,v]of Object.entries(attrs))shape.setAttribute(k,v);stateIcon.append(shape);}
   $('toggle').querySelector('.glyph').append(stateIcon);
+  const glass = globalThis.MiracleWidgetGlass?.mount(shadow);
   $('prompt').value = INTRO;
   let lastEditor = null;
   function status(message, kind = 'info', code = '') {
@@ -116,11 +109,22 @@
     $('toggle').title='Miracle · '+label;
     if (checking) $('status').dataset.kind = 'waiting';
   }
+  let closingPanel = null;
   function open(value) {
-    $('panel').hidden = !value; $('toggle').setAttribute('aria-expanded', String(value));
-    if (value) $('agent-start').focus(); else $('toggle').focus();
+    closingPanel?.cancel(); closingPanel = null;
+    $('toggle').setAttribute('aria-expanded', String(value));
+    if (value) {
+      $('panel').hidden = false; glass?.refresh(); $('agent-start').focus();
+    } else {
+      $('toggle').focus();
+      if (!$('panel').hidden && $('panel').animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const animation = $('panel').animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(8px) scale(.97)'}],{duration:170,easing:'ease-in',fill:'both'});
+        closingPanel = animation;
+        animation.onfinish = () => { if (closingPanel !== animation) return; $('panel').hidden = true; animation.cancel(); closingPanel = null; glass?.refresh(); };
+      } else { $('panel').hidden = true; glass?.refresh(); }
+    }
   }
-  $('toggle').onclick = () => open($('panel').hidden);
+  $('toggle').onclick = () => open($('toggle').getAttribute('aria-expanded') !== 'true');
   $('close').onclick = () => open(false);
   shadow.addEventListener('keydown', event => { if (event.key === 'Escape') open(false); });
   function editable(el) {
