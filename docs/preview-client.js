@@ -28,6 +28,9 @@
       {at:'Demo',src:'studio',text:'Illustrative Studio connection with 12 tools.'}]});
   async function request(_address,path) {
     if(path === '/api/status') return status();
+    if(path === '/api/tools/list') return {ok:true,demo:true,tools:[
+      {name:'get_scene_info',description:'Example: inspect the open place.',inputSchema:{type:'object',properties:{}},annotations:{readOnlyHint:true}},
+      {name:'run_code',description:'Example: execute Luau in the local application. Execution is disabled in this preview.',inputSchema:{type:'object',properties:{code:{type:'string'}},required:['code']}}]};
     if(path === '/api/auth') return {ok:true};
     throw new Error('Preview only. Download Miracle and open the local workspace to use Studio tools. Nothing was sent.');
   }

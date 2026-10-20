@@ -26,6 +26,14 @@ The bridge creates its access token locally. It does not belong in Studio, an AI
 
 The m✦ logo in the navigation rail opens `/ui/welcome.html`. Installation and the first extension launch open the welcome page. Browser startup or a later launch can show it again after five hours. During the cooldown, toolbar clicks open the workspace and browser startup stays quiet. Existing welcome/workspace tabs are reused.
 
+## Workspace sections
+
+The dashboard opens one screen at a time: Home, Code, Tools, AI Chats, Connection, Appearance, Usage, Events and Setup Guide. Each screen keeps its controls and editor draft while you switch. Links such as `dashboard.html#appearance` open a section directly, and browser Back/Forward returns to the previous section.
+
+On phones, the fixed bottom bar has Home, Code, Tools, Chats and More. More opens the complete section menu. Desktop uses the same sections in its side rail. Individual sections can scroll when their contents are longer than the screen.
+
+Tools loads the catalog advertised by the connected Studio and supports name/description search and schema inspection. It does not execute tools. AI Chats provides shortcuts to supported services and notes for Notion AI and ClickUp Brain. The hosted preview uses a clearly labeled sample tool catalog.
+
 ## Appearance
 
 The new Coast, Alps and Aurora wallpapers are optimized original landscape illustrations, 1672 × 941 pixels, together about 459 KB. The remaining five landscapes use lightweight 1920-pixel derivatives; all eight active backgrounds total about 1.27 MB. The original 4K collection remains in the source repository. Wallpapers and thumbnails are separate files; provenance and actual dimensions are recorded in `assets/bg/PHOTO-SOURCES.md`.

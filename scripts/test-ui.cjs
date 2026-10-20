@@ -6,6 +6,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { chromium } = require('playwright');
 const sharp = require('sharp');
+const {openSection,selectMaterial}=require('./ui-navigation.cjs');
 const base = process.env.MIRACLES_UI_URL || 'http://127.0.0.1:19737';
 const root = path.resolve(__dirname, '..');
 const out = path.join(root, '.mcp_cache/qa');
@@ -45,7 +46,7 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
       assert.deepEqual(missing, []);
     });
     await check('real refraction is bounded and light mode disables effects', async () => {
-      await page.locator('[data-material="clear"]').click();
+      await selectMaterial(page, 'clear');
       await page.locator('.hero-card').scrollIntoViewIfNeeded();
       await page.waitForFunction(() => !!document.querySelector('feImage')?.getAttribute('href'));
       const hero = page.locator('.hero-card'), on = await hero.screenshot();
@@ -56,7 +57,7 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
       assert(changed > 100);
       assert.equal(await page.locator('[data-glass-active="true"]').count(), 2);
       assert.equal(await page.locator('feDisplacementMap').count(), 6);
-      await page.locator('[data-material="light"]').click();
+      await selectMaterial(page, 'light');
       assert.equal(await hero.evaluate(el => getComputedStyle(el, '::before').backdropFilter), 'none');
     });
     await check('rail hover magnifies icons and the tooltip sits above the hero card', async () => {
@@ -77,7 +78,7 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
       await page.mouse.move(0, 0);
     });
     await check('cards tilt with the pointer and settle without moving the rail logo', async () => {
-      await page.locator('[data-material="clear"]').click();
+      await selectMaterial(page, 'clear');
       await page.evaluate(() => { document.activeElement.blur(); scrollTo({ top: 0, behavior: 'instant' }); });
       await page.mouse.move(0, 0); await page.waitForTimeout(450);
       const logo = page.locator('.rail-brand'), logoBefore = await logo.boundingBox();
@@ -92,32 +93,25 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
       assert(Math.abs(tilted.y - before.y) > .5);
       await page.mouse.move(0, 0);
       await page.waitForFunction(() => getComputedStyle(document.querySelector('.hero-card')).transform === 'none');
-      await page.locator('[data-material="light"]').click();
+      await selectMaterial(page, 'light');
       await hero.hover({ position: { x: 30, y: 30 } });
       await page.waitForTimeout(400);
       assert.match(await hero.evaluate(el => getComputedStyle(el).transform), /^matrix3d/);
       assert.equal(await hero.evaluate(el => getComputedStyle(el, '::before').backdropFilter), 'none');
       await page.mouse.move(0, 0);
     });
-    await check('scrolling gently trails the rail with the logo anchored inside it', async () => {
-      const before = await page.evaluate(() => {
-        const logo = document.querySelector('.rail-brand').getBoundingClientRect();
-        const rail = document.querySelector('.sidebar').getBoundingClientRect();
-        return {offset: logo.top - rail.top, railY: rail.top};
-      });
-      await page.evaluate(() => scrollBy({ top: 320, behavior: 'instant' }));
-      await page.waitForTimeout(65);
-      const after = await page.evaluate(() => {
-        const logo = document.querySelector('.rail-brand').getBoundingClientRect();
-        const rail = document.querySelector('.sidebar').getBoundingClientRect();
-        return {offset: logo.top - rail.top, railY: rail.top};
-      });
-      assert(Math.abs(after.offset - before.offset) < .1);
-      assert(after.railY - before.railY > .3 && after.railY - before.railY <= 16);
-      await page.waitForFunction(() => Math.abs(parseFloat(getComputedStyle(document.querySelector('.sidebar')).getPropertyValue('--rail-drift'))) < .1);
-      await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+    await check('sections preserve editor drafts and browser navigation', async () => {
+      await openSection(page, 'executor');
+      await page.locator('#luauCode').fill('-- section draft');
+      await openSection(page, 'appearance');
+      assert(await page.locator('[data-workspace-screen="executor"]').isHidden());
+      await page.goBack();
+      await page.locator('[data-workspace-screen="executor"]').waitFor({state:'visible'});
+      assert.equal(await page.locator('#luauCode').inputValue(), '-- section draft');
+      await openSection(page, 'overview');
     });
     await check('instructions expand smoothly, reverse mid-animation and respect reduced motion', async () => {
+      await openSection(page, 'executor');
       const details = page.locator('#aiPromptDetails'), summary = details.locator('summary');
       const content = details.locator('.fold-content');
       await summary.click();
@@ -152,12 +146,14 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
       assert.match(await page.locator('#executionOutput').innerText(), /line 1/);
     });
     await check('native MCP disabled status gives the real setup action', async () => {
+      await openSection(page, 'connection');
       await post('/__fixture/reset', { state: 'mcp_disabled' });
       await page.evaluate(() => MiraclesDashboard.refresh());
       assert.match(await page.locator('#connectionFeedback').innerText(), /MCP|Assistant/);
       await post('/__fixture/reset'); await page.evaluate(() => MiraclesDashboard.refresh());
     });
     await check('responsive dashboard and mobile dock', async () => {
+      await openSection(page, 'overview');
       await page.setViewportSize({ width: 1920, height: 1080 });
       assert((await page.locator('.workspace').boundingBox()).width > 1450);
       await page.screenshot({ path: path.join(out, 'dashboard-desktop.png'), fullPage: true });
@@ -169,15 +165,20 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
       await page.setViewportSize({ width: 320, height: 740 });
       const narrowNav = await page.locator('.sidebar').boundingBox();
       assert(narrowNav.x >= 0 && narrowNav.x + narrowNav.width <= 320);
-      const lastLink = await page.locator('.sidebar .nav-link').last().boundingBox();
+      const lastLink = await page.locator('#openSections').boundingBox();
       assert(lastLink.x + lastLink.width <= 320);
+      await openSection(page, 'usage');
+      assert(await page.locator('[data-workspace-screen="overview"]').isHidden());
+      await openSection(page, 'setupGuide');
+      assert(await page.locator('#setupGuide').isVisible());
+      await openSection(page, 'overview');
       assert.deepEqual(errors, []);
     });
     await check('welcome has a separate responsive layout and real bridge status', async () => {
       await page.setViewportSize({ width: 1440, height: 1000 });
       await page.goto(base + '/ui/welcome.html');
       await page.waitForSelector('body[data-wallpaper][data-studio-ready="true"]');
-      assert.equal((await page.locator('#welcomeTitle').textContent()).trim(), 'Welcome to Miracle.');
+      assert.equal(await page.locator('#welcomeTitle').getAttribute('aria-label'), 'Welcome to Miracle.');
       const copy = await page.locator('.welcome-copy').boundingBox();
       const connection = await page.locator('.welcome-connect').boundingBox();
       assert(copy.x + copy.width < connection.x);

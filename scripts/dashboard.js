@@ -193,7 +193,7 @@
   $('#checkConnection').onclick = checkConnection;
   $('#dashPill').onclick = checkConnection;
   $('#studioStatus').onclick = () => {
-    $('#setupGuide').scrollIntoView({ behavior: "smooth", block: "start" });
+    window.MiracleSections.open('setupGuide');
     toast($('#connectionFeedback').textContent);
   };
 
@@ -264,30 +264,6 @@
     try { await client.copy(recent.map(entry => `[${entry.at || '—'}] ${entry.src || 'bridge'}: ${String(entry.text || '')}`).join('\n')); toast('Events copied'); }
     catch { toast('Could not copy. Select the event text manually.', true); }
   });
-  $('#openHelp').addEventListener('click', () => $('#setupGuide').scrollIntoView({behavior:'smooth', block:'start'}));
-  function selectNav(target) {
-    $$('.navigation .nav-link').forEach(link => {
-      const active = link.getAttribute('href') === target;
-      link.classList.toggle('active', active);
-      if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
-    });
-    requestAnimationFrame(positionNavIndicator);
-  }
-  function positionNavIndicator() {
-    const nav=$('.navigation'),active=nav.querySelector('.active');
-    nav.classList.toggle('has-selection',Boolean(active));
-    if(!active) return;
-    const outer=nav.getBoundingClientRect(),inner=active.getBoundingClientRect();
-    nav.style.setProperty('--nav-x',`${inner.left-outer.left}px`);
-    nav.style.setProperty('--nav-y',`${inner.top-outer.top}px`);
-    nav.style.setProperty('--nav-width',`${inner.width}px`);
-    nav.style.setProperty('--nav-height',`${inner.height}px`);
-  }
-  if('ResizeObserver' in window) new ResizeObserver(positionNavIndicator).observe($('.navigation'));
-  document.fonts?.ready.then(positionNavIndicator);
-  $$('.navigation .nav-link').forEach(link => link.addEventListener('click', () => selectNav(link.getAttribute('href'))));
-  window.addEventListener('hashchange', () => selectNav(location.hash || '#overview'));
-  selectNav(location.hash || '#overview');
 
   const today = new Date();
   $('#localDate').dateTime = today.toISOString();
