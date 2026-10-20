@@ -72,3 +72,13 @@
 .welcome-type-line.is-current::after{content:'';display:inline-block;width:.035em;height:.72em;margin-left:.08em;background:#d5ffea;vertical-align:-.025em;border-radius:2px;animation:welcome-caret 1.05s steps(1,end) infinite}
 @keyframes welcome-caret{0%,48%{opacity:1}49%,100%{opacity:0}}
 @media(prefers-reduced-motion:reduce){.welcome-type-line::after{display:none}}
+
+/* Thirty full labels reserve one stable slot on narrow and wide screens. */
+.welcome-idea-title { display:flex; align-items:center; gap:10px; }
+#welcomePromptCount { font:9px var(--mono); letter-spacing:0; color:#e5fff1c9; white-space:nowrap; }
+.welcome-prompt-copy { display:grid; flex:1; min-width:0; text-align:left; }
+.welcome-prompt-copy>span { grid-area:1/1; min-width:0; overflow-wrap:anywhere; }
+.welcome-prompt-measure { visibility:hidden; pointer-events:none; }
+.welcome-prompt-line.is-typing::after { content:''; display:inline-block; width:1px; height:.85em; margin-left:2px; margin-right:-3px; background:currentColor; vertical-align:-.05em; animation:welcome-caret 1.05s steps(1,end) infinite; }
+@media(prefers-reduced-motion:reduce) { .welcome-prompt-line::after { display:none; } }
+@media(forced-colors:active) { #welcomePromptCount { color:CanvasText; } }
