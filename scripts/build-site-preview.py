@@ -19,7 +19,7 @@ def build():
         shutil.copy2(ROOT / 'assets/bg' / name, destination)
     scripts = preview / 'scripts'
     scripts.mkdir(exist_ok=True)
-    names = ['setup-guide', 'appearance', 'dashboard', 'welcome', 'rail', 'usage',
+    names = ['setup-guide', 'appearance', 'dashboard', 'welcome', 'welcome-prompts', 'rail', 'usage',
              'chat-prompt', 'executor', 'dashboard-glass', 'surfaces', 'welcome-motion', 'typewriter', 'workspace-sections', 'workspace-motion', 'desktop-motion', 'tool-catalog']
     for name in names:
         source = (ROOT / 'scripts' / f'{name}.js').read_text()

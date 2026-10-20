@@ -57,7 +57,8 @@
     button.addEventListener('click', async () => {
       const feedback = document.getElementById('promptFeedback');
       clearTimeout(feedbackTimer);
-      try { await client.copy(button.dataset.copyPrompt); feedback.textContent = 'Copied. Bring it to your AI chat.'; }
+      const prompt=window.MiraclePrompts?.prepareCopy(button)||button.dataset.copyPrompt;
+      try { await client.copy(prompt); feedback.textContent = 'Copied. Bring it to your AI chat.'; }
       catch { feedback.textContent = 'Select the prompt text and copy it.'; }
       feedbackTimer = setTimeout(() => { feedback.textContent = 'Copy a prompt for your chat'; }, 5000);
     });
