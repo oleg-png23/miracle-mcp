@@ -20,7 +20,7 @@
     const effect={finish(){animation.cancel();cleanup();effects.delete(effect);if(own.get(channel)===effect)own.delete(channel);}};
     own.set(channel,effect);effects.add(effect);animation.onfinish=effect.finish;
   }
-  const selector='.nav > :not(.nav-progress),.hero-copy > *, .preview-top > *, .preview-rail > *, .preview-main > *, .chat-note > *, .hero-bottom > :not(.glass), .scenery-switch > *, .compatibility-inner > :not(.compatibility-window), .section-heading > *, .workflow-illustration > *, .feature-list > article, .atmosphere-heading > *, .landscape-grid > *, #preview > :not(.demo-grid), .demo-grid > a, .setup-intro > *, .setup > .setup-steps > li, .questions > div:not(.faq-list) > *, .faq-list > details, .closing > *, .footer > *';
+  const selector='.nav > :not(.nav-progress),.hero-copy > *, .preview-top > *, .preview-rail > *, .preview-main > *, .chat-note > *, .hero-bottom > :not(.glass), .scenery-switch > *, .compatibility-inner > :not(.compatibility-window), .section-heading > *, .workflow-illustration > *, .feature-list > article, .idea-console, .atmosphere-heading > *, .landscape-grid > *, #preview > :not(.demo-grid), .demo-grid > a, .setup-intro > *, .setup > .setup-steps > li, .questions > div:not(.faq-list) > *, .faq-list > details, .closing > *, .footer > *';
   const targets=[...document.querySelectorAll(selector)];
   const settleReveal=el=>{seen.add(el);el.classList.remove('site-reveal-pending');};
   function reveal(el,index=0){
