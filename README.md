@@ -15,7 +15,11 @@ The workspace includes a compact glass navigation rail, a welcome page, optimize
 
 Python uses the standard library. Node.js is needed only for development and browser tests.
 
-## Start
+## Install a release
+
+Download `miracle-mcp-2.2.0.zip` and extract both folders together. Load **plugin/** as the unpacked Chrome/Edge extension, enable Studio MCP, then run **release/run.bat**. The local bridge serves the interface from the sibling plugin folder. See [the installation guide](INSTALL.md) for the full Russian instructions.
+
+## Start from source
 
 1. Open a place in Roblox Studio. In Assistant, select **… → Manage MCP Servers → Enable Studio as MCP Server**.
 2. Run `run.bat` from this folder. The launcher starts the bridge and opens the workspace at `http://127.0.0.1:19731/app`.
@@ -106,7 +110,7 @@ UI tests use local synthetic chats and a fake Studio transport. They do not send
 
 The glass check compares pixels with refraction enabled and zeroed against a checkerboard backdrop, verifies the stable lens interior, depth, material switches, responsive map sizes, offscreen suspension, system transparency, forced colors and the unsupported-engine fallback. Screenshots are saved in `.mcp_cache/qa/`.
 
-`python scripts/build-release.py` creates the extension, standalone website, wallpaper archives and SHA-256 checksums in `.mcp_cache/release/` from an explicit allowlist. The site source is in `website/`; `docs/` is its GitHub Pages publication copy. The archives exclude local tokens, caches, user data, tests and unrelated workspace folders.
+`python scripts/build-release.py` creates the extension, standalone website, wallpaper archives and SHA-256 checksums in `.mcp_cache/release/` from an explicit allowlist. The site source is in `website/`; `docs/` is its GitHub Pages publication copy. The main ZIP has exactly `plugin/` and `release/` at its root. The archives exclude local tokens, caches, user data, tests and unrelated workspace folders. A manifest version change merged into main triggers the release workflow: it tests the source, builds all archives, uploads them into a draft GitHub release and publishes the complete set. Published releases are preserved on retries.
 
 ## License
 

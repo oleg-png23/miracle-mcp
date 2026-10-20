@@ -14,6 +14,8 @@ Then open http://127.0.0.1:19739. Wallpaper selection is stored only in this bro
 
 The workspace preview is illustrative, rather than a live connection to Roblox Studio. The page works without JavaScript; the landscape picker, copy button, and automatic copyright year are progressive enhancements. Native FAQ disclosures work without scripts. The navigation and main workspace preview use bounded, cached lens maps for real backdrop refraction in Chromium, with CSS fallback and respect for reduced transparency. No optical work runs continuously while idle.
 
+The landing page has its own pill theme and all-screen motion controller. Scroll entrances, the service strip and ambient hero effects also run on touch devices. Pointer tilt is limited to non-optical cards; glass containers stay stationary. Pause motion, reduced motion and hidden/offscreen state stop the effects. The setup section explains the two-folder ZIP and links to INSTALL.md.
+
 Font license: `assets/fonts/OFL-Inter.txt`. Landscape sources: `assets/bg/PHOTO-SOURCES.md`. Source code follows the root project's MIT license.
 
 ## Interactive app previews

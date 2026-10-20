@@ -45,6 +45,7 @@ def build():
         shutil.copy2(ROOT / 'scripts' / f'{name}.js', site / f'{name}.js')
     shutil.copy2(ROOT / 'styles/desktop-motion.css', site / 'desktop-motion.css')
     shutil.copy2(ROOT / 'styles/typewriter.css', site / 'typewriter.css')
+    shutil.copy2(ROOT / 'INSTALL.md', site / 'INSTALL.md')
     # GitHub Pages serves /docs; keep its source identical to the standalone site.
     shutil.copytree(site, ROOT / 'docs', dirs_exist_ok=True)
 

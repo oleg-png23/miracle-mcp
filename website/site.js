@@ -32,8 +32,8 @@
     try { await preload.decode(); } catch { announce('This landscape could not load. Try again.'); return; }
     if (request !== sceneRequest) return;
     applyScene(name);
-    photo.getAnimations?.().forEach(animation=>animation.cancel());
-    if(document.documentElement.dataset.desktopMotion==='on'&&photo.animate)photo.animate([{opacity:.5},{opacity:1}],{duration:550,easing:'ease-out'});
+    photo.getAnimations?.().filter(animation=>animation.id==='site-scene-fade').forEach(animation=>animation.cancel());
+    if(document.documentElement.dataset.siteMotion==='on'&&photo.animate){const fade=photo.animate([{opacity:.5},{opacity:1}],{duration:550,easing:'ease-out'});fade.id='site-scene-fade';}
     if (scrollToHero) document.querySelector('.hero').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.motion==='paused' ? 'instant' : 'smooth' });
     announce(`${name.charAt(0).toUpperCase() + name.slice(1)} landscape selected`);
   }
@@ -50,7 +50,7 @@
   document.querySelectorAll('[data-copy]').forEach(button => button.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(button.dataset.copy);
-      announce('Copied run.bat');
+      announce('Copied '+button.dataset.copy);
       button.querySelector('span').textContent = 'Copied ✓';
       setTimeout(() => { button.querySelector('span').innerHTML = 'Copy <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>'; }, 2200);
     } catch {
