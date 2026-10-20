@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {chromium} = require('playwright');
 const sharp = require('sharp');
+const {openSection,selectMaterial}=require('./ui-navigation.cjs');
 const base = process.env.MIRACLES_UI_URL || 'http://127.0.0.1:19737';
 const out = path.resolve(__dirname, '../.mcp_cache/qa');
 fs.mkdirSync(out, {recursive: true});
@@ -36,7 +37,7 @@ async function difference(a, b, edge = 36) {
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(base + '/ui/dashboard.html');
     await page.waitForSelector('body[data-connection="online"]');
-    await page.locator('[data-material="clear"]').click();
+    await selectMaterial(page, 'clear');
     await page.locator('.hero-card').scrollIntoViewIfNeeded();
     await page.mouse.move(0, 0);
     await page.waitForFunction(() => document.querySelector('.hero-card').dataset.glassActive === 'true');
@@ -86,14 +87,14 @@ async function difference(a, b, edge = 36) {
     });
     assert.equal(scales.channels, 3);
     assert(scales.high > scales.low * 2);
-    await page.locator('[data-material="frosted"]').click();
+    await selectMaterial(page, 'frosted');
     assert.match(await hero.evaluate(el => getComputedStyle(el, '::before').backdropFilter), /blur\(18px\)/);
-    await page.locator('[data-material="light"]').click();
+    await selectMaterial(page, 'light');
     assert.equal(await hero.evaluate(el => getComputedStyle(el, '::before').backdropFilter), 'none');
     assert.equal(await page.locator('[data-glass-active="true"]').count(), 0);
     console.log('PASS depth, RGB dispersion, frosted and disabled modes');
 
-    await page.locator('[data-material="clear"]').click();
+    await selectMaterial(page, 'clear');
     await page.setViewportSize({width: 390, height: 844});
     await hero.scrollIntoViewIfNeeded();
     await page.waitForFunction(() => {
@@ -106,7 +107,7 @@ async function difference(a, b, edge = 36) {
     await page.waitForFunction(() => document.querySelector('.hero-card').dataset.glassActive === 'true');
     await page.waitForTimeout(250);
     await page.screenshot({path: path.join(out, 'liquid-glass-mobile.png')});
-    await page.locator('#events').scrollIntoViewIfNeeded();
+    await openSection(page, 'events');
     await page.waitForFunction(() => document.querySelector('.hero-card').dataset.glassActive === 'false');
     assert.equal(await page.locator('#events').getAttribute('data-glass-passive'), 'true');
     console.log('PASS responsive geometry and offscreen filter suspension');
