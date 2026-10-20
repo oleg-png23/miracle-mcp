@@ -115,3 +115,8 @@ html:not([data-site-motion="on"]) .compatibility-brands[aria-hidden="true"] { di
 @media(max-width:650px) { .install-package { margin-block:23px; max-width:none; }.install-package>div { border-radius:22px; padding:15px 12px; }.install-package small { font-size:8px; } }
 
 .chat-note [data-type-line].is-current::after { position:static; display:inline-block; width:1px; height:.85em; margin-left:2px; margin-right:-3px; vertical-align:-.05em; }
+
+/* Official icon geometry is shared across the marketing interface. */
+.note-spark>.icon { width:26px; height:26px; }.note-arrow>.icon { width:18px; height:18px; }.workflow-connector>.icon { width:18px; height:18px; margin:auto; }
+
+.icon.icon-inline { display:inline-block; width:1em; height:1em; vertical-align:-.12em; }.preview-dots>.icon { width:18px; height:18px; }.rail-end>.icon { width:19px; height:19px; }.studio-orb>.icon { width:27px; height:27px; }
