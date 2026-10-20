@@ -32,7 +32,9 @@
     try { await preload.decode(); } catch { announce('This landscape could not load. Try again.'); return; }
     if (request !== sceneRequest) return;
     applyScene(name);
-    if (scrollToHero) document.querySelector('.hero').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    photo.getAnimations?.().forEach(animation=>animation.cancel());
+    if(document.documentElement.dataset.desktopMotion==='on'&&photo.animate)photo.animate([{opacity:.5},{opacity:1}],{duration:550,easing:'ease-out'});
+    if (scrollToHero) document.querySelector('.hero').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.motion==='paused' ? 'instant' : 'smooth' });
     announce(`${name.charAt(0).toUpperCase() + name.slice(1)} landscape selected`);
   }
 

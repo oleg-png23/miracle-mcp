@@ -4,9 +4,11 @@
   const screens=[...document.querySelectorAll('[data-workspace-screen]')];
   if(!screens.length)return;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+  const desktop=matchMedia('(min-width:651px) and (hover:hover) and (pointer:fine)');
   const heading=document.getElementById('sectionHeading');
   const menu=document.getElementById('sectionMenu');
   const selector='.page-heading > *, .hero-card > *, .metric > *, .panel > :not(.chat-services):not(.tool-catalog), .workspace-shortcuts > a, .chat-services > a, .tool-catalog > details';
+  const desktopSelector='.page-heading > :not(div), .page-heading > div > *, .hero-card > *, .metric > *, .panel > :not(.chat-services):not(.tool-catalog):not(form):not(.usage-metrics):not(.usage-directions):not(.usage-table-wrap):not(.log-entries):not(.setup-steps), .panel form > *, .workspace-shortcuts > a, .chat-services > a, .tool-catalog > details, .usage-metrics > *, .usage-directions > *, .usage-table-wrap tbody > tr, .log-entries > .log-entry, .setup-guide .setup-steps > li';
   const active=new Map(),waiting=new Map();
   let screen=null,seen=new WeakSet(),direction=0,frame=0,paused=false;
   try{paused=(localStorage.getItem('miracle.motionPaused')??localStorage.getItem('miracle.welcome.motionPaused'))==='true';}catch{/* optional */}
@@ -25,7 +27,7 @@
     const animation=el.animate([
       {opacity:0,translate:`${direction*distance}px 18px`},
       {opacity:1,translate:'0px 0px'}
-    ],{duration:520,delay:Math.min(index*35,210),easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'});
+    ],{duration:desktop.matches?650:520,delay:Math.min(index*(desktop.matches?55:35),desktop.matches?385:210),easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'});
     active.set(el,animation);
     animation.onfinish=()=>{if(active.get(el)===animation)active.delete(el);animation.cancel();};
   }
@@ -38,7 +40,7 @@
   },{threshold:.06}):null;
   function collect(){
     frame=0;if(!screen||screen.hidden)return;
-    const nodes=[...(heading&&!heading.hidden?heading.children:[]),...screen.querySelectorAll(selector)];
+    const nodes=[...(heading&&!heading.hidden?heading.children:[]),...screen.querySelectorAll(desktop.matches?desktopSelector:selector)];
     let index=0;
     for(const el of nodes){
       if(seen.has(el)||waiting.has(el)||el.hidden||!el.getClientRects().length)continue;
@@ -72,7 +74,7 @@
   // The native dialog owns focus and Escape; animate only its non-glass contents.
   if(menu&&'MutationObserver'in window)new MutationObserver(()=>{
     if(!menu.open)return;
-    [...menu.children].forEach((el,index)=>{
+    [...menu.querySelectorAll('.section-menu-heading > *, .section-menu-links > a')].forEach((el,index)=>{
       seen.delete(el);play(el,index);
     });
   }).observe(menu,{attributes:true,attributeFilter:['open']});
