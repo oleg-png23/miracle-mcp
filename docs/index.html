@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="site.css"><link rel="stylesheet" href="demo-cards.css"><link rel="stylesheet" href="typewriter.css">
   <script src="site.js" defer></script><script src="typewriter.js" defer></script>
   <script src="optics.js" defer></script>
+  <link rel="stylesheet" href="idea-playground.css"><script src="idea-playground.js" defer></script>
 <link rel="stylesheet" href="site-theme.css"><link rel="stylesheet" href="site-motion.css"><script src="surfaces.js" defer></script><script src="site-motion.js" defer></script></head>
 <body class="marketing-site">
   <a class="skip" href="#main">Skip to content</a>
@@ -34,7 +35,7 @@
   <header class="header" id="header">
     <nav class="nav glass" aria-label="Main navigation">
       <a href="#" class="brand" aria-label="Miracle home"><span class="mark" aria-hidden="true">m<span>✦</span></span><span>miracle<span class="brand-period">.</span></span></a>
-      <div class="nav-links"><a href="#preview">Live preview</a><a href="#experience">Experience</a><a href="#setup">Get started</a><a href="#questions">Questions</a></div>
+      <div class="nav-links"><a href="#playground">Playground</a><a href="#preview">Live preview</a><a href="#experience">Experience</a><a href="#setup">Get started</a><a href="#questions">Questions</a></div>
       <a class="nav-download" href="https://github.com/oleg-png23/miracle-mcp/releases/latest">Get Miracle <svg class="icon"><use href="#i-arrow"/></svg></a>
       <span class="nav-progress" aria-hidden="true"><span></span></span>
     </nav>
@@ -76,6 +77,72 @@
       <div class="experience-layout">
         <div class="workflow-illustration" aria-label="Connection from AI chat through Miracle to local Studio tools"><div class="workflow-label"><span class="live-dot"></span> THE LOCAL ROUTE</div><div class="workflow-row"><span class="workflow-symbol"><svg class="icon"><use href="#i-code"/></svg></span><div><strong>A thought in your chat</strong><span>Describe what you want to create</span></div><span class="workflow-step">01</span></div><div class="workflow-connector" aria-hidden="true">↓</div><div class="workflow-row focus"><span class="workflow-symbol"><span class="mark" aria-hidden="true">m<span>✦</span></span></span><div><strong>A connection through Miracle</strong><span>Tool calls travel through your local bridge</span></div><span class="workflow-step">02</span></div><div class="workflow-connector" aria-hidden="true">↓</div><div class="workflow-row"><span class="workflow-symbol"><span class="studio-logo" aria-hidden="true"></span></span><div><strong>A change in your world</strong><span>Studio runs the available MCP tools</span></div><span class="workflow-step">03</span></div><div class="workflow-foot"><svg class="icon"><use href="#i-shield"/></svg> The bridge stays on your machine.</div></div>
         <div class="feature-list"><article><span class="feature-index">01 / CONNECT</span><h3>Your chat. Your choice.</h3><p>Start a Miracle session inside a supported AI chat. Keep working where the conversation already happens.</p></article><article><span class="feature-index">02 / CREATE</span><h3>Give ideas a place to land.</h3><p>Miracle discovers the tools advertised by Studio's built-in MCP server, passes tool calls along, and brings the results back.</p></article><article><span class="feature-index">03 / MAKE IT YOURS</span><h3>A calmer creative space.</h3><p>A glass workspace, scenic wallpapers, connection details, an optional Luau editor, and session usage — all in one place.</p></article></div>
+      </div>
+    </section>
+
+    <section id="playground" class="idea-playground section wrap" aria-labelledby="playground-title" data-idea-world="sky" data-idea-light="dawn" data-idea-phase="ready">
+      <div class="section-heading"><p class="eyebrow">A SMALL SPARK. A NEW POSSIBILITY.</p><h2 id="playground-title">Every world starts<br>with a <em>what if.</em></h2><p class="section-intro">Pick a world. Set the light. Add your own little twist. Follow your idea through Miracle and take a ready-to-use brief into your AI chat.</p></div>
+      <div class="idea-console">
+        <form class="idea-form" id="ideaForm">
+          <fieldset class="idea-controls" id="ideaControls" disabled>
+            <legend class="idea-kicker">THE MIRACLE PLAYGROUND <span aria-hidden="true">✦</span></legend>
+            <fieldset class="idea-choice"><legend>01 <span>Choose a world</span></legend><div class="idea-pills" role="group" aria-label="World concept"><button type="button" data-idea-preset="sky" aria-pressed="true"><span aria-hidden="true">☁</span>Sky islands</button><button type="button" data-idea-preset="neon" aria-pressed="false"><span aria-hidden="true">◇</span>Neon city</button><button type="button" data-idea-preset="moon" aria-pressed="false"><span aria-hidden="true">☾</span>Moon garden</button></div></fieldset>
+            <fieldset class="idea-choice"><legend>02 <span>Find the feeling</span></legend><div class="idea-pills idea-lights" role="group" aria-label="Scene lighting"><button type="button" data-idea-mood="dawn" aria-pressed="true"><span class="idea-light-dot dawn" aria-hidden="true"></span>Soft dawn</button><button type="button" data-idea-mood="golden" aria-pressed="false"><span class="idea-light-dot golden" aria-hidden="true"></span>Golden hour</button><button type="button" data-idea-mood="night" aria-pressed="false"><span class="idea-light-dot night" aria-hidden="true"></span>After dark</button></div></fieldset>
+            <label class="idea-input-label" for="ideaInput"><span>03</span>Your unexpected twist</label>
+            <textarea id="ideaInput" class="idea-input" rows="3" maxlength="180" required aria-describedby="ideaHint" placeholder="A floating skatepark above a sea of clouds…">A chain of floating islands with a glowing portal and tiny bridges.</textarea>
+            <p class="idea-hint" id="ideaHint">Your idea stays in this page. Make it as strange as you like.</p>
+            <div class="idea-actions"><button class="button button-dark idea-build" type="submit">Follow the spark <span aria-hidden="true">↗</span></button><button class="idea-surprise" id="ideaSurprise" type="button"><span aria-hidden="true">⤨</span>Surprise me</button></div>
+          </fieldset>
+          <noscript><p class="idea-hint">Enable JavaScript to customize the concept, or use the sample brief below.</p></noscript>
+        </form>
+        <figure class="idea-scene">
+          <div class="idea-scene-top"><span><span class="idea-status-dot" aria-hidden="true"></span>ILLUSTRATED CONCEPT</span><span id="ideaSeed">SKY / 001</span></div>
+          <svg class="idea-world" viewBox="0 0 640 410" role="img" aria-labelledby="ideaWorldTitle ideaWorldDescription">
+            <title id="ideaWorldTitle">Sky islands in soft dawn light</title><desc id="ideaWorldDescription">An illustrated floating world. Choose a theme and lighting to personalize the concept; the real build happens in your AI chat with Studio.</desc>
+            <defs><linearGradient id="idea-rock" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8faed1"/><stop offset="1" stop-color="#47668d"/></linearGradient><linearGradient id="idea-glass" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e3f6ff" stop-opacity=".85"/><stop offset="1" stop-color="#a0bde3" stop-opacity=".22"/></linearGradient></defs>
+            <g class="idea-orbits" fill="none" stroke="currentColor"><ellipse cx="320" cy="227" rx="274" ry="125" transform="rotate(-14 320 227)"/><ellipse cx="320" cy="227" rx="247" ry="161" transform="rotate(13 320 227)" stroke-dasharray="3 10"/></g>
+            <g class="idea-stars" fill="currentColor"><circle cx="110" cy="94" r="3"/><circle cx="524" cy="83" r="2"/><circle cx="559" cy="252" r="3"/><circle cx="80" cy="292" r="2"/><path d="m460 51 3 9 9 3-9 3-3 9-3-9-9-3 9-3Zm-280 274 2 6 6 2-6 2-2 6-2-6-6-2 6-2Z"/></g>
+            <ellipse cx="320" cy="368" rx="146" ry="18" fill="#09182b" opacity=".24"/>
+            <g class="idea-island" stroke-linejoin="round">
+              <path d="m126 232 194 106 194-106-29 67-165 88-165-88Z" fill="url(#idea-rock)"/>
+              <path d="m320 338 194-106-29 67-165 88Z" fill="#344e76" opacity=".55"/>
+              <path d="m214 281 26 63 19-10 15 28 46 25V338Z" fill="#cfdef4" opacity=".15"/>
+              <path d="m320 126 194 106-194 106-194-106Z" class="idea-ground" stroke-width="5"/>
+              <g class="idea-ground-grid" fill="none" stroke-width="1"><path d="m176 205 194 106m-146-132 194 106m-146-132 194 106M176 259l194-106M224 285l194-106M272 311l194-106"/></g>
+              <g class="idea-world-sky">
+                <path d="m319 294-54-29 54-29 54 29Z" fill="#e6f1ff" opacity=".75"/>
+                <path d="m319 276-38-21 38-21 38 21Z" fill="#fff"/>
+                <path d="M280 240v-78a40 40 0 0 1 80 0v78h-17v-77a23 23 0 0 0-46 0v77Z" fill="#93b4dc" transform="translate(9 -6)"/>
+                <path d="M280 240v-78a40 40 0 0 1 80 0v78h-17v-77a23 23 0 0 0-46 0v77Z" fill="#edf8ff"/>
+                <path d="M300 233v-69a20 20 0 0 1 40 0v69Z" fill="url(#idea-glass)"/>
+                <g stroke="#63889f" stroke-width="7" stroke-linecap="round"><path d="M211 235v-48m211 45v-49"/></g>
+                <g fill="#c0e5d7"><circle cx="211" cy="171" r="24"/><circle cx="196" cy="184" r="18"/><circle cx="227" cy="184" r="19"/></g><g fill="#d8dbfa"><circle cx="422" cy="169" r="24"/><circle cx="407" cy="182" r="18"/><circle cx="438" cy="182" r="19"/></g>
+                <g fill="#edf8ff" opacity=".8"><ellipse cx="162" cy="100" rx="37" ry="12"/><ellipse cx="145" cy="91" rx="18" ry="15"/><ellipse cx="172" cy="89" rx="23" ry="18"/></g>
+              </g>
+              <g class="idea-world-neon">
+                <path d="m210 232 109 60 119-65" fill="none" stroke="#a5e6f6" stroke-width="4"/>
+                <path d="M220 215v-94l55 30v94Z" fill="#577ab3"/><path d="m275 151 35-20v94l-35 20Z" fill="#304e7d"/><path d="m220 121 36-20 54 30-35 20Z" fill="#9abce5"/>
+                <path d="M320 240V90l53 29v150Z" fill="#566ea6"/><path d="m373 119 36-20v150l-36 20Z" fill="#2b436f"/><path d="m320 90 36-20 53 29-36 20Z" fill="#b9c8f1"/>
+                <path d="M394 270v-83l40 22v83Z" fill="#6d80bc"/><path d="m434 209 27-15v83l-27 15Z" fill="#3e527e"/><path d="m394 187 27-15 40 22-27 15Z" fill="#becbf0"/>
+                <g stroke="#b6f6fc" stroke-width="4"><path d="m232 148 30 16m-30 3 30 16m-30 3 30 16m70-78 29 16m-29 7 29 16m-29 7 29 16m-29 7 29 16m-29 7 29 16m48-16 20 11m-20 4 20 11"/></g>
+                <circle cx="357" cy="56" r="6" fill="#c5ecff"/><path d="M357 70v-10" stroke="#c5ecff" stroke-width="2"/>
+              </g>
+              <g class="idea-world-moon">
+                <ellipse cx="215" cy="226" rx="29" ry="16" fill="#8f9fc8" opacity=".35"/><ellipse cx="418" cy="251" rx="31" ry="17" fill="#8f9fc8" opacity=".35"/>
+                <ellipse cx="322" cy="238" rx="67" ry="36" fill="#d0dff6"/><path d="M257 230a65 85 0 0 1 130 0q-65 44-130 0Z" fill="url(#idea-glass)" stroke="#b5cbe9" stroke-width="3"/>
+                <path d="M322 145v119m-61-35q61-37 122 0" fill="none" stroke="#d5e9ff" stroke-width="2" opacity=".7"/>
+                <g stroke="#b5e5d9" stroke-width="4" stroke-linecap="round"><path d="M301 237v-35m22 39v-54m23 49v-30M210 274v-24m210-36v-29"/></g>
+                <g fill="#f2e6c9"><circle cx="301" cy="199" r="8"/><circle cx="323" cy="184" r="10"/><circle cx="346" cy="203" r="8"/><circle cx="210" cy="246" r="7"/><circle cx="420" cy="181" r="7"/></g>
+                <circle cx="453" cy="103" r="33" fill="#e5e9fa"/><circle cx="465" cy="95" r="8" fill="#bacce5"/><circle cx="443" cy="115" r="5" fill="#bacce5"/>
+              </g>
+              <g class="idea-satellite"><path d="m88 183 51 28 51-28-10 28-41 23-41-23Z" fill="#6786ae"/><path d="m139 155 51 28-51 28-51-28Z" fill="#d0e5ed"/><path d="M140 181v-18" stroke="#729294" stroke-width="5"/><circle cx="140" cy="153" r="13" fill="#d1e8db"/></g>
+              <g transform="translate(356 285)"><ellipse cy="17" rx="12" ry="6" fill="#284b742f"/><rect x="-7" y="-7" width="14" height="19" rx="6" fill="#f1f8ff"/><circle cy="-17" r="9" fill="#f1f8ff"/><path d="M-3-19h1m4 0h1" stroke="#607b9d" stroke-width="2" stroke-linecap="round"/></g>
+            </g>
+          </svg>
+          <figcaption><strong id="ideaSceneName">Somewhere above the clouds.</strong><span id="ideaSceneMood">Soft dawn · a quieter kind of magic</span></figcaption>
+          <ol class="idea-route" aria-label="Illustrated route from idea to Studio"><li data-idea-step="0" aria-current="step"><span class="idea-route-icon" aria-hidden="true">✧</span><span>AI chat<small>Your spark</small></span></li><li data-idea-step="1"><span class="idea-route-icon idea-route-mark" aria-hidden="true">m</span><span>Miracle<small>The connection</small></span></li><li data-idea-step="2"><span class="idea-route-icon" aria-hidden="true">◇</span><span>Studio<small>Your world</small></span></li></ol>
+        </figure>
+        <div class="idea-result" id="ideaResult"><div class="idea-result-top"><label for="ideaBrief">Your next move.</label><button id="ideaCopy" class="idea-copy" type="button" disabled>Copy brief <span aria-hidden="true">↗</span></button></div><textarea id="ideaBrief" class="idea-brief" rows="6" readonly spellcheck="false" aria-label="Starter brief for your AI chat">In my open Roblox Studio place, create a chain of floating islands with a glowing portal and tiny bridges. Use soft dawn lighting with a cool sky and gentle haze. Inspect the existing scene first, group the new build in its own model, and preserve unrelated work. Explain the result and what I can adjust.</textarea><p class="idea-feedback" id="ideaFeedback" role="status" aria-live="polite">A little inspiration. Copy it into your AI chat with Miracle to build in Studio.</p></div>
       </div>
     </section>
 

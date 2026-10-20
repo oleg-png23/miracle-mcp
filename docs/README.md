@@ -18,6 +18,8 @@ The landing page has its own pill theme and all-screen motion controller. Scroll
 
 Scroll entrances are prepared before a block reaches the screen and run once with a short translation and fade. Touch and narrow layouts have no entrance stagger or overshoot. Touch press feedback waits for a completed tap; native swipes cancel it. Ambient effects pause offscreen without resetting their timelines. Scroll navigation caches section geometry until layout changes and updates only the progress indicator, avoiding page-wide inherited style changes on every scroll frame.
 
+The Idea Playground adds three illustrated SVG worlds, three lighting moods, 18 shuffled starter ideas and an editable concept. It creates a local, reusable brief for the visitor's AI chat; it does not invoke an AI service or connect to Studio. The illustrated route and brief typing run only after interaction, respect motion preferences and settle when hidden or offscreen. Editing preserves custom text across world changes, and copying mid-animation copies the complete current brief. User ideas are neither persisted nor transmitted. Without JavaScript, the sample illustration and selectable example brief remain available.
+
 Font license: `assets/fonts/OFL-Inter.txt`. Landscape sources: `assets/bg/PHOTO-SOURCES.md`. Source code follows the root project's MIT license.
 
 ## Interactive app previews
