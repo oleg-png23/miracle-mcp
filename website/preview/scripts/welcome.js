@@ -25,11 +25,11 @@
       const ready = data.online === true && diagnosis.state === 'linked';
       document.body.dataset.studioReady = String(ready);
       status.textContent = ready ? 'Studio MCP connected' : data.online === true ? diagnosis.title : 'Start the local bridge';
-      detail.textContent = data.online === true ? diagnosis.message : 'Run run.bat from your Miracle folder, then check the connection.';
+      detail.textContent = data.online === true ? diagnosis.message : 'Run release/run.bat from the extracted download (or run.bat in a source checkout), then check the connection.';
     } catch {
       document.body.dataset.studioReady = 'false';
       status.textContent = 'Start the local bridge';
-      detail.textContent = 'Run run.bat from your Miracle folder, then check the connection.';
+      detail.textContent = 'Run release/run.bat from the extracted download (or run.bat in a source checkout), then check the connection.';
     } finally {
       checking = false;
       refresh.disabled = false;

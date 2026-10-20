@@ -1,0 +1,52 @@
+name: Build and publish release
+on:
+  push:
+    branches: [main]
+    paths: [manifest.json, .github/workflows/release.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: miracle-release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Verify source and build archives
+        run: |
+          npm test
+          python -m unittest discover -s python -p 'test_*.py'
+          python scripts/build-release.py
+      - name: Publish complete release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          miracle_version=$(python -c 'import json,re; v=json.load(open("manifest.json"))["version"]; assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+",v); print(v)')
+          miracle_tag="v$miracle_version"
+          if gh release view "$miracle_tag" --json isDraft --jq '.isDraft' > release-state.txt 2>/dev/null; then
+            if [ "$(cat release-state.txt)" = false ]; then
+              echo "Release $miracle_tag is already published; preserving it."
+              exit 0
+            fi
+            miracle_target=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$miracle_tag" --jq '.target_commitish')
+            test "$miracle_target" = "$GITHUB_SHA"
+          else
+            gh release create "$miracle_tag" --target "$GITHUB_SHA" --title "Miracle $miracle_version" --notes-file RELEASE_NOTES.md --draft
+          fi
+          gh release upload "$miracle_tag" \
+            ".mcp_cache/release/miracle-mcp-$miracle_version.zip" \
+            ".mcp_cache/release/miracle-website-$miracle_version.zip" \
+            ".mcp_cache/release/miracle-wallpapers-$miracle_version.zip" \
+            .mcp_cache/release/SHA256SUMS.txt --clobber
+          gh release edit "$miracle_tag" --draft=false --latest

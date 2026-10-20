@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Miracle — Local Bridge for Roblox Studio",
   "short_name": "Miracle",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Connect AI chats to Roblox Studio through a local MCP bridge.",
   "author": "Miracles Lab",
   "minimum_chrome_version": "114",

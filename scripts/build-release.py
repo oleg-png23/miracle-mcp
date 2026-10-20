@@ -24,25 +24,27 @@ def files_under(folder):
             and not any(part.startswith('.') or part == '__pycache__' for part in file.relative_to(ROOT / folder).parts)]
 
 
-def build():
-    OUT.mkdir(parents=True, exist_ok=True)
-    runtime = [ROOT / name for name in ['manifest.json', 'background.js', 'config.js',
-        'dashboard.html', 'welcome.html', 'run.bat', 'README.md', 'LICENSE', 'THIRD_PARTY.md']]
+def runtime_entries():
+    plugin = [ROOT / name for name in ['manifest.json', 'background.js', 'config.js',
+        'dashboard.html', 'welcome.html', 'INSTALL.md', 'LICENSE', 'THIRD_PARTY.md']]
     for directory in ['assets', 'styles', 'content']:
-        runtime.extend(file for file in files_under(directory)
-                       if not file.name.startswith(('test-', 'test_'))
-                       and file.suffix not in {'.pyc', '.zip'}
-                       and file.name not in {'build-release.py', 'publish-release.py'})
-    runtime.extend((ROOT / 'scripts').glob('*.js'))
-    runtime.append(ROOT / 'scripts' / 'start.ps1')
-    runtime.extend(ROOT / 'python' / name for name in ['mcp_server.py', 'studio_mcp.py', 'usage_stats.py'])
-    runtime.extend(ROOT / 'icons' / name for name in ['icon16.png', 'icon48.png', 'icon128.png'])
-    # Original 4K research/source assets remain in Git; ship only the active
-    # registry and thumbnails needed by the picker, not unused full duplicates.
+        plugin.extend(file for file in files_under(directory)
+                      if not file.name.startswith(('test-', 'test_'))
+                      and file.suffix not in {'.pyc', '.zip'})
+    plugin.extend((ROOT / 'scripts').glob('*.js'))
+    plugin.extend(ROOT / 'icons' / name for name in ['icon16.png', 'icon48.png', 'icon128.png'])
     registry = (ROOT / 'scripts' / 'appearance.js').read_text(encoding='utf-8')
     backgrounds = set(re.findall(r"(?:file|thumb):'([^']+)'", registry)) | {'PHOTO-SOURCES.md'}
-    runtime = [file for file in runtime if file.parent != ROOT / 'assets' / 'bg' or file.name in backgrounds]
-    outputs = [archive(f'miracle-mcp-{VERSION}.zip', [(file, file.relative_to(ROOT)) for file in runtime], 'miracle-mcp')]
+    plugin = [file for file in plugin if file.parent != ROOT / 'assets' / 'bg' or file.name in backgrounds]
+    bridge = [ROOT / name for name in ['run.bat', 'scripts/start.ps1', 'python/mcp_server.py',
+        'python/studio_mcp.py', 'python/usage_stats.py', 'INSTALL.md', 'LICENSE', 'THIRD_PARTY.md', 'RELEASE_NOTES.md']]
+    return [(file, Path('plugin') / file.relative_to(ROOT)) for file in plugin] + [
+        (file, Path('release') / file.relative_to(ROOT)) for file in bridge]
+
+
+def build():
+    OUT.mkdir(parents=True, exist_ok=True)
+    outputs = [archive(f'miracle-mcp-{VERSION}.zip', runtime_entries())]
     runpy.run_path(str(ROOT / 'scripts' / 'build-site-preview.py'), run_name='__main__')
     site = files_under('website')
     site.append(ROOT / 'website' / '.nojekyll')
@@ -56,6 +58,8 @@ def build():
     for file in [*outputs, checksums]:
         print(f'{file.name}: {file.stat().st_size:,} bytes')
     with zipfile.ZipFile(outputs[0]) as bundle:
+        if {Path(name).parts[0] for name in bundle.namelist()} != {'plugin', 'release'}:
+            raise RuntimeError('The main release must contain exactly plugin/ and release/')
         forbidden = {'token.txt', '2fa.txt', 'queue.json', '.env'}
         if any(Path(name).name in forbidden or '/__pycache__/' in name for name in bundle.namelist()):
             raise RuntimeError('A private/runtime file entered the release archive')

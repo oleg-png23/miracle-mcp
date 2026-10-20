@@ -22,7 +22,7 @@ except ImportError:  # direct execution: python python/mcp_server.py
     from studio_mcp import StudioMCP, StudioMCPError
     from usage_stats import UsageStats
 
-VERSION = "2.1.0"
+VERSION = "2.2.0"
 INSTANCE_ID = secrets.token_hex(8)
 START = time.time()
 TOKEN = ""
@@ -305,9 +305,20 @@ def _trusted_origin(origin: Optional[str], port: int) -> bool:
         return False
 
 
+def resolve_app_root(server_file=__file__):
+    """Support a source checkout and the sibling plugin/release ZIP layout."""
+    runtime = Path(server_file).resolve().parents[1]
+    if (runtime / "dashboard.html").is_file():
+        return str(runtime)
+    plugin = runtime.parent / "plugin"
+    if (plugin / "manifest.json").is_file() and (plugin / "dashboard.html").is_file():
+        return str(plugin)
+    return str(runtime)
+
+
 class H(BaseHTTPRequestHandler):
     server_version = "MiraclesMCP/" + VERSION
-    APP_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    APP_ROOT = resolve_app_root()
     STATIC_EXTS = {
         ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
         ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png",

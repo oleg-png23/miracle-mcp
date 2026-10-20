@@ -9,10 +9,21 @@ function Get-BridgeStatus {
 }
 
 try {
+    $taskUIRoot = $taskRoot
+    if (-not (Test-Path -LiteralPath (Join-Path $taskUIRoot 'manifest.json'))) {
+        $taskUIRoot = Join-Path (Split-Path -Parent $taskRoot) 'plugin'
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $taskUIRoot 'manifest.json'))) {
+        throw 'Не найдена папка plugin. Распакуйте ZIP целиком и оставьте папки plugin и release рядом.'
+    }
+    $taskVersion = (Get-Content -LiteralPath (Join-Path $taskUIRoot 'manifest.json') -Raw | ConvertFrom-Json).version
     $taskExisting = Get-BridgeStatus
     if ($taskExisting) {
         if ($taskExisting.studio_mode -ne 'native_mcp') {
             throw 'Порт 19731 занят старым мостом Miracles. Закройте старый сервер и запустите run.bat снова. Новая версия использует встроенный MCP Studio.'
+        }
+        if ($taskExisting.version -ne $taskVersion) {
+            throw 'Запущена другая версия моста. Завершите старый процесс mcp_server.py в Диспетчере задач и снова запустите run.bat.'
         }
         Start-Process -FilePath "$taskBase/app"
         exit 0
