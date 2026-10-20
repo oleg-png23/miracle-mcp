@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const rail=document.querySelector('.sidebar');if(!rail)return;
+  const paused=()=>document.documentElement.dataset.motion==='paused';
   const links=[...rail.querySelectorAll('.navigation .nav-link')];
   const controls=[...links,rail.querySelector('.rail-action')].filter(Boolean);
   const tip=document.createElement('div');tip.id='railTooltip';tip.className='rail-tooltip';
@@ -33,7 +34,7 @@
     if(nativePopover&&!tip.matches(':popover-open'))tip.showPopover();else if(!nativePopover)tip.hidden=false;
     place();frame=requestAnimationFrame(()=>tip.classList.add('is-visible'));
   }
-  function magnify(index){links.forEach((link,i)=>{
+  function magnify(index){if(paused()||reducedMotion.matches)index=-1;links.forEach((link,i)=>{
     const distance=Math.abs(i-index);
     link.style.setProperty('--dock-scale',index<0?'1':distance===0?'1.28':distance===1?'1.12':'1');
     link.style.setProperty('--dock-lift',index<0?'0px':distance===0?'5px':distance===1?'2px':'0px');
@@ -43,6 +44,7 @@
     link.addEventListener('pointerenter',event=>{if(event.pointerType!=='touch')magnify(index);});
     link.addEventListener('focus',()=>magnify(index));
     link.addEventListener('click',()=>{
+      if(paused()||reducedMotion.matches||document.hidden){hide();return;}
       const wave=document.createElement('span');wave.className='rail-press-wave';wave.setAttribute('aria-hidden','true');link.append(wave);
       setTimeout(()=>wave.remove(),650);hide();
     });
@@ -77,7 +79,7 @@
   }
   function followScroll(){
     const delta=scrollY-lastScroll;lastScroll=scrollY;
-    if(innerWidth<=650||reducedMotion.matches||document.hidden){stopDrift();return;}
+    if(innerWidth<=650||reducedMotion.matches||paused()||document.hidden||document.body.dataset.glassMode==='beautify'){stopDrift();return;}
     if(!delta)return;
     targetDrift=Math.max(-maxDrift,Math.min(maxDrift,targetDrift+delta*.14));
     clearTimeout(returnTimer);
@@ -86,6 +88,7 @@
   }
   window.addEventListener('scroll',()=>{followScroll();if(anchor)place();},{passive:true});
   window.addEventListener('resize',stopDrift,{passive:true});
-  reducedMotion.addEventListener('change',stopDrift);
+  reducedMotion.addEventListener('change',()=>{stopDrift();magnify(-1);});
+  document.addEventListener('miracle:motion',()=>{stopDrift();magnify(-1);});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopDrift();});
 })();

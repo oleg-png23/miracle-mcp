@@ -54,6 +54,8 @@
   }
   function render() {
     document.body.dataset.motionPaused = String(paused || reduced.matches);
+    document.documentElement?.setAttribute('data-motion',paused||reduced.matches?'paused':'running');
+    document.dispatchEvent?.(new CustomEvent('miracle:motion',{detail:{paused:paused||reduced.matches}}));
     button.disabled = reduced.matches;
     button.setAttribute('aria-pressed', String(paused || reduced.matches));
     button.textContent = reduced.matches ? 'Reduced motion' : paused ? 'Resume motion' : 'Pause motion';

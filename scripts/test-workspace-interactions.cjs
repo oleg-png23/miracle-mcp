@@ -81,7 +81,7 @@ test('a swipe suppresses its synthetic link click while keyboard and later taps 
   h.advance(451);click(1);assert.equal(prevented,1,'A later tap remains available');
 });
 
-function motion({paused=false,reduced=false}={}){
+function motion({paused=false,reduced=false,desktop=false}={}){
   const events={},frames=new Map(),animations=[],observers=[],intersections=[];let next=0;
   function node(options={}){
     const el={hidden:false,top:100,bottom:140,glass:false,hasGlass:false,focused:false,
@@ -97,7 +97,7 @@ function motion({paused=false,reduced=false}={}){
     getElementById:id=>id==='sectionHeading'?heading:menu,addEventListener:(k,fn)=>{events[k]=fn;}};
   const media={matches:reduced,addEventListener:(k,fn)=>{events.reduce=fn;}};
   const window={innerHeight:800,IntersectionObserver:true,MutationObserver:true,addEventListener:(k,fn)=>{events[k]=fn;}};
-  const context={document,window,localStorage:{getItem:()=>String(paused)},matchMedia:()=>media,
+  const context={document,window,localStorage:{getItem:()=>String(paused)},matchMedia:query=>query.startsWith('(min-width')?{matches:desktop}:media,
     requestAnimationFrame:fn=>{frames.set(++next,fn);return next;},cancelAnimationFrame:id=>frames.delete(id),
     IntersectionObserver:class{constructor(callback){this.callback=callback;this.observed=new Set();intersections.push(this);}observe(el){this.observed.add(el);}unobserve(el){this.observed.delete(el);}disconnect(){this.observed.clear();}},
     MutationObserver:class{constructor(callback){this.callback=callback;observers.push(this);}observe(el){this.target=el;}disconnect(){this.target=null;}}};
@@ -148,4 +148,12 @@ test('hidden tabs settle effects and an active editor is never animated',()=>{
   h.document.hidden=true;h.events.visibilitychange();assert(h.animations.every(a=>a.canceled));
   const count=h.animations.length;h.enter(2);assert.equal(h.animations.length,count);
   h.document.hidden=false;h.events.visibilitychange();h.flush();assert.equal(h.animations.length,count);
+});
+
+
+test('desktop sections use a wider reveal cascade and stagger every menu link',()=>{
+  const h=motion({desktop:true});assert.equal(h.animations[0].options.duration,650);assert.equal(h.animations[1].options.delay,55);
+  h.menu.open=true;h.menu.querySelectorAll=()=>Array.from({length:11},()=>h.node());
+  const before=h.animations.length;h.observers[1].callback();assert.equal(h.animations.length-before,11);
+  assert.equal(h.animations.at(-1).options.delay,385);
 });

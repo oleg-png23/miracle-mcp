@@ -49,7 +49,7 @@
     document.body.dataset.wallpaper=key;
     tint(image,choice.hue);
     photo.getAnimations?.().forEach(animation=>animation.cancel());
-    if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&photo.animate)photo.animate([{opacity:.45},{opacity:1}],{duration:450,easing:'ease-out'});
+    if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&document.documentElement.dataset.motion!=='paused'&&!document.hidden&&photo.animate)photo.animate([{opacity:.45},{opacity:1}],{duration:450,easing:'ease-out'});
     const label=document.getElementById('wallpaperName');if(label)label.textContent=choice.name;
     document.querySelectorAll('.wallpaper-option').forEach(button=>{
       const selected=wallpapers[button.dataset.wallpaper]===choice;
