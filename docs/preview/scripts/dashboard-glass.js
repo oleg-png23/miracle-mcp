@@ -13,7 +13,7 @@
     refractiveIndex: 1.5,
     maxMapSide: 512,
     maxMapPixels: 65536,
-    maxCachedMaps: 6,
+    maxCachedMaps: 32,
     maxBevel: 34,
     minBevel: 6,
     defaultDepth: 68,
@@ -47,7 +47,7 @@
   }
 
   const surfaces = elements.map((el, index) => ({
-    el, id: `miracle-lens-${index}`, visible: false, geometry: '',
+    el, id: `miracle-lens-${index}`, idBase: `miracle-lens-${index}`, revision: 0, active: null, boundId: null, requestedGeometry: '', visible: false, geometry: '',
     filter: null, map: null, displacements: [], scale: 0,
     primary: el.matches(primarySelector),
     chromatic: true
@@ -58,18 +58,28 @@
     if (contrast.matches || (transparency.matches && !['clear', 'beautify'].includes(document.body.dataset.glassChoice))) return 'light';
     return document.body.dataset.glassMode || 'clear';
   }
-  function enabled() { return supported && ['clear', 'beautify'].includes(mode()) && !document.hidden; }
+  function enabled() { return supported && ['clear', 'beautify'].includes(mode()); }
   function eligible(surface) { return mode() === 'beautify' || surface.primary; }
+  function retained(surface) { return mode() === 'beautify' || surface.visible; }
   function setActive(surface, active) {
-    surface.el.dataset.glassActive = String(active);
-    if (active) surface.el.style.setProperty('--glass-filter', `url(#${surface.id})`);
-    else surface.el.style.removeProperty('--glass-filter');
+    if (surface.active !== active) {
+      surface.el.dataset.glassActive = String(active);
+      surface.active = active;
+    }
+    if (active && surface.boundId !== surface.id) {
+      surface.el.style.setProperty('--glass-filter', `url(#${surface.id})`);
+      surface.boundId = surface.id;
+    } else if (!active && surface.boundId !== null) {
+      surface.el.style.removeProperty('--glass-filter');
+      surface.boundId = null;
+    }
   }
   function updateScale(surface) {
     const strength = (0.45 + depth / 100 * 0.9) * (mode() === 'beautify' ? 1.7 : 1);
     surface.displacements.forEach((el, index) => {
       const dispersion = surface.chromatic ? 1 + (index - 1) * (mode() === 'beautify' ? 0.065 : optics.dispersion) : 1;
-      el.setAttribute('scale', (surface.scale * strength * dispersion).toFixed(2));
+      const value = (surface.scale * strength * dispersion).toFixed(2);
+      if (el.getAttribute('scale') !== value) el.setAttribute('scale', value);
     });
   }
   function createFilter(surface) {
@@ -177,51 +187,69 @@
     metrics.mapsBuilt++;
     metrics.pixelsBuilt += canvas.width * canvas.height;
     metrics.generationMs += performance.now() - started;
-    return {displacement, specular: specularMap, scale: reach * 2};
+    const maps = {displacement, specular: specularMap, scale: reach * 2, loaded: true};
+    if (typeof Image !== 'undefined') {
+      maps.loaded = false;
+      const decode = src => { const image = new Image(); image.src = src; return image.decode(); };
+      maps.ready = Promise.all([decode(displacement), decode(specularMap)]).then(
+        () => { maps.loaded = true; }, () => { maps.failed = true; }
+      );
+    }
+    return maps;
   }
 
   function update(surface) {
-    if (!enabled() || !surface.visible || !eligible(surface)) return;
+    if (!enabled() || document.hidden || !retained(surface) || !eligible(surface)) return;
+    const material = mode();
     const width = Math.round(surface.el.clientWidth), height = Math.round(surface.el.clientHeight);
-    if (!width || !height) { setActive(surface, false); return; }
+    if (!width || !height) return;
     const style = getComputedStyle(surface.el);
     const radius = Math.min(parseFloat(style.borderTopLeftRadius) || 25, width / 2, height / 2);
     const bevel = Math.max(2, Math.min(mode() === 'beautify' ? 42 : optics.maxBevel, radius * 0.9,
       Math.max(optics.minBevel, Number(surface.el.dataset.glassBevel) || radius), Math.min(width, height) / 3));
     const geometry = `${mode()}:${width}:${height}:${radius.toFixed(1)}:${bevel.toFixed(1)}`;
-    if (geometry !== surface.geometry) {
-      let maps = cache.get(geometry);
-      if (!maps) {
-        maps = makeMaps(width, height, radius, bevel);
-        if (!maps) { setActive(surface, false); return; }
-        if (cache.size >= optics.maxCachedMaps) cache.delete(cache.keys().next().value);
-        cache.set(geometry, maps);
-      }
-      if (!surface.filter) createFilter(surface);
-      const padding = Math.ceil(maps.scale);
-      for (const [key, value] of Object.entries({x: -padding, y: -padding, width: width + padding * 2, height: height + padding * 2})) {
-        surface.filter.setAttribute(key, value);
-      }
-      for (const [key, value] of Object.entries({x: 0, y: 0, width, height, href: maps.displacement})) {
-        surface.map.setAttribute(key, value);
-      }
-      surface.el.style.setProperty('--glass-specular', `url("${maps.specular}")`);
-      surface.scale = maps.scale;
-      surface.geometry = geometry;
-      updateScale(surface);
+    if (geometry === surface.geometry) { surface.requestedGeometry = ''; setActive(surface, true); return; }
+    if (geometry === surface.requestedGeometry) return;
+    surface.requestedGeometry = geometry;
+    let maps = cache.get(geometry);
+    if (!maps) {
+      maps = makeMaps(width, height, radius, bevel);
+      if (!maps) { surface.requestedGeometry = ''; return; }
+      if (cache.size >= optics.maxCachedMaps) cache.delete(cache.keys().next().value);
+      cache.set(geometry, maps);
     }
-    setActive(surface, true);
+    const commit = () => {
+      if (surface.requestedGeometry !== geometry) return;
+      if (!enabled() || !eligible(surface) || !retained(surface) || mode() !== material) { surface.requestedGeometry = ''; return; }
+      if (surface.el.clientWidth !== width || surface.el.clientHeight !== height) { surface.requestedGeometry = ''; schedule(surface); return; }
+      if (!maps.loaded) { surface.requestedGeometry = ''; return; }
+      // Build an immutable replacement while the previous lens remains attached.
+      const next = {id: `${surface.idBase}-${++surface.revision}`, chromatic: surface.chromatic, displacements: []};
+      createFilter(next);
+      const padding = Math.ceil(maps.scale * 2.6);
+      for (const [key, value] of Object.entries({x: -padding, y: -padding, width: width + padding * 2, height: height + padding * 2})) next.filter.setAttribute(key, value);
+      for (const [key, value] of Object.entries({x: 0, y: 0, width, height, href: maps.displacement})) next.map.setAttribute(key, value);
+      const previous = surface.filter;
+      Object.assign(surface, next, {scale: maps.scale, geometry, width, height, requestedGeometry: ''});
+      surface.el.style.setProperty('--glass-specular', `url("${maps.specular}")`);
+      updateScale(surface);
+      setActive(surface, true);
+      if (previous) requestAnimationFrame(() => previous.remove());
+    };
+    if (maps.loaded) commit();
+    else maps.ready.then(commit);
   }
+
   function drain() {
     frame = 0;
-    if (!enabled()) { pending.clear(); return; }
+    if (!enabled() || document.hidden) { pending.clear(); return; }
     const surface = pending.values().next().value;
     if (surface) { pending.delete(surface); update(surface); }
-    // Geometry is computed once per surface/resize, one surface per frame.
+    // Prepare one resize per frame without detaching the previously rendered lens.
     if (pending.size) frame = requestAnimationFrame(drain);
   }
   function schedule(surface) {
-    if (!enabled() || !surface.visible || !eligible(surface)) return;
+    if (!enabled() || document.hidden || !retained(surface) || !eligible(surface)) return;
     pending.add(surface);
     if (!frame) frame = requestAnimationFrame(drain);
   }
@@ -229,15 +257,16 @@
     const material = mode();
     root.dataset.glassEngine = material === 'light' ? 'light'
       : material === 'frosted' ? 'frosted' : supported ? 'refraction' : 'fallback';
+    if (document.hidden) { pending.clear(); return; }
     surfaces.forEach(surface => {
       surface.el.dataset.glassPassive = String(!eligible(surface));
       updateScale(surface);
-      if (enabled() && surface.visible && eligible(surface)) schedule(surface);
+      if (enabled() && retained(surface) && eligible(surface)) schedule(surface);
       else setActive(surface, false);
     });
     if (hint) hint.textContent = material === 'light' ? 'Effects off.'
       : material === 'frosted' ? 'Soft, frosted glass.'
-      : material === 'beautify' ? (supported ? 'Beautify · deep refraction, RGB light and liquid glass on every surface.' : 'Beautify · rich frosted glass. Live refraction needs Chrome or Edge.')
+      : material === 'beautify' ? (supported ? 'Beautify · persistent refraction and RGB glass on every surface.' : 'Beautify · rich frosted glass. Live refraction needs Chrome or Edge.')
       : supported ? 'Liquid glass · live refraction and light.' : 'Soft glass · refraction needs Chrome or Edge.';
   }
   window.DashboardGlass = {
@@ -254,7 +283,7 @@
     const resize = new ResizeObserver(entries => {
       entries.forEach(entry => {
         const surface = byElement.get(entry.target);
-        if (surface?.visible) pending.add(surface);
+        if (surface && retained(surface) && eligible(surface) && (surface.el.clientWidth !== surface.width || surface.el.clientHeight !== surface.height)) pending.add(surface);
       });
       clearTimeout(timer);
       timer = setTimeout(() => { if (!frame && pending.size) frame = requestAnimationFrame(drain); }, optics.resizeDelay);
@@ -265,7 +294,7 @@
         entries.forEach(entry => {
           const surface = byElement.get(entry.target);
           surface.visible = entry.isIntersecting;
-          if (surface.visible) schedule(surface);
+          if (retained(surface)) schedule(surface);
           else { pending.delete(surface); setActive(surface, false); }
         });
       });
