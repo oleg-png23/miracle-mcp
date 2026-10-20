@@ -286,3 +286,8 @@ body[data-glass-mode="beautify"] .segmented-control [data-material="beautify"] {
   body .glass::after,
   body .welcome-connect::after { display: none; }
 }
+
+/* Keep the sampled backdrop in one coordinate space in the heavy material. */
+body[data-glass-mode="beautify"] .pointer-card{transform:none!important;translate:none!important;transition:box-shadow .35s}
+body[data-glass-mode="beautify"] .sidebar{--rail-drift:0px!important}
+body[data-glass-mode="beautify"] .welcome-connect{animation:none;translate:none!important}

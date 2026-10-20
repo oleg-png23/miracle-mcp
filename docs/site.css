@@ -27,3 +27,19 @@
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}.button:hover,.landscape-card:hover{transform:none}}
 @media(prefers-reduced-transparency:reduce){.glass{backdrop-filter:none;-webkit-backdrop-filter:none;background:#eaf1e5}.nav{color:#315342}.scenery-switch,.scene{color:#315342}.preview-shell{background:#e8f0e5}.chat-note{background:#edf4e6}}
 @media(forced-colors:active){.hero-landscape,.closing-mark{display:none}.hero{background:Canvas;color:CanvasText}.glass,.preview-shell,.button,.scenery-switch,.landscape-card,.workflow-illustration,.workflow-row,.closing,.nav-download{background:Canvas;color:CanvasText;border:1px solid CanvasText;box-shadow:none;backdrop-filter:none}.hero-copy .eyebrow,.hero-description,.hero-note,.light,.hero h1 em,.nav,.scene{color:CanvasText}.chat-note{background:Canvas;color:CanvasText;border:1px solid CanvasText}.icon{color:CanvasText}.live-dot{background:CanvasText}.scene.selected{outline:2px solid Highlight}.landscape-card img{forced-color-adjust:none}.hero-bottom{position:relative;margin-bottom:20px}.preview-rail,.chat-orb,.studio-orb,.preview-pill{border-color:CanvasText}.preview-main h2,.preview-main p,.preview-breadcrumb,.demo-node,.preview-caption{color:CanvasText}}
+
+/* Intrinsic text width must not resize the surrounding glass grid while typing. */
+.hero-content{grid-template-columns:repeat(2,minmax(0,1fr))}
+.hero-copy,.product-preview{min-width:0;max-width:100%}
+@media(max-width:760px){
+  .hero{height:auto;min-height:0}
+  .hero-content{grid-template-columns:minmax(0,1fr);align-items:start;padding-bottom:24px}
+  .hero-copy,.product-preview{width:100%;min-width:0}
+  .hero h1[data-typewriter]{font-size:clamp(38px,11vw,59px);letter-spacing:-.055em}
+  .hero-copy .eyebrow{white-space:normal}
+  .hero-actions{flex-wrap:wrap}
+  .product-preview{max-width:none;margin:25px 0 0;justify-self:stretch}
+  .chat-note{transform:none;margin-inline:0}
+  .hero-bottom{position:relative;inset:auto;margin:8px auto 28px;flex:none}
+  .scenery-switch{max-width:100%;flex-wrap:wrap;justify-content:center}
+}
