@@ -52,7 +52,7 @@
       await navigator.clipboard.writeText(button.dataset.copy);
       announce('Copied '+button.dataset.copy);
       button.querySelector('span').textContent = 'Copied ✓';
-      setTimeout(() => { button.querySelector('span').innerHTML = 'Copy <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>'; }, 2200);
+      setTimeout(() => { button.querySelector('span').innerHTML = 'Copy <svg class="icon" aria-hidden="true"><use href="assets/icons/interface.svg#copy"/></svg>'; }, 2200);
     } catch {
       announce('Select run.bat above to copy it.');
     }
