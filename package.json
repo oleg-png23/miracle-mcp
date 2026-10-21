@@ -6,7 +6,7 @@
   "license": "MIT",
   "engines": { "node": ">=20" },
   "scripts": {
-    "test": "node --test scripts/test-background.cjs scripts/test-bridge-client.cjs scripts/test-chat-prompt.cjs scripts/test-site-adapters.cjs scripts/test-site-preview.cjs scripts/test-site-motion.cjs scripts/test-idea-playground.cjs scripts/test-glass-engine.cjs scripts/test-welcome-motion.cjs scripts/test-welcome-prompts.cjs scripts/test-typewriter.cjs scripts/test-widget-glass.cjs scripts/test-workspace-sections.cjs scripts/test-workspace-interactions.cjs scripts/test-desktop-motion.cjs",
+    "test": "node --test scripts/test-background.cjs scripts/test-bridge-client.cjs scripts/test-chat-prompt.cjs scripts/test-site-adapters.cjs scripts/test-site-preview.cjs scripts/test-site.cjs scripts/test-glass-engine.cjs scripts/test-welcome-motion.cjs scripts/test-welcome-prompts.cjs scripts/test-typewriter.cjs scripts/test-widget-glass.cjs scripts/test-workspace-sections.cjs scripts/test-workspace-interactions.cjs scripts/test-desktop-motion.cjs",
     "test:python": "python -m unittest discover -s python -p test_*.py",
     "test:ui": "node scripts/test-ui.cjs",
     "test:glass": "node scripts/test-liquid-glass.cjs",

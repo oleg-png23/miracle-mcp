@@ -41,13 +41,13 @@ def build():
         if page == 'dashboard':
             html = html.replace('Run in Studio ', 'Preview only ')
         (preview / f'{page}.html').write_text(html)
-    for name in ['typewriter', 'surfaces', 'desktop-motion']:
-        shutil.copy2(ROOT / 'scripts' / f'{name}.js', site / f'{name}.js')
-    shutil.copy2(ROOT / 'styles/desktop-motion.css', site / 'desktop-motion.css')
-    shutil.copy2(ROOT / 'styles/typewriter.css', site / 'typewriter.css')
     shutil.copy2(ROOT / 'INSTALL.md', site / 'INSTALL.md')
     # GitHub Pages serves /docs; keep its source identical to the standalone site.
-    shutil.copytree(site, ROOT / 'docs', dirs_exist_ok=True)
+    # docs is generated; remove stale files when landing-page features are deleted.
+    docs = ROOT / 'docs'
+    if docs.exists():
+        shutil.rmtree(docs)
+    shutil.copytree(site, docs)
 
 
 if __name__ == '__main__':
