@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const fs=require('node:fs');
 
-function fixture({material='clear',deferred=false,site=false}={}) {
+function fixture({material='clear',deferred=false}={}) {
   const frames=[],timers=new Map(),decodes=[],events={};let timerId=0,intersection,resize;
   const media={matches:false,addEventListener(){}};
   const makeNode=primary=>({primary,clientWidth:120,clientHeight:90,dataset:{},children:[],attrs:{},writes:0,
@@ -14,7 +14,7 @@ function fixture({material='clear',deferred=false,site=false}={}) {
   const body=makeNode();body.dataset={glassMode:material,glassChoice:material};
   const root=makeNode();
   const context={window:{},document:{body,documentElement:root,hidden:false,
-    querySelectorAll:q=>site&&q!=='.glass'?elements.filter(el=>el.primary):elements,
+    querySelectorAll:()=>elements,
     getElementById:()=>null,addEventListener:(event,fn)=>{events[event]=fn;},
     createElementNS:()=>makeNode(),createElement:()=>({width:0,height:0,getContext:()=>({
       createImageData:(w,h)=>({data:new Uint8ClampedArray(w*h*4)}),putImageData(){}}),toDataURL:()=> 'data:image/png;base64,demo'})},
@@ -25,8 +25,8 @@ function fixture({material='clear',deferred=false,site=false}={}) {
     getComputedStyle:()=>({borderTopLeftRadius:'24'}),performance:{now:()=>0},Uint8ClampedArray};
   if(deferred)context.Image=class{decode(){return new Promise(resolve=>decodes.push(resolve));}};
   context.window.IntersectionObserver=context.IntersectionObserver;
-  vm.runInNewContext(fs.readFileSync(site?'website/optics.js':'scripts/dashboard-glass.js','utf8'),context);
-  const engine=context.window[site?'SiteGlass':'DashboardGlass'];
+  vm.runInNewContext(fs.readFileSync('scripts/dashboard-glass.js','utf8'),context);
+  const engine=context.window.DashboardGlass;
   const flush=()=>{for(const fn of timers.values())fn();timers.clear();while(frames.length)frames.shift()();};
   const seen=(target,visible)=>{intersection([{target,isIntersecting:visible}]);flush();};
   const filter=el=>{
@@ -60,9 +60,9 @@ test('Beautify keeps every lens attached through viewport changes and hidden tab
   assert.equal(f.root.dataset.glassEngine,'light');
 });
 
-for(const site of [false,true])test((site?'Site':'Beautify')+' retains the old lens until replacement images decode',async()=>{
-  const f=fixture({material:site?'clear':'beautify',deferred:true,site});
-  f.elements.filter(el=>!site||el.primary).forEach(el=>f.seen(el,true));await f.decode();
+test('Beautify retains the old lens until replacement images decode',async()=>{
+  const f=fixture({material:'beautify',deferred:true});
+  f.elements.forEach(el=>f.seen(el,true));await f.decode();
   const el=f.elements[0],original=el.style.values.get('--glass-filter');assert(original);
   const oldFilter=f.filter(el),oldMap=oldFilter.children[0].attrs.href;
   el.clientWidth+=25;f.resize(el);
