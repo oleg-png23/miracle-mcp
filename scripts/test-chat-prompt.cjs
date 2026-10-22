@@ -15,9 +15,17 @@ test('build includes the full advertised tool objects and user task', () => {
     annotations: { readOnlyHint: true }, execution: { taskSupport: 'optional' }, _meta: { vendor: 'native' }
   }];
   const built = prompt.build(tools, 'Inspect Workspace');
-  assert(built.includes(JSON.stringify(tools, null, 2)));
+  assert(built.includes(JSON.stringify(tools)));
   assert(built.includes('Inspect Workspace'));
   assert(built.includes('arbitrary.native_tool'));
+});
+
+test('large catalogs stay on one line without dropping schemas or metadata', () => {
+  const tools=Array.from({length:100},(_,i)=>({name:'tool_'+i,inputSchema:{type:'object',properties:{code:{type:'string'}}},_meta:{vendor:'native'}}));
+  const built=prompt.build(tools,'Keep my draft');
+  const catalog=built.slice(prompt.intro.length+1).split('\n')[0];
+  assert.deepEqual(JSON.parse(catalog),tools);
+  assert(built.endsWith('User task:\nKeep my draft'));
 });
 
 test('legacy intro, text, marker and safety guidance remain available', () => {
