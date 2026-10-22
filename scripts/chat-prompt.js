@@ -18,7 +18,8 @@ Available tools (complete advertised objects, including descriptions and schemas
   function build(tools, task) {
     const catalog = Array.isArray(tools) ? tools : [];
     const request = task == null ? '' : String(task);
-    return `${intro}\n${JSON.stringify(catalog, null, 2)}\n\nUser task:\n${request}`;
+    // Keep every advertised field, without thousands of editor paragraphs.
+    return `${intro}\n${JSON.stringify(catalog)}\n\nUser task:\n${request}`;
   }
 
   globalThis.MiraclesPrompt = { marker, intro, text: intro, build };

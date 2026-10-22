@@ -149,6 +149,12 @@
     if (lastEditor && visible(lastEditor)) return lastEditor;
     const hostname = location.hostname.replace(/^www\./, '');
     const specific = siteEditors[hostname] || '';
+    // Most chats expose their composer directly. Avoid walking the entire chat
+    // (including every message and open shadow root) on each send check.
+    if (specific) {
+      const composer = [...document.querySelectorAll(specific)].find(visible);
+      if (composer) return composer;
+    }
     const selector = [specific, 'textarea:not([readonly]):not([disabled]),[contenteditable="true"],[contenteditable="plaintext-only"]'].filter(Boolean).join(',');
     const candidates = [];
     function scan(root, depth = 0) {
@@ -168,7 +174,7 @@
     if (button.disabled) return;
     button.disabled = true; button.setAttribute('aria-busy', 'true');
     try { await task(); }
-    catch (error) { status(error.message || 'The action failed. Please try again.', 'error'); }
+    catch (error) { if(error.name !== 'AbortError') status(error.message || 'The action failed. Please try again.', 'error'); }
     finally { button.disabled = false; button.setAttribute('aria-busy', 'false'); }
   }
   function message(type) {
@@ -199,6 +205,7 @@
   const stopAgent = button('agent-stop', 'Stop session'); stopAgent.hidden = true;
   $('panel').querySelector('.actions').prepend(startAgent, stopAgent);
   let agentActive = false, observer = null, debounce = 0, seen = new Set(), historicalNodes = new WeakSet(), historicalUserNodes = new WeakSet(), busy = false, sessionInstance = null, sessionId = '', toolCount = 0, watchdog = 0;
+  let startup = null;
   const MAX_TOOL_CALLS = 30;
   async function recordUsage(kind, eventId, value) {
     try {
@@ -209,17 +216,27 @@
   const sent = new Set();
   function armAssistantWatchdog() { clearTimeout(watchdog); if(!agentActive) return; watchdog=setTimeout(()=>{ if(agentActive&&!busy) stop('No completed AI response after 120 seconds. Session paused. Check the site adapter.','ASSISTANT_TIMEOUT'); },120000); }
   function userTurnNodes() { return [...document.querySelectorAll('[data-message-author-role="user"],[data-message-author="user"],[data-role="user"],[data-role="human"],[data-testid*="user-message"],[data-testid*="human-message"],.user-message,.human-message,.qwen-chat-message-user,.chat-user,.segment-user,.user-query,.ds-message.d29f3d7d,ol.flex-col-reverse > li')].filter(el=>!host.contains(el)&&!el.closest('#miracles-mcp-widget')); }
-  const sendRuntime = (type, payload = {}) => new Promise((resolve, reject) => {
+  const sendRuntime = (type, payload = {}, signal) => new Promise((resolve, reject) => {
     const timeout = type === 'MCP_CALL' ? 85000 : type === 'MCP_TOOLS' ? 25000 : 15000;
-    const timer = setTimeout(() => reject(new Error('Bridge response timed out.')), timeout);
-    chrome.runtime.sendMessage({ type, ...payload }, response => { clearTimeout(timer);
-      if (chrome.runtime.lastError || !response) reject(new Error('No response from the extension. Reload this page and try again.'));
-      else resolve(response);
-    });
+    let timer;
+    const cleanup = () => { clearTimeout(timer); signal?.removeEventListener('abort', abort); };
+    const abort = () => { cleanup(); reject(new DOMException('Session start cancelled.', 'AbortError')); };
+    if(signal?.aborted) { abort(); return; }
+    signal?.addEventListener('abort', abort, {once:true});
+    timer = setTimeout(() => { cleanup(); reject(new Error('Bridge response timed out.')); }, timeout);
+    try {
+      chrome.runtime.sendMessage({ type, ...payload }, response => {
+        cleanup();
+        if (chrome.runtime.lastError || !response) reject(new Error('No response from the extension. Reload this page and try again.'));
+        else resolve(response);
+      });
+    } catch(error) { cleanup(); reject(error); }
   });
   function stop(reason, code = 'SESSION_PAUSED') {
+    startup?.abort();
     const interrupted=busy&&code==='STOPPED';
     agentActive = false; busy = false; clearTimeout(debounce); clearTimeout(watchdog); observer?.disconnect(); observer = null;
+    debounce = 0;
     startAgent.hidden = false; stopAgent.hidden = true;
     status(reason+(interrupted?' A pending tool may still finish. Its result will not be sent to the chat.':''), code === 'STOPPED' ? 'info' : 'error', code);
   }
@@ -315,18 +332,28 @@
     if(composer.matches('textarea,input')) {
       const proto=composer.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;
       Object.getOwnPropertyDescriptor(proto,'value').set.call(composer,value);
+      composer.dispatchEvent(new InputEvent('input',{bubbles:true,composed:true,inputType:'insertText',data:value}));
     } else {
       const selection=composer.getRootNode().getSelection?.()||window.getSelection(); const range=document.createRange();
       range.selectNodeContents(composer); selection.removeAllRanges(); selection.addRange(range);
+      // Rich editors process a paste as one transaction. insertText can create
+      // one edit per line and stall the host page on a full MCP catalog.
+      if (typeof DataTransfer !== 'undefined' && typeof ClipboardEvent !== 'undefined') {
+        const data = new DataTransfer(); data.setData('text/plain', value);
+        const paste = new ClipboardEvent('paste', {bubbles:true,composed:true,cancelable:true,clipboardData:data});
+        composer.dispatchEvent(paste);
+        if (paste.defaultPrevented || text(composer) === value) return;
+      }
       if(!document.execCommand('insertText',false,value)) throw new Error('The site rejected text input.');
     }
-    composer.dispatchEvent(new InputEvent('input',{bubbles:true,composed:true,inputType:'insertText',data:value}));
   }
-  async function clickSend(pair,value) {
+  async function clickSend(pair,value,signal) {
     await new Promise(r=>setTimeout(r,300));
+    signal?.throwIfAborted();
     const latest=composerAndSend();
     if(!latest||!latest.send||!text(latest.composer).includes(value)) throw new Error('The send button is unavailable. Your draft is preserved.');
     latest.send.click(); await new Promise(r=>setTimeout(r,600));
+    signal?.throwIfAborted();
     const current=pair.composer.isConnected?pair.composer:findComposer();
     if(current&&text(current).includes(value)) throw new Error('The site did not confirm sending. Your draft is preserved.');
   }
@@ -382,11 +409,14 @@
     }} catch(error) { stop(error.message||'Tool loop error.','AGENT_PAUSED'); }
     finally { busy=false; if(agentActive) { armAssistantWatchdog(); setTimeout(handleAssistant,450); } }
   }
-  async function beginAgent() {
+  async function beginAgent(signal) {
     status('Checking the bridge and Studio tools…');
-    const health=await sendRuntime('MCP_HEALTH');
+    const health=await sendRuntime('MCP_HEALTH',{},signal);
+    signal.throwIfAborted();
     if(health?.online!==true||health?.authenticated!==true||health?.code!=='READY') throw new Error(health?.message||'The bridge or Roblox Studio is not ready.');
-    const listed=await sendRuntime('MCP_TOOLS');
+    status('Loading the Studio tool catalog…');
+    const listed=await sendRuntime('MCP_TOOLS',{},signal);
+    signal.throwIfAborted();
     if(listed?.ok!==true||!Array.isArray(listed.tools)) throw new Error(listed?.message||'Could not load Studio tools.');
     if(health.instance_id&&listed.instance_id&&health.instance_id!==listed.instance_id) throw new Error('The bridge restarted during setup. Start a new session.');
     sessionInstance=listed.instance_id||health.instance_id||null;
@@ -403,24 +433,38 @@
     const pair=composerAndSend(); if(!pair) throw new Error(siteAdapter()?.errorMessage||'Message editor not found.');
     const draft=text(pair.composer).trim();
     const instructions=globalThis.MiraclesPrompt.build(tools,draft||'Ask the user what to do in Roblox Studio.');
+    status('Preparing the chat instructions…');
     setComposerValue(pair.composer,instructions);
     await new Promise(r=>setTimeout(r,250));
+    signal.throwIfAborted();
     const current=pair.composer.isConnected?pair.composer:findComposer();
     if(!current||!text(current).includes(MARKER)||(draft&&!text(current).includes(draft))) throw new Error('The site did not accept the instructions. Your draft is preserved.');
     const readyPair=composerAndSend(); if(!readyPair||readyPair.composer!==current) throw new Error('Send button not found. Your draft is preserved.');
-    await clickSend({composer:current},instructions);
+    status('Sending the session instructions…');
+    await clickSend({composer:current},instructions,signal);
     agentActive=true; startAgent.hidden=true; stopAgent.hidden=false;
     observer=new MutationObserver(records=>{
       if(!records.some(record=>!host.contains(record.target))) return;
-      if(!busy) for(const turn of userTurnNodes()) if(!historicalUserNodes.has(turn)) { historicalUserNodes.add(turn); armAssistantWatchdog(); }
-      clearTimeout(debounce); debounce=setTimeout(handleAssistant,450);
+      // Throttle rather than restart a debounce for every host mutation.
+      // Animated chats can mutate continuously, otherwise starving the reader.
+      if (!debounce) debounce=setTimeout(()=>{
+        debounce=0;
+        if(!agentActive) return;
+        if(!busy) for(const turn of userTurnNodes()) if(!historicalUserNodes.has(turn)) { historicalUserNodes.add(turn); armAssistantWatchdog(); }
+        handleAssistant();
+      },450);
     });
     observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['aria-busy','disabled','data-is-streaming']});
-    await recordUsage('activation',sessionId+':start',instructions);
     setTimeout(handleAssistant,450);
     status('Session active. Tools: '+tools.length+'.','success'); armAssistantWatchdog();
+    void recordUsage('activation',sessionId+':start',instructions);
   }
-  startAgent.onclick=()=>run(startAgent,beginAgent);
+  startAgent.onclick=()=>run(startAgent,async()=>{
+    const controller=new AbortController(); startup=controller;
+    stopAgent.textContent='Cancel start'; stopAgent.hidden=false;
+    try { await beginAgent(controller.signal); }
+    finally { startup=null; stopAgent.textContent='Stop session'; stopAgent.hidden=!agentActive; }
+  });
   stopAgent.onclick=()=>stop('Session stopped.','STOPPED');
   $('copy').onclick=()=>run($('copy'),async()=>{
     const health=await sendRuntime('MCP_HEALTH'); if(health?.code!=='READY') throw new Error(health?.message||'The bridge or Roblox Studio is not ready.');
