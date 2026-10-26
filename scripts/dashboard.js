@@ -199,10 +199,11 @@
 
   const applyWallpaper = key => window.MiracleAppearance.apply(key);
   function applyMaterial(value) {
-    const mode = ['beautify', 'frosted', 'light'].includes(value) ? value : 'clear';
+    const mode = window.MiracleAppearance.normalizeMaterial(value);
     document.body.dataset.glassMode = mode;
-    document.body.dataset.glassChoice = mode;
-    $('#glassDepth').disabled = !['clear', 'beautify'].includes(mode);
+    const system = value === 'light' && matchMedia('(prefers-reduced-transparency: reduce)').matches;
+    document.body.dataset.glassChoice = system ? 'system' : mode;
+    $('#glassDepth').disabled = system;
     $$('[data-material]').forEach(button => {
       const selected = button.dataset.material === mode;
       button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected));
@@ -248,7 +249,7 @@
     $('#toggleToken').setAttribute('aria-label', show ? 'Hide token' : 'Show token');
   });
   $('#refreshStatus').addEventListener('click', checkConnection);
-  $$('[data-wallpaper]').forEach(button => button.addEventListener('click', async () => { if(await applyWallpaper(button.dataset.wallpaper)) { window.MiracleAppearance.setMode('manual');persist({dashboardWallpaper:button.dataset.wallpaper,dashboardWallpaperMode:'manual'}); } }));
+  $$('.wallpaper-option[data-wallpaper]').forEach(button => button.addEventListener('click', async () => { if(await applyWallpaper(button.dataset.wallpaper)) { window.MiracleAppearance.setMode('manual');persist({dashboardWallpaper:button.dataset.wallpaper,dashboardWallpaperMode:'manual'}); } }));
   $$('[data-material]').forEach(button => button.addEventListener('click', () => { applyMaterial(button.dataset.material); persist({dashboardMaterial:button.dataset.material}); }));
   $('#glassDepth').addEventListener('input', event => applyDepth(event.target.value));
   $('#glassDepth').addEventListener('change', event => persist({dashboardGlassDepth:Number(event.target.value)}));
@@ -287,6 +288,7 @@
     const applied=await window.MiracleAppearance.setMode('manual',theme);
     if(applied&&(settings.dashboardWallpaper!==theme||settings.dashboardWallpaperMode!=='manual'))await persist({dashboardWallpaper:theme,dashboardWallpaperMode:'manual'});
     applyMaterial(settings.dashboardMaterial);
+    if(document.body.dataset.glassChoice!=='system'&&settings.dashboardMaterial!==document.body.dataset.glassMode)await persist({dashboardMaterial:document.body.dataset.glassMode});
     applyDepth(settings.dashboardGlassDepth ?? 68);
     await tick();
   }

@@ -60,15 +60,16 @@ test('desktop page reveals leave optical surfaces and their ancestors stationary
 
 test('mouse and keyboard feedback never activates controls and excludes touch and glass',()=>{
   const h=desktopHarness({dashboard:true}),button=h.node();
-  h.pointer(button);assert.equal(h.animations.length,2);assert.equal(button.children.length,1);
+  h.pointer(button);assert.equal(h.animations.length,1);assert.equal(button.children.length,0);
+  assert(h.animations[0].frames.every(frame=>Number(frame.scale)<=1));
   h.animations.at(-1).onfinish();assert.equal(button.children.length,0);
   const before=h.animations.length;
   h.pointer(h.glass);h.pointer(h.ancestor);h.pointer(h.node({disabled:true}));h.pointer(h.node({excluded:true}));
   h.pointer(button,{pointerType:'touch'});h.pointer(button,{button:2});assert.equal(h.animations.length,before);
   h.events.keydown({target:button,key:'Enter',preventDefault(){assert.fail('Motion must not change activation behavior');}});
-  assert.equal(h.animations.length,before+2);
-  h.events.keydown({target:h.node({tagName:'A'}),key:' '});assert.equal(h.animations.length,before+2);
-  h.events.keydown({target:button,key:'Enter',repeat:true});assert.equal(h.animations.length,before+2);
+  assert.equal(h.animations.length,before+1);
+  h.events.keydown({target:h.node({tagName:'A'}),key:' '});assert.equal(h.animations.length,before+1);
+  h.events.keydown({target:button,key:'Enter',repeat:true});assert.equal(h.animations.length,before+1);
 });
 
 test('selection and value feedback ignores unchanged polling updates and hidden controls',()=>{
@@ -86,11 +87,11 @@ test('selection and value feedback ignores unchanged polling updates and hidden 
   h.animations.at(-1).onfinish();h.observers[0].callback([{type:'childList',target:h.value}]);assert.equal(h.animations.length,count+1);
 });
 
-test('pause, hidden tabs, reduced motion and desktop changes cancel effects and remove press rims',()=>{
+test('pause, hidden tabs, reduced motion and desktop changes cancel feedback without leaving extra layers',()=>{
   const h=desktopHarness({dashboard:true}),button=h.node();h.pointer(button);h.photo.animate([{opacity:.5},{opacity:1}],{duration:550});
   h.events['miracle:motion']({detail:{paused:true}});assert(h.animations.every(a=>a.canceled));assert.equal(button.children.length,0);
   const before=h.animations.length;h.pointer(button);assert.equal(h.animations.length,before);assert.equal(h.root.dataset.desktopMotion,'off');
-  h.events['miracle:motion']({detail:{paused:false}});h.pointer(button);assert.equal(h.animations.length,before+2);
+  h.events['miracle:motion']({detail:{paused:false}});h.pointer(button);assert.equal(h.animations.length,before+1);
   h.document.hidden=true;h.events.visibilitychange();assert(h.animations.every(a=>a.canceled));assert.equal(h.root.dataset.pageHidden,'true');
   h.document.hidden=false;h.events.visibilitychange();h.pointer(button);h.reducedMedia.matches=true;h.events.reduced();assert(h.animations.every(a=>a.canceled));
   const touch=desktopHarness({desktop:false});assert.equal(touch.animations.length,0);touch.pointer(touch.node());assert.equal(touch.animations.length,0);

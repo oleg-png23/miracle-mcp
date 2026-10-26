@@ -284,3 +284,43 @@ body[data-glass-mode="beautify"] .segmented-control [data-material="beautify"] {
 body[data-glass-mode="beautify"] .pointer-card{transform:none!important;translate:none!important;transition:box-shadow .35s}
 body[data-glass-mode="beautify"] .sidebar{--rail-drift:0px!important}
 body[data-glass-mode="beautify"] .welcome-connect{animation:none;translate:none!important}
+
+/* Colorless liquid glass: a neutral lens and white specular light only.
+ * Foreground accents remain separate from the optical material. */
+body:is(.dashboard-page,.welcome-page)[data-glass-mode="liquid"] :is(.glass,.welcome-connect) {
+  background: transparent;
+  border-color: rgb(255 255 255 / .72);
+  box-shadow: 0 12px 32px -22px rgb(0 0 0 / .22), inset 0 1px 0 rgb(255 255 255 / .82), inset 0 -1px 0 rgb(255 255 255 / .3);
+}
+body:is(.dashboard-page,.welcome-page)[data-glass-mode="liquid"] :is(.glass,.welcome-connect)::before {
+  background: linear-gradient(135deg, rgb(255 255 255 / .16), rgb(255 255 255 / .04) 68%, rgb(255 255 255 / .1));
+  -webkit-backdrop-filter: var(--glass-filter, blur(7px)) blur(.35px) saturate(1);
+  backdrop-filter: var(--glass-filter, blur(7px)) blur(.35px) saturate(1);
+}
+body:is(.dashboard-page,.welcome-page)[data-glass-mode="liquid"] :is(.glass,.welcome-connect)::after {
+  background-image: var(--glass-specular, none), radial-gradient(ellipse at var(--card-glow-x,22%) var(--card-glow-y,8%), rgb(255 255 255 / .12), transparent 64%);
+  box-shadow: inset 1px 1px 1px rgb(255 255 255 / .62), inset -1px -1px 1px rgb(255 255 255 / .24);
+}
+body:is(.dashboard-page,.welcome-page)[data-glass-mode="liquid"] .glass[data-glass-passive="true"]::before,
+html[data-glass-engine="refraction"] body[data-glass-mode="liquid"] :is(.glass,.welcome-connect)[data-glass-active="false"]::before {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+@media(prefers-contrast:more) {
+  body:is(.dashboard-page,.welcome-page)[data-glass-mode="liquid"] :is(.glass,.welcome-connect)::before { background: rgb(255 255 255 / .94); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media(forced-colors:active) {
+  body:is(.dashboard-page,.welcome-page)[data-glass-mode="liquid"] :is(.glass,.welcome-connect)::before { background: Canvas!important; -webkit-backdrop-filter: none!important; backdrop-filter: none!important; }
+  body:is(.dashboard-page,.welcome-page)[data-glass-mode="liquid"] :is(.glass,.welcome-connect)::after { display: none; }
+}
+@media(prefers-reduced-transparency:reduce) and (prefers-contrast:no-preference) and (forced-colors:none) {
+  body:is(.dashboard-page,.welcome-page)[data-glass-choice="liquid"] :is(.glass,.welcome-connect)::before {
+    background: linear-gradient(135deg,rgb(255 255 255 / .16),rgb(255 255 255 / .04) 68%,rgb(255 255 255 / .1))!important;
+    -webkit-backdrop-filter: var(--glass-filter,blur(7px)) blur(.35px) saturate(1)!important;
+    backdrop-filter: var(--glass-filter,blur(7px)) blur(.35px) saturate(1)!important;
+  }
+  html[data-glass-engine="refraction"] body[data-glass-choice="liquid"] :is(.glass,.welcome-connect)[data-glass-active="false"]::before {
+    -webkit-backdrop-filter: none!important;
+    backdrop-filter: none!important;
+  }
+}

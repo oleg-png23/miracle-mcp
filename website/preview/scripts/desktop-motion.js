@@ -27,11 +27,7 @@
   }
   function press(el){
     if(!allowed()||!el||typeof el.animate!=='function'||optical(el))return;
-    animate(el,[{scale:'1'},{scale:'.96',offset:.3},{scale:'1.025',offset:.72},{scale:'1'}],{duration:420},'press');
-    // This rim is a separate child; never replace the glass specular pseudo-layer.
-    const ring=document.createElement('span');ring.className='desktop-click-ring';ring.setAttribute('aria-hidden','true');
-    el.classList.add('desktop-reactive');el.append(ring);
-    animate(ring,[{opacity:.48,scale:'1'},{opacity:0,scale:'1.16'}],{duration:440},'ring',()=>{ring.remove();if(!el.querySelector('.desktop-click-ring'))el.classList.remove('desktop-reactive');});
+    animate(el,[{scale:'1'},{scale:'.985',offset:.35},{scale:'1'}],{duration:240},'press');
   }
   document.addEventListener('pointerdown',event=>{
     if(event.defaultPrevented||event.button!==0||event.pointerType==='touch')return;
@@ -48,10 +44,10 @@
       const value=el.getAttribute(record.attributeName);if(record.oldValue===value)return;
       if(record.attributeName==='aria-checked'){
         const thumb=el.matches('.switch')?el.querySelector('span'):null;
-        if(thumb)animate(thumb,[{scale:'.82 1.12'},{scale:'1.12 .92',offset:.55},{scale:'1'}],{duration:420},'selection');
+        if(thumb)animate(thumb,[{scale:'.96'},{scale:'1'}],{duration:220},'selection');
       }else if(value==='true'&&el.matches('.segmented-control button,.wallpaper-option,.scene,.landscape-card')){
         const image=el.querySelector('img,.scene-swatch')||el;
-        animate(image,[{scale:'.94'},{scale:'1.055',offset:.6},{scale:'1'}],{duration:460},'selection');
+        animate(image,[{opacity:.7},{opacity:1}],{duration:220},'selection');
       }
     }else if(el.matches?.(values)){
       const text=el.textContent,old=previous.get(el);previous.set(el,text);
@@ -69,7 +65,7 @@
   function reveal(el,index){
     if(seen.has(el)||optical(el))return;seen.add(el);
     if(el.contains(document.activeElement))return;
-    animate(el,[{opacity:0,translate:'0px 26px'},{opacity:1,translate:'0px -2px',offset:.82},{opacity:1,translate:'0px 0px'}],{duration:720,delay:Math.min(index*55,385)},'reveal');
+    animate(el,[{opacity:0,translate:'0px 10px'},{opacity:1,translate:'0px 0px'}],{duration:420,delay:Math.min(index*28,140)},'reveal');
   }
   const arrivals='IntersectionObserver'in window?new IntersectionObserver(entries=>{
     let index=0;

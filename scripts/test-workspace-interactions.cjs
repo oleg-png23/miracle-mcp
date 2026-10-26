@@ -117,7 +117,7 @@ test('every screen reveals its content, cancels old animations and leaves glass 
     assert(h.animations.slice(before).every(a=>a.options.fill==='backwards'));
   }
   assert(first.every(a=>a.canceled));
-  h.enter(1,-1);assert.match(h.animations.at(-1).keyframes[0].translate,/^-24px/);
+  h.enter(1,-1);assert.match(h.animations.at(-1).keyframes[0].translate,/^-8px/);
   const last=h.animations.at(-1);last.onfinish();assert(last.canceled,'Finished reveals release their animation layer');
 });
 
@@ -151,9 +151,9 @@ test('hidden tabs settle effects and an active editor is never animated',()=>{
 });
 
 
-test('desktop sections use a wider reveal cascade and stagger every menu link',()=>{
-  const h=motion({desktop:true});assert.equal(h.animations[0].options.duration,650);assert.equal(h.animations[1].options.delay,55);
+test('desktop sections use a short reveal cascade and stagger every menu link',()=>{
+  const h=motion({desktop:true});assert.equal(h.animations[0].options.duration,360);assert.equal(h.animations[1].options.delay,28);
   h.menu.open=true;h.menu.querySelectorAll=()=>Array.from({length:11},()=>h.node());
   const before=h.animations.length;h.observers[1].callback();assert.equal(h.animations.length-before,11);
-  assert.equal(h.animations.at(-1).options.delay,385);
+  assert.equal(h.animations.at(-1).options.delay,112);
 });

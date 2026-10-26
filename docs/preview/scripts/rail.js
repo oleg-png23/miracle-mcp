@@ -36,18 +36,14 @@
   }
   function magnify(index){if(paused()||reducedMotion.matches)index=-1;links.forEach((link,i)=>{
     const distance=Math.abs(i-index);
-    link.style.setProperty('--dock-scale',index<0?'1':distance===0?'1.28':distance===1?'1.12':'1');
-    link.style.setProperty('--dock-lift',index<0?'0px':distance===0?'5px':distance===1?'2px':'0px');
+    link.style.setProperty('--dock-scale',index<0?'1':distance===0?'1.06':distance===1?'1.02':'1');
+    link.style.setProperty('--dock-lift','0px');
   });}
   links.forEach((link,index)=>{
     link.style.setProperty('--rail-order',String(index));
     link.addEventListener('pointerenter',event=>{if(event.pointerType!=='touch')magnify(index);});
     link.addEventListener('focus',()=>magnify(index));
-    link.addEventListener('click',()=>{
-      if(paused()||reducedMotion.matches||document.hidden){hide();return;}
-      const wave=document.createElement('span');wave.className='rail-press-wave';wave.setAttribute('aria-hidden','true');link.append(wave);
-      setTimeout(()=>wave.remove(),650);hide();
-    });
+    link.addEventListener('click',hide);
   });
   rail.addEventListener('pointerleave',()=>{magnify(-1);hide();});
   rail.addEventListener('focusout',event=>{if(!rail.contains(event.relatedTarget)){magnify(-1);hide();}});
@@ -59,36 +55,9 @@
   });
   document.addEventListener('keydown',event=>{if(event.key==='Escape')hide();});
   window.addEventListener('resize',hide,{passive:true});
-  // Only the vertical desktop rail trails scrolling; the mobile dock stays fixed.
   const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
-  const maxDrift=16,followMs=150,returnDelayMs=100;
-  let drift=0,targetDrift=0,driftFrame=0,returnTimer=0,lastScroll=scrollY,lastFrame=0;
-  function stopDrift(){
-    cancelAnimationFrame(driftFrame);clearTimeout(returnTimer);
-    driftFrame=0;drift=0;targetDrift=0;lastFrame=0;lastScroll=scrollY;
-    rail.style.setProperty('--rail-drift','0px');
-  }
-  function animateDrift(time){
-    const elapsed=lastFrame?Math.min(40,time-lastFrame):16;lastFrame=time;
-    drift+=(targetDrift-drift)*(1-Math.exp(-elapsed/followMs));
-    if(Math.abs(drift-targetDrift)<.04)drift=targetDrift;
-    rail.style.setProperty('--rail-drift',`${drift.toFixed(2)}px`);
-    if(anchor)place();
-    if(drift!==targetDrift)driftFrame=requestAnimationFrame(animateDrift);
-    else{driftFrame=0;lastFrame=0;}
-  }
-  function followScroll(){
-    const delta=scrollY-lastScroll;lastScroll=scrollY;
-    if(innerWidth<=650||reducedMotion.matches||paused()||document.hidden||document.body.dataset.glassMode==='beautify'){stopDrift();return;}
-    if(!delta)return;
-    targetDrift=Math.max(-maxDrift,Math.min(maxDrift,targetDrift+delta*.14));
-    clearTimeout(returnTimer);
-    if(!driftFrame)driftFrame=requestAnimationFrame(animateDrift);
-    returnTimer=setTimeout(()=>{targetDrift=0;if(!driftFrame)driftFrame=requestAnimationFrame(animateDrift);},returnDelayMs);
-  }
-  window.addEventListener('scroll',()=>{followScroll();if(anchor)place();},{passive:true});
-  window.addEventListener('resize',stopDrift,{passive:true});
-  reducedMotion.addEventListener('change',()=>{stopDrift();magnify(-1);});
-  document.addEventListener('miracle:motion',()=>{stopDrift();magnify(-1);});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)stopDrift();});
+  // The lens stays in the same backdrop coordinate space while scrolling.
+  window.addEventListener('scroll',()=>{if(anchor)place();},{passive:true});
+  reducedMotion.addEventListener('change',()=>magnify(-1));
+  document.addEventListener('miracle:motion',()=>magnify(-1));
 })();
