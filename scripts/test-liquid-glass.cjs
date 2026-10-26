@@ -5,7 +5,7 @@ const path = require('node:path');
 const {chromium} = require('playwright');
 const sharp = require('sharp');
 const {openSection,selectMaterial}=require('./ui-navigation.cjs');
-const base = process.env.MIRACLES_UI_URL || 'http://127.0.0.1:19737';
+const base = (process.env.HELIUM_UI_URL || process.env.MIRACLES_UI_URL) || 'http://127.0.0.1:19737';
 const out = path.resolve(__dirname, '../.mcp_cache/qa');
 fs.mkdirSync(out, {recursive: true});
 

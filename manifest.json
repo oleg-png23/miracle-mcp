@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Miracle \u2014 Local Bridge for Roblox Studio",
-  "short_name": "Miracle",
-  "version": "2.9.1",
+  "name": "Helium \u2014 Local Bridge for Roblox Studio",
+  "short_name": "Helium",
+  "version": "2.9.2",
   "description": "Connect AI chats to Roblox Studio through a local MCP bridge.",
   "author": "Miracles Lab",
   "minimum_chrome_version": "114",
   "action": {
-    "default_title": "Open Miracle",
+    "default_title": "Open Helium",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -99,7 +99,7 @@
         "content/site-adapters.js",
         "content/widget-glass.js",
         "scripts/tool-protocol.js",
-        "content/miracle.js"
+        "content/helium.js"
       ],
       "run_at": "document_idle",
       "all_frames": false

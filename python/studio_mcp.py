@@ -31,7 +31,8 @@ def _candidate_roots() -> list[Path]:
 
 def find_studio_mcp() -> Optional[Path]:
     """Return the newest installed StudioMCP binary, or None."""
-    override = os.environ.get("MIRACLES_STUDIO_MCP_PATH") or os.environ.get(ENV_OVERRIDE)
+    override = (os.environ.get("HELIUM_STUDIO_MCP_PATH")
+                or os.environ.get("MIRACLES_STUDIO_MCP_PATH") or os.environ.get(ENV_OVERRIDE))
     if override:
         path = Path(os.path.expandvars(os.path.expanduser(override)))
         if path.is_file():
@@ -177,7 +178,7 @@ class StudioMCP:
             exe = self.executable or find_studio_mcp()
             if not self.command and (not exe or not Path(exe).is_file()):
                 self._state = "missing"
-                self.last_error = "Roblox Studio MCP executable not found (set MIRACLES_STUDIO_MCP_PATH to its path)"
+                self.last_error = "Roblox Studio MCP executable not found (set HELIUM_STUDIO_MCP_PATH to its path)"
                 self._message = self.last_error
                 return self.status()
             self.executable = Path(exe) if exe else None
@@ -203,7 +204,7 @@ class StudioMCP:
             self._stderr.start()
             try:
                 self._request("initialize", {"protocolVersion": PROTOCOL_VERSION, "capabilities": {},
-                                              "clientInfo": {"name": "miracles-mcp", "version": "1.0"}})
+                                              "clientInfo": {"name": "helium-mcp", "version": "1.0"}})
                 self._notify("notifications/initialized")
                 self._refresh_tools()
             except (StudioMCPError, OSError, ValueError) as exc:

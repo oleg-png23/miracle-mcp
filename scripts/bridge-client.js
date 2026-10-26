@@ -81,7 +81,7 @@
       return values;
     }
     if (location.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(location.hostname))
-      throw new Error("Automatic setup requires the local Miracle page.");
+      throw new Error("Automatic setup requires the local Helium page.");
     const response = await fetch(new URL("/api/bootstrap", location.origin), {
       method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", cache: "no-store",
       signal: AbortSignal.timeout(5000)

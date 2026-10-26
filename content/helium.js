@@ -2,9 +2,9 @@
  * Editors are discovered only after a user action. No polling or DOM observer. */
 (() => {
   'use strict';
-  if (document.getElementById('miracles-mcp-widget')) return;
+  if (document.getElementById('helium-mcp-widget') || document.getElementById('miracles-mcp-widget')) return;
   const { marker: MARKER, intro: INTRO } = globalThis.MiraclesPrompt;
-  const CLIENT_VERSION = '2.9.1';
+  const CLIENT_VERSION = '2.9.2';
 
   const siteEditors = {
     'chatgpt.com': '#prompt-textarea,textarea[data-id="root"]',
@@ -36,7 +36,7 @@
     'kimi.ai': { selectors: '.segment-assistant .segment-content-box', exclude: '.thinking-container', send: '.send-button-container' }
   };
   const host = document.createElement('div');
-  host.id = 'miracles-mcp-widget';
+  host.id = 'helium-mcp-widget';
   host.style.cssText = 'position:fixed!important;right:16px!important;bottom:24px!important;z-index:2147483647!important;display:block!important;width:auto!important;height:auto!important;pointer-events:none!important;';
   const shadow = host.attachShadow({ mode: 'open' });
   const css = `
@@ -73,19 +73,19 @@
     for (const [key, value] of Object.entries(attrs || {})) element.setAttribute(key, value);
     element.append(...children); return element;
   }
-  function mark() { return node('span', {class:'monogram','aria-hidden':'true'}, 'm', node('span',{},'✦')); }
+  function mark() { return node('span', {class:'monogram','aria-hidden':'true'}, 'h', node('span',{},'✦')); }
   const button = (id, label, className = 'action') => node('button', { id, type: 'button', class: className }, label);
-  const close = button('close', '×', 'close'); close.setAttribute('aria-label', 'Close Miracle');
+  const close = button('close', '×', 'close'); close.setAttribute('aria-label', 'Close Helium');
   shadow.append(node('div', { class: 'widget' },
-    node('section', { class: 'panel', id: 'panel', 'aria-label': 'Miracle for Roblox Studio', hidden: '' },
-      node('header', { class: 'panel-head' }, node('div', { class: 'brand' }, node('span', { class: 'brand-mark' }, mark('')), node('div', {}, node('h2', {}, 'Miracle'), node('span', { class: 'eyebrow' }, 'Studio MCP'))), close),
+    node('section', { class: 'panel', id: 'panel', 'aria-label': 'Helium for Roblox Studio', hidden: '' },
+      node('header', { class: 'panel-head' }, node('div', { class: 'brand' }, node('span', { class: 'brand-mark' }, mark('')), node('div', {}, node('h2', {}, 'Helium'), node('span', { class: 'eyebrow' }, 'Studio MCP'))), close),
       node('p', { class: 'intro' }, 'Connect this chat to Roblox Studio.'),
       node('div', { class: 'actions' },
         button('copy', 'Copy instructions'),
         node('div', { class: 'secondary' }, button('check', 'Check connection'), button('dashboard', 'Open workspace'))),
       node('div', { class: 'status', id: 'status', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true', 'data-kind': 'info' }, 'Start a session to connect this chat to Studio tools.'),
-      node('details', { id: 'manual' }, node('summary', {}, 'AI instructions'), node('textarea', { id: 'prompt', readonly: '', 'aria-label': 'Miracle AI instructions', spellcheck: 'false' }))),
-    node('button', { class: 'toggle', id: 'toggle', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'panel', title: 'Open Miracle for Roblox Studio' }, node('span', { class: 'glyph' }, mark('')), node('span', { class: 'toggle-copy' }, 'Miracle', node('small', {}, 'Connect Studio')))));
+      node('details', { id: 'manual' }, node('summary', {}, 'AI instructions'), node('textarea', { id: 'prompt', readonly: '', 'aria-label': 'Helium AI instructions', spellcheck: 'false' }))),
+    node('button', { class: 'toggle', id: 'toggle', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'panel', title: 'Open Helium for Roblox Studio' }, node('span', { class: 'glyph' }, mark('')), node('span', { class: 'toggle-copy' }, 'Helium', node('small', {}, 'Connect Studio')))));
   document.documentElement.append(host);
   const $ = id => shadow.getElementById(id);
   const stateIcon=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -106,8 +106,8 @@
     const label = kind === 'error' ? 'Check needed' : agentActive ? 'Session active' : checking ? 'Checking' : 'Open workspace';
     $('toggle').querySelector('small').textContent = 'Studio MCP · ' + label;
     $('toggle').dataset.state = kind==='error'?'error':checking?'waiting':agentActive?'active':kind;
-    $('toggle').setAttribute('aria-label','Miracle · '+label);
-    $('toggle').title='Miracle · '+label;
+    $('toggle').setAttribute('aria-label','Helium · '+label);
+    $('toggle').title='Helium · '+label;
     if (checking) $('status').dataset.kind = 'waiting';
   }
   let closingPanel = null;
@@ -221,12 +221,12 @@
   async function recordUsage(kind, eventId, value) {
     try {
       const response=await sendRuntime('MCP_USAGE',{kind,event_id:eventId,characters:[...value].length});
-      if(!response?.ok) console.warn('[Miracles] Usage could not be saved:',response?.message||'no response');
-    } catch(error) { console.warn('[Miracles] Usage could not be saved:',error.message); }
+      if(!response?.ok) console.warn('[Helium] Usage could not be saved:',response?.message||'no response');
+    } catch(error) { console.warn('[Helium] Usage could not be saved:',error.message); }
   }
   const sent = new Set();
   function armAssistantWatchdog() { clearTimeout(watchdog); if(!agentActive) return; watchdog=setTimeout(()=>{ if(agentActive&&!busy) stop('No completed AI response after 120 seconds. Session paused. Check the site adapter.','ASSISTANT_TIMEOUT'); },120000); }
-  function userTurnNodes() { return [...document.querySelectorAll('[data-message-author-role="user"],[data-message-author="user"],[data-role="user"],[data-role="human"],[data-testid*="user-message"],[data-testid*="human-message"],.user-message,.human-message,.qwen-chat-message-user,.chat-user,.segment-user,.user-query,.ds-message.d29f3d7d,ol.flex-col-reverse > li')].filter(el=>!host.contains(el)&&!el.closest('#miracles-mcp-widget')); }
+  function userTurnNodes() { return [...document.querySelectorAll('[data-message-author-role="user"],[data-message-author="user"],[data-role="user"],[data-role="human"],[data-testid*="user-message"],[data-testid*="human-message"],.user-message,.human-message,.qwen-chat-message-user,.chat-user,.segment-user,.user-query,.ds-message.d29f3d7d,ol.flex-col-reverse > li')].filter(el=>!host.contains(el)&&!el.closest('#helium-mcp-widget')); }
   const sendRuntime = (type, payload = {}, signal) => new Promise((resolve, reject) => {
     const timeout = type === 'MCP_CALL' ? 85000 : type === 'MCP_TOOLS' ? 25000 : 15000;
     let timer;
@@ -271,7 +271,7 @@
       return /assistant|model/i.test(marker)&&!/user|human/i.test(marker)?[direct]:[];
     });
     return nodes.filter(el=>{
-      if(host.contains(el)||el.closest('#miracles-mcp-widget')||el.closest(userSelector)||config?.exclude&&el.closest(config.exclude)) return false;
+      if(host.contains(el)||el.closest('#helium-mcp-widget')||el.closest(userSelector)||config?.exclude&&el.closest(config.exclude)) return false;
       if(hostKey()==='chat.deepseek.com'&&el.closest('.d29f3d7d')) return false;
       const role=(el.getAttribute('data-message-author-role')||el.getAttribute('data-message-author')||el.getAttribute('data-role')||'').toLowerCase();
       if(role==='user'||role==='human') return false;
@@ -350,7 +350,7 @@
     signal?.throwIfAborted();
     const alreadySent=userTurnNodes().some(turn=>{
       const value=turn.innerText||turn.textContent||'';
-      return value.includes('Miracle tool result:')&&value.includes(item.encoded);
+      return value.includes('Helium tool result:')&&value.includes(item.encoded);
     });
     if(!alreadySent) {
       const pair=composerAndSend();
@@ -492,7 +492,7 @@
       const toolError=response?.ok===true&&response.result?.isError===true;
       const payload=response?.ok===true?{ok:!toolError,call_id:call.id,result:response.result}:{ok:false,call_id:call.id,code:response?.code||'TOOL_FAILED',message:response?.message||'The tool returned an error.'};
       const encoded=JSON.stringify(payload);
-      exposeResult({entry,encoded,message:'Miracle tool result:\n```json\n'+encoded+'\n```',eventId:sessionId+':'+call.id+':out',instance:sessionInstance,toolError,requestError:response?.ok!==true,code:payload.code});
+      exposeResult({entry,encoded,message:'Helium tool result:\n```json\n'+encoded+'\n```',eventId:sessionId+':'+call.id+':out',instance:sessionInstance,toolError,requestError:response?.ok!==true,code:payload.code});
       if(!agentActive)return;
       reportAgent('sending_result','',call.name);
       await deliverResult(sessionController?.signal);

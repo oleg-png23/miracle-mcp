@@ -25,7 +25,7 @@ except ImportError:  # direct execution: python python/mcp_server.py
     from studio_mcp import StudioMCP, StudioMCPError
     from usage_stats import UsageStats
 
-VERSION = "2.9.1"
+VERSION = "2.9.2"
 INSTANCE_ID = secrets.token_hex(8)
 START = time.time()
 TOKEN = ""
@@ -358,7 +358,7 @@ def resolve_app_root(server_file=__file__):
 
 
 class H(BaseHTTPRequestHandler):
-    server_version = "MiraclesMCP/" + VERSION
+    server_version = "HeliumMCP/" + VERSION
     APP_ROOT = resolve_app_root()
     STATIC_EXTS = {
         ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -466,7 +466,7 @@ class H(BaseHTTPRequestHandler):
                 recent = RECENT[-15:][::-1]
                 results = RESULTS[-50:][::-1]
             native = _status_native()
-            self._json({"online": True, "service": "miracle-mcp", "pid": os.getpid(), "version": VERSION, "instance_id": INSTANCE_ID,
+            self._json({"online": True, "service": "helium-mcp", "pid": os.getpid(), "version": VERSION, "instance_id": INSTANCE_ID,
                         "queue": queue_count, "oldest_pending_s": int(oldest), "stale": oldest > 120,
                         "studio_mode": "native_mcp", "studio_linked": native.get("state") == "ready",
                         "native_mcp": native, "results": results, "recent": recent,
@@ -729,7 +729,7 @@ def existing_bridge(port: int) -> Optional[dict]:
             info = json.loads(response.read(MAX_BODY))
         if (isinstance(info, dict) and info.get("online") is True
                 and info.get("studio_mode") == "native_mcp"
-                and info.get("service", "miracle-mcp") == "miracle-mcp"):
+                and info.get("service", "miracle-mcp") in {"helium-mcp", "miracle-mcp"}):
             return info
     except (OSError, ValueError):
         pass
@@ -738,7 +738,7 @@ def existing_bridge(port: int) -> Optional[dict]:
 
 def main(argv=None):
     global TOKEN, SAFE, ALLOW_ASSETS, START, USAGE
-    parser = argparse.ArgumentParser(description="Miracles MCP local bridge")
+    parser = argparse.ArgumentParser(description="Helium MCP local bridge")
     parser.add_argument("--port", type=int, default=19731)
     parser.add_argument("--token", default="")
     parser.add_argument("--no-safe", action="store_true")
@@ -755,15 +755,15 @@ def main(argv=None):
             raise
         running = existing_bridge(args.port)
         if running and running.get("version") == VERSION:
-            print(f"[miracles-mcp] reusing v{VERSION} at http://127.0.0.1:{args.port}/app", flush=True)
+            print(f"[helium-mcp] reusing v{VERSION} at http://127.0.0.1:{args.port}/app", flush=True)
             return 0
-        raise SystemExit(f"Port {args.port} is occupied. Run run.bat to replace a previous Miracle bridge; another application will not be stopped.") from None
+        raise SystemExit(f"Port {args.port} is occupied. Run run.bat to replace a previous Helium bridge; another application will not be stopped.") from None
     # Only the process that owns the port may create credentials. Two
     # simultaneous launches cannot race while writing token.txt.
     TOKEN = _load_token(args.token)
-    print(f"[miracles-mcp] v{VERSION} native Studio MCP bridge at http://127.0.0.1:{server.server_port}")
-    print(f"[miracles-mcp] dashboard: http://127.0.0.1:{server.server_port}/app")
-    print(f"[miracles-mcp] safe mode: {'ON' if SAFE else 'OFF'}")
+    print(f"[helium-mcp] v{VERSION} native Studio MCP bridge at http://127.0.0.1:{server.server_port}")
+    print(f"[helium-mcp] dashboard: http://127.0.0.1:{server.server_port}/app")
+    print(f"[helium-mcp] safe mode: {'ON' if SAFE else 'OFF'}")
     start_native_monitor()
     try:
         server.serve_forever()

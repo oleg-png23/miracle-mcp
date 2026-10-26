@@ -24,7 +24,7 @@ function Open-Workspace {
     Start-Process -FilePath "$taskBase/app"
 }
 
-function Stop-MiracleBridge($taskStatus) {
+function Stop-HeliumBridge($taskStatus) {
     if ($taskStatus -and $taskStatus.studio_mode -ne 'native_mcp') {
         throw 'The selected port belongs to another application. It was not stopped.'
     }
@@ -36,7 +36,7 @@ function Stop-MiracleBridge($taskStatus) {
         Invoke-RestMethod -Uri "$taskBase/api/bridge/shutdown" -Method Post -ContentType 'application/json' -Body $taskStopBody -TimeoutSec 5 | Out-Null
     } else {
         # Migration from older versions without a shutdown route. Verify the
-        # listener PID, Python command and installed Miracle package first.
+        # listener PID, Python command and installed Helium package first.
         $taskListeners = @(Get-NetTCPConnection -LocalPort $taskPort -State Listen -ErrorAction SilentlyContinue)
         $taskOwners = @($taskListeners | Select-Object -ExpandProperty OwningProcess -Unique)
         if (-not $taskOwners.Count) { return }
@@ -56,13 +56,13 @@ function Stop-MiracleBridge($taskStatus) {
                         try {
                             $taskOlderManifest = Get-Content -LiteralPath (Join-Path $taskOlderUI 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
                             $taskOlderSource = Get-Content -LiteralPath $taskOlderServer -Raw -Encoding UTF8
-                            $taskVerified = $taskOlderManifest.name -eq 'Miracle — Local Bridge for Roblox Studio' -and $taskOlderManifest.version -eq $taskStatus.version -and $taskOlderSource.Contains('MiraclesMCP/') -and $taskOlderSource.Contains('class BridgeServer(')
+                            $taskVerified = ($taskOlderManifest.name -in @('Helium — Local Bridge for Roblox Studio', 'Miracle — Local Bridge for Roblox Studio')) -and $taskOlderManifest.version -eq $taskStatus.version -and ($taskOlderSource.Contains('HeliumMCP/') -or $taskOlderSource.Contains('MiraclesMCP/')) -and $taskOlderSource.Contains('class BridgeServer(')
                         } catch { $taskVerified = $false }
                     }
                 }
             }
             if (-not $taskVerified) {
-                throw 'An older or unrelated process owns the selected port. Its identity could not be verified, so it was not stopped. Close the previous Miracle release and try again.'
+                throw 'An older or unrelated process owns the selected port. Its identity could not be verified, so it was not stopped. Close the previous Helium release and try again.'
             }
         }
         foreach ($taskOwner in $taskOwners) { Stop-Process -Id $taskOwner -Force -ErrorAction Stop }
@@ -75,10 +75,11 @@ function Stop-MiracleBridge($taskStatus) {
 }
 
 try {
+    # Keep the shared legacy mutex so old and new installers serialize together.
     $taskMutex = [System.Threading.Mutex]::new($false, "Local\MiracleMCP-Bridge-$taskPort")
     try { $taskMutexHeld = $taskMutex.WaitOne([TimeSpan]::FromSeconds(20)) }
     catch [System.Threading.AbandonedMutexException] { $taskMutexHeld = $true }
-    if (-not $taskMutexHeld) { throw 'Another Miracle launch is still in progress. Wait a moment and try again.' }
+    if (-not $taskMutexHeld) { throw 'Another Helium launch is still in progress. Wait a moment and try again.' }
     $taskUIRoot = $taskRoot
     if (-not (Test-Path -LiteralPath (Join-Path $taskUIRoot 'manifest.json'))) {
         $taskUIRoot = Join-Path (Split-Path -Parent $taskRoot) 'plugin'
@@ -89,20 +90,21 @@ try {
     $taskVersion = (Get-Content -LiteralPath (Join-Path $taskUIRoot 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
     $taskExisting = Get-BridgeStatus
     if ($StopBridge) {
-        Stop-MiracleBridge $taskExisting
-        Write-Host '[Miracle MCP] Bridge stopped.'
+        Stop-HeliumBridge $taskExisting
+        Write-Host '[Helium MCP] Bridge stopped.'
         exit 0
     }
     if ($taskExisting -and $taskExisting.online -and $taskExisting.studio_mode -eq 'native_mcp' -and $taskExisting.version -eq $taskVersion) {
-        Write-Host '[Miracle MCP] Reusing the running bridge.'
+        Write-Host '[Helium MCP] Reusing the running bridge.'
         Open-Workspace
         exit 0
     }
     if ($taskExisting -or @(Get-NetTCPConnection -LocalPort $taskPort -State Listen -ErrorAction SilentlyContinue).Count) {
-        Stop-MiracleBridge $taskExisting
+        Stop-HeliumBridge $taskExisting
     }
 
     $taskCandidates = [System.Collections.Generic.List[string]]::new()
+    if ($env:HELIUM_PYTHON_PATH) { $taskCandidates.Add($env:HELIUM_PYTHON_PATH) }
     if ($env:MIRACLES_PYTHON_PATH) { $taskCandidates.Add($env:MIRACLES_PYTHON_PATH) }
     foreach ($taskCommand in @(Get-Command python.exe, python3.exe -CommandType Application -All -ErrorAction SilentlyContinue)) {
         if ($taskCommand.Source -and $taskCommand.Source -notmatch '\\WindowsApps\\') { $taskCandidates.Add($taskCommand.Source) }
@@ -188,7 +190,7 @@ try {
     if (-not $taskReady) { throw "Не удалось запустить мост. Подробности: $taskLogs\bridge.stderr.log" }
     Open-Workspace
 } catch {
-    Write-Host ('[Miracles MCP] ' + $_.Exception.Message) -ForegroundColor Red
+    Write-Host ('[Helium MCP] ' + $_.Exception.Message) -ForegroundColor Red
     exit 1
 } finally {
     if ($taskMutexHeld) { $taskMutex.ReleaseMutex() }

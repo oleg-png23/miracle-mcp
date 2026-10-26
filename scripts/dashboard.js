@@ -93,7 +93,7 @@
     setText('stStudio', linked ? 'Connected' : 'Waiting');
     setText('studioNote', linked ? (nativeMcp ? `Available tools: ${Number(data.native_mcp?.tools_count) || 0}` : `Response ${Number(data.studio_seen_s) || 0} seconds ago`) : diagnosis.title);
     setText('studioVisualStatus', linked ? 'MCP connected' : 'Waiting for connection');
-    setText('bridgeDescription', linked ? 'Your tools are ready. Open your AI chat and select Miracle → Start session.' : diagnosis.message);
+    setText('bridgeDescription', linked ? 'Your tools are ready. Open your AI chat and select Helium → Start session.' : diagnosis.message);
     feedback(panelError || diagnosis.message, !!panelError || diagnosis.state !== 'linked');
     setText('studioStatus', diagnosis.title);
     setText('latencyValue', `${latency} ms`);

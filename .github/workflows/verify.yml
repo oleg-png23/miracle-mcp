@@ -1,4 +1,4 @@
-name: Verify Miracle
+name: Verify Helium
 on:
   pull_request:
   push:
@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: miracle-verify-${{ github.ref }}
+  group: helium-verify-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   core:
@@ -59,14 +59,14 @@ jobs:
               try { Invoke-RestMethod http://127.0.0.1:19737/api/status -TimeoutSec 2 | Out-Null; $ready = $true; break } catch { Start-Sleep -Milliseconds 300 }
             }
             if (-not $ready) { throw 'Studio simulator did not start.' }
-            $env:MIRACLES_QUICK_QA = '1'
-            if ('${{ matrix.view }}' -eq 'agent') { $env:MIRACLES_AGENT_ONLY = '1' } else { $env:MIRACLES_DASHBOARD_ONLY = '1' }
+            $env:HELIUM_QUICK_QA = '1'
+            if ('${{ matrix.view }}' -eq 'agent') { $env:HELIUM_AGENT_ONLY = '1' } else { $env:HELIUM_DASHBOARD_ONLY = '1' }
             npm run test:ui
             if ($LASTEXITCODE -ne 0) { throw 'Browser checks failed.' }
           } finally { Stop-Process -Id $fixture.Id -Force -ErrorAction SilentlyContinue }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: miracle-browser-qa-${{ matrix.view }}
+          name: helium-browser-qa-${{ matrix.view }}
           path: .mcp_cache/qa
           include-hidden-files: false

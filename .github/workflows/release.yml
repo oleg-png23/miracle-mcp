@@ -7,7 +7,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: miracle-release-${{ github.ref }}
+  group: helium-release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   release:
@@ -32,21 +32,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          miracle_version=$(python -c 'import json,re; v=json.load(open("manifest.json"))["version"]; assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+",v); print(v)')
-          miracle_tag="v$miracle_version"
-          if gh release view "$miracle_tag" --json isDraft --jq '.isDraft' > release-state.txt 2>/dev/null; then
+          helium_version=$(python -c 'import json,re; v=json.load(open("manifest.json"))["version"]; assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+",v); print(v)')
+          helium_tag="v$helium_version"
+          if gh release view "$helium_tag" --json isDraft --jq '.isDraft' > release-state.txt 2>/dev/null; then
             if [ "$(cat release-state.txt)" = false ]; then
-              echo "Release $miracle_tag is already published; preserving it."
+              echo "Release $helium_tag is already published; preserving it."
               exit 0
             fi
-            miracle_target=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$miracle_tag" --jq '.target_commitish')
-            test "$miracle_target" = "$GITHUB_SHA"
+            helium_target=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$helium_tag" --jq '.target_commitish')
+            test "$helium_target" = "$GITHUB_SHA"
           else
-            gh release create "$miracle_tag" --target "$GITHUB_SHA" --title "Miracle $miracle_version" --notes-file RELEASE_NOTES.md --draft
+            gh release create "$helium_tag" --target "$GITHUB_SHA" --title "Helium $helium_version" --notes-file RELEASE_NOTES.md --draft
           fi
-          gh release upload "$miracle_tag" \
-            ".mcp_cache/release/miracle-mcp-$miracle_version.zip" \
-            ".mcp_cache/release/miracle-website-$miracle_version.zip" \
-            ".mcp_cache/release/miracle-wallpapers-$miracle_version.zip" \
+          gh release upload "$helium_tag" \
+            ".mcp_cache/release/helium-mcp-$helium_version.zip" \
+            ".mcp_cache/release/helium-website-$helium_version.zip" \
+            ".mcp_cache/release/helium-wallpapers-$helium_version.zip" \
             .mcp_cache/release/SHA256SUMS.txt --clobber
-          gh release edit "$miracle_tag" --draft=false --latest
+          gh release edit "$helium_tag" --draft=false --latest

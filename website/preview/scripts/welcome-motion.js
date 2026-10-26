@@ -10,7 +10,7 @@
   const headline = document.getElementById('welcomeTitle');
   const lead = document.getElementById('welcomeTitleLead');
   const end = document.getElementById('welcomeTitleEnd');
-  const phrases = [['Welcome to', 'Miracle.'], ['Your ideas.', 'In Studio.'],
+  const phrases = [['Welcome to', 'Helium.'], ['Your ideas.', 'In Studio.'],
     ['Less setup.', 'More flow.'], ['Build with', 'your AI.']];
   let phrase = 0, count = 0, phase = 'typing', timer = 0, visible = true, started = false;
   const total = () => phrases[phrase][0].length + phrases[phrase][1].length;
