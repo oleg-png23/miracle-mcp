@@ -323,3 +323,12 @@ body.dashboard-page .desktop-foot { padding-top: 28px; opacity: .7; }
   body.dashboard-page .sidebar .nav-link.active { color: HighlightText; }
   body.dashboard-page :is(button, a, input, textarea, summary):focus-visible { outline-color: Highlight; }
 }
+
+body.dashboard-page .agent-status { --radius: 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 24px; margin-top: 16px; --glass-wash-top: .88; --glass-wash-bottom: .76; }
+body.dashboard-page .agent-status > div { min-width: 0; }
+body.dashboard-page .agent-status strong { display: block; font-size: 13px; margin: 7px 0; letter-spacing: -.02em; }
+body.dashboard-page .agent-status p { color: #496353; font-size: 11px; line-height: 1.7; max-width: 650px; margin: 0; }
+body.dashboard-page .agent-status .button { flex: none; background: #f7ffe9; border-color: #cde0ba; color: #34533b; }
+body.dashboard-page .agent-status[data-state="active"] .section-kicker { color: #1c7856; }
+@media (max-width: 650px) { body.dashboard-page .agent-status { display: block; padding: 19px 21px; } body.dashboard-page .agent-status .button { margin-top: 13px; min-height: 40px; } }
+@media (forced-colors: active) { body.dashboard-page .agent-status p, body.dashboard-page .agent-status .button { background: Canvas; color: CanvasText; border-color: CanvasText; } }

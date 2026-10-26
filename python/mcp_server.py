@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import hashlib
 import json
 import os
 import re
 import secrets
+import socket
 import threading
 import time
 import urllib.parse
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -22,7 +25,7 @@ except ImportError:  # direct execution: python python/mcp_server.py
     from studio_mcp import StudioMCP, StudioMCPError
     from usage_stats import UsageStats
 
-VERSION = "2.2.0"
+VERSION = "2.9.0"
 INSTANCE_ID = secrets.token_hex(8)
 START = time.time()
 TOKEN = ""
@@ -57,6 +60,44 @@ _MONITOR_STOP = threading.Event()
 _DEDUP_LOCK = threading.Lock()
 _CALLS: dict[str, dict] = {}
 USAGE = UsageStats()
+_AGENTS: dict[str, dict] = {}
+_LAST_UI_OPEN = 0.0
+
+
+def agent_sessions() -> list[dict]:
+    with _STATE_LOCK:
+        return [{**item, "age_s": max(0, int(time.time() - item["updated_at"]))}
+                for item in sorted(_AGENTS.values(), key=lambda item: item["updated_at"], reverse=True)[:12]]
+
+
+def record_agent(body: dict) -> None:
+    """Store operational state only, never chat text, arguments or results."""
+    client_id, session_id = body.get("client_id"), body.get("session_id")
+    if not isinstance(client_id, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,100}", client_id):
+        raise ValueError("A valid chat client id is required")
+    if not isinstance(session_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", session_id):
+        raise ValueError("A valid session id is required")
+    state = body.get("state")
+    if state not in {"starting", "watching", "waiting_json", "running", "sending_result", "paused", "stopped"}:
+        raise ValueError("Unknown agent state")
+    site = body.get("site", "")
+    if not isinstance(site, str) or not re.fullmatch(r"[a-zA-Z0-9.-]{1,253}", site):
+        raise ValueError("A hostname is required")
+    calls = body.get("calls", 0)
+    if type(calls) is not int or not 0 <= calls <= 30:
+        raise ValueError("Invalid tool call count")
+    item = {"session_id": session_id, "site": site.lower(), "state": state, "calls": calls,
+            "updated_at": time.time()}
+    for field, limit, pattern in [("code", 80, r"[A-Z0-9_]*"), ("tool_name", 200, r"[^\x00-\x1f]*"),
+                                  ("client_version", 30, r"[0-9.]*"), ("extension_version", 30, r"[0-9.]*")]:
+        value = body.get(field, "")
+        if not isinstance(value, str) or len(value) > limit or not re.fullmatch(pattern, value):
+            raise ValueError("Invalid agent " + field)
+        item[field] = value
+    with _STATE_LOCK:
+        _AGENTS[client_id] = item
+        while len(_AGENTS) > 32:
+            del _AGENTS[min(_AGENTS, key=lambda key: _AGENTS[key]["updated_at"])]
 
 
 def now() -> str:
@@ -425,13 +466,14 @@ class H(BaseHTTPRequestHandler):
                 recent = RECENT[-15:][::-1]
                 results = RESULTS[-50:][::-1]
             native = _status_native()
-            self._json({"online": True, "version": VERSION, "instance_id": INSTANCE_ID,
+            self._json({"online": True, "service": "miracle-mcp", "pid": os.getpid(), "version": VERSION, "instance_id": INSTANCE_ID,
                         "queue": queue_count, "oldest_pending_s": int(oldest), "stale": oldest > 120,
                         "studio_mode": "native_mcp", "studio_linked": native.get("state") == "ready",
                         "native_mcp": native, "results": results, "recent": recent,
                         "uptime_s": int(time.time() - START), "port": self.server.server_port,
                         "auth": True, "safe": SAFE, "allowlist": sorted(ALLOW_ASSETS, key=int),
-                        "usage": USAGE.snapshot()})
+                        "usage": USAGE.snapshot(), "agent_sessions": agent_sessions(),
+                        "capabilities": ["agent_status", "graceful_shutdown", "single_instance"]})
         else:
             self._json({"error": "not found"}, 404)
 
@@ -471,8 +513,39 @@ class H(BaseHTTPRequestHandler):
                 return
             self._json({"ok": True, "instance_id": INSTANCE_ID})
             return
-        if path in {"/api/tools/list", "/api/tools/call", "/api/execute", "/api/usage/event"} and not self._authed(body):
+        if path in {"/api/tools/list", "/api/tools/call", "/api/execute", "/api/usage/event",
+                    "/api/agent/state", "/api/bridge/shutdown", "/api/ui/claim"} and not self._authed(body):
             self._json({"ok": False, "error": {"code": "unauthorized", "message": "Bad or missing bridge token"}}, 401)
+            return
+        if path == "/api/agent/state":
+            try:
+                record_agent(body)
+            except ValueError as exc:
+                self._json({"ok": False, "message": str(exc)}, 400)
+                return
+            self._json({"ok": True})
+            return
+        if path in {"/api/bridge/shutdown", "/api/ui/claim"}:
+            if body.get("instance_id") != INSTANCE_ID:
+                self._json({"ok": False, "error": {"code": "instance_changed", "message": "The bridge changed. Check its status again."}}, 409)
+                return
+            if path == "/api/ui/claim":
+                global _LAST_UI_OPEN
+                with _STATE_LOCK:
+                    open_ui = time.monotonic() - _LAST_UI_OPEN > 3
+                    if open_ui:
+                        _LAST_UI_OPEN = time.monotonic()
+                self._json({"ok": True, "open_ui": open_ui})
+                return
+            with _DEDUP_LOCK, _STATE_LOCK:
+                busy = bool(QUEUE) or any(not entry["event"].is_set() for entry in _CALLS.values())
+                if not busy:
+                    self.server.stopping.set()
+            if busy:
+                self._json({"ok": False, "error": {"code": "bridge_busy", "message": "A Studio tool is still running. Wait for it to finish before replacing the bridge."}}, 409)
+                return
+            self._json({"ok": True, "instance_id": INSTANCE_ID, "status": "stopping"})
+            threading.Thread(target=self.server.shutdown, name="bridge-shutdown", daemon=True).start()
             return
         if path == "/api/usage/event":
             try:
@@ -543,6 +616,9 @@ class H(BaseHTTPRequestHandler):
                     self._json({"ok": False, "error": {"code": "call_id_conflict", "message": "call_id was already used with different content"}}, 409)
                     return
                 if entry is None:
+                    if self.server.stopping.is_set():
+                        self._json({"ok": False, "error": {"code": "shutting_down", "message": "The bridge is stopping. Start a new session after reconnecting."}}, 503)
+                        return
                     entry = {"fingerprint": fingerprint, "event": threading.Event(), "response": None, "http": 200}
                     _CALLS[call_id] = entry
                     owner = True
@@ -593,6 +669,9 @@ class H(BaseHTTPRequestHandler):
                 tool_name, arg_name = None, None
             global NEXT_ID
             with _STATE_LOCK:
+                if self.server.stopping.is_set():
+                    self._json({"ok": False, "error": {"code": "shutting_down", "message": "The bridge is stopping. Reconnect before running code."}}, 503)
+                    return
                 jid = NEXT_ID
                 NEXT_ID += 1
                 QUEUE.append({"id": jid, "ts": time.time(), "src": "api"})
@@ -605,7 +684,18 @@ class H(BaseHTTPRequestHandler):
 
 class BridgeServer(ThreadingHTTPServer):
     daemon_threads = True
-    allow_reuse_address = True
+    allow_reuse_address = os.name != "nt"
+
+    def __init__(self, *args, **kwargs):
+        self.stopping = threading.Event()
+        super().__init__(*args, **kwargs)
+
+    def server_bind(self):
+        # SO_REUSEADDR permits duplicate listeners on Windows. The bridge must
+        # exclusively own its port, including launches outside run.bat.
+        if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
     def server_close(self):
         try:
@@ -632,6 +722,20 @@ def _load_token(explicit: str = "") -> str:
     return token
 
 
+def existing_bridge(port: int) -> Optional[dict]:
+    try:
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(f"http://127.0.0.1:{port}/api/status", timeout=2) as response:
+            info = json.loads(response.read(MAX_BODY))
+        if (isinstance(info, dict) and info.get("online") is True
+                and info.get("studio_mode") == "native_mcp"
+                and info.get("service", "miracle-mcp") == "miracle-mcp"):
+            return info
+    except (OSError, ValueError):
+        pass
+    return None
+
+
 def main(argv=None):
     global TOKEN, SAFE, ALLOW_ASSETS, START, USAGE
     parser = argparse.ArgumentParser(description="Miracles MCP local bridge")
@@ -641,11 +745,22 @@ def main(argv=None):
     parser.add_argument("--allow-assets", default="")
     args = parser.parse_args(argv)
     USAGE = UsageStats(Path(__file__).resolve().parents[1] / ".mcp_cache" / "usage-stats.json")
-    TOKEN = _load_token(args.token)
     SAFE = not args.no_safe
     ALLOW_ASSETS = {a.strip() for a in args.allow_assets.split(",") if a.strip().isdigit()}
     START = time.time()
-    server = BridgeServer(("127.0.0.1", args.port), H)
+    try:
+        server = BridgeServer(("127.0.0.1", args.port), H)
+    except OSError as exc:
+        if exc.errno != errno.EADDRINUSE and getattr(exc, "winerror", None) not in {10048, 10013}:
+            raise
+        running = existing_bridge(args.port)
+        if running and running.get("version") == VERSION:
+            print(f"[miracles-mcp] reusing v{VERSION} at http://127.0.0.1:{args.port}/app", flush=True)
+            return 0
+        raise SystemExit(f"Port {args.port} is occupied. Run run.bat to replace a previous Miracle bridge; another application will not be stopped.") from None
+    # Only the process that owns the port may create credentials. Two
+    # simultaneous launches cannot race while writing token.txt.
+    TOKEN = _load_token(args.token)
     print(f"[miracles-mcp] v{VERSION} native Studio MCP bridge at http://127.0.0.1:{server.server_port}")
     print(f"[miracles-mcp] dashboard: http://127.0.0.1:{server.server_port}/app")
     print(f"[miracles-mcp] safe mode: {'ON' if SAFE else 'OFF'}")

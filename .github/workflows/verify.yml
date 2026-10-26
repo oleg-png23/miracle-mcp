@@ -1,0 +1,67 @@
+name: Verify Miracle
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: miracle-verify-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - run: npm test
+      - run: python -m unittest discover -s python -p 'test_*.py'
+      - run: python scripts/build-release.py
+  windows-launcher:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - run: python scripts/build-release.py
+      - name: Test the packaged Windows launcher
+        shell: powershell
+        run: ./scripts/test-launcher.ps1
+  browser:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - name: Test dashboard and chat relay in Edge with simulated Studio
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force .mcp_cache/qa | Out-Null
+          $fixture = Start-Process python -ArgumentList '-u scripts/test-fixture.py' -PassThru -RedirectStandardOutput .mcp_cache/qa/fixture.stdout.log -RedirectStandardError .mcp_cache/qa/fixture.stderr.log
+          try {
+            $ready = $false
+            for ($attempt = 0; $attempt -lt 30; $attempt++) {
+              try { Invoke-RestMethod http://127.0.0.1:19737/api/status -TimeoutSec 2 | Out-Null; $ready = $true; break } catch { Start-Sleep -Milliseconds 300 }
+            }
+            if (-not $ready) { throw 'Studio simulator did not start.' }
+            $env:MIRACLES_QUICK_QA = '1'
+            npm run test:ui
+            if ($LASTEXITCODE -ne 0) { throw 'Browser checks failed.' }
+          } finally { Stop-Process -Id $fixture.Id -Force -ErrorAction SilentlyContinue }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: miracle-browser-qa
+          path: .mcp_cache/qa
+          include-hidden-files: false

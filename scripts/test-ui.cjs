@@ -277,6 +277,33 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
       await page.waitForTimeout(1200); assert.equal((await calls()).length, 0);
       await page.locator('#miracles-mcp-widget #agent-stop').click();
     });
+    await check('long partial JSON completes and runs once without relying on a stop button',async()=>{
+      await seed([]);await start();
+      await page.evaluate(()=>{
+        const text=JSON.stringify({miracles_tool:{id:'long-stream',name:'run_code',arguments:{code:'-- '+ 'x'.repeat(14000)+'\\nreturn 1'}}});
+        const reply=document.createElement('div');reply.id='long-stream';reply.setAttribute('data-message-author-role','assistant');
+        const pre=document.createElement('pre'),code=document.createElement('code');code.textContent=text.slice(0,-3);pre.append(code);reply.append(pre);document.querySelector('#messages').append(reply);
+        window.completeLongReply=()=>{code.textContent=text;};
+      });
+      await page.waitForTimeout(1700);assert.equal((await calls()).length,0);
+      await page.evaluate(()=>window.completeLongReply());await waitCalls(1);
+      await page.waitForFunction(()=>window.sentMessages.length===2);
+      await page.waitForTimeout(1200);assert.equal((await calls()).length,1);
+      await page.locator('#miracles-mcp-widget #agent-stop').click();
+    });
+    await check('Watch attaches to existing JSON and retry delivers a saved result once',async()=>{
+      await seed([],'Keep this draft');
+      await page.evaluate(()=>{const reply=document.createElement('div');reply.setAttribute('data-message-author-role','assistant');reply.textContent=JSON.stringify({miracles_tool:{id:'watch-latest',name:'get_scene_info',arguments:{}}});document.querySelector('#messages').append(reply);});
+      await page.locator('#miracles-mcp-widget #agent-watch').click();await waitCalls(1);
+      await page.waitForFunction(()=>document.querySelector('#miracles-mcp-widget').shadowRoot.getElementById('status').textContent.includes('result is saved'));
+      assert.equal(await page.locator('textarea').first().inputValue(),'Keep this draft');
+      await page.locator('textarea').first().fill('');
+      await page.locator('#miracles-mcp-widget #retry-result').click();
+      await page.waitForFunction(()=>window.sentMessages.length===1);
+      assert.equal((await calls()).length,1);
+      assert.match((await page.evaluate(()=>window.sentMessages))[0],/Native fixture result/);
+      await page.locator('#miracles-mcp-widget #agent-stop').click();
+    });
     for(const hostname of ['www.notion.so','app.clickup.com']) {
       await check(hostname+' scopes the agent to AI chat and preserves work documents',async()=>{
         await seed([tool('work-app','get_scene_info'),{text:'Done'}],'Inspect my Roblox place',hostname);

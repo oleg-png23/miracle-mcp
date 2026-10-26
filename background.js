@@ -13,6 +13,18 @@ chrome.runtime.onStartup.addListener(() => openDashboard('startup').catch(consol
 chrome.action.onClicked.addListener(() => openDashboard().catch(console.error));
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
   if (!message || typeof message !== 'object') return;
+  if (message.type === 'MCP_AGENT_STATE') {
+    let source;
+    try { source = new URL(sender.tab?.url || sender.url); } catch { reply({ok:false,message:'Chat source is unavailable.'}); return; }
+    if (!Number.isInteger(sender.tab?.id) || source.protocol !== 'https:') { reply({ok:false,message:'Agent state requires a chat tab.'}); return; }
+    // Only these fields leave the extension. Ignore caller-supplied URLs,
+    // tokens, arguments and text; identify the real sender tab ourselves.
+    apiPost('/api/agent/state', {client_id:'tab:'+sender.tab.id,site:source.hostname,
+      session_id:message.session_id,state:message.state,code:typeof message.code==='string'?message.code.toUpperCase().replace(/[^A-Z0-9_]/g,'_').slice(0,80):'',tool_name:message.tool_name||'',
+      calls:message.calls,client_version:message.client_version||'',extension_version:chrome.runtime.getManifest?.().version||''})
+      .then(reply,error=>reply({ok:false,message:error.message}));
+    return true;
+  }
   if (message.type === 'MCP_USAGE') {
     let site;
     try { site = new URL(sender.tab?.url || sender.url).hostname.toLowerCase(); }
@@ -71,6 +83,8 @@ async function checkBridgeHealth() {
     if(!response.ok) return {online:false,authenticated:true,code:'HTTP_'+response.status,message:`The bridge returned HTTP ${response.status} while checking status.`};
     const info=await response.json();
     if(info.online!==true) return {online:false,authenticated:true,info,code:'OFFLINE',message:'The local bridge is not running.'};
+    const installedVersion=chrome.runtime.getManifest?.().version;
+    if(installedVersion&&info.version&&installedVersion!==info.version)return {online:true,authenticated:true,info,instance_id:info.instance_id,code:'VERSION_MISMATCH',message:`Bridge ${info.version} and extension ${installedVersion} are different versions. Run the new release/run.bat, reload the extension and refresh this chat.`};
     const native=info.native_mcp||{};
     if(info.studio_linked!==true||native.state!=='ready') {
       const state=String(native.state||'studio_closed');

@@ -6,7 +6,8 @@ const vm=require('node:vm');
 // Run the actual content scripts with a deterministic chat DOM and clock.
 function chat({rich=false,hold='',paste=true,toolCount=1}={}) {
   let now=0,nextTimer=0,readerScans=0,fullScans=0,execCalls=0,pastes=0,inputs=0,observer;
-  const timers=new Map(), pending={}, sent=[], requests=[], elements=new Map();
+  const timers=new Map(), pending={}, sent=[], requests=[], messages=[], assistants=[], users=[], elements=new Map();
+  let blockResultSend=false, streaming=false;
   class Element {
     constructor(tag='div') { this.tagName=tag.toUpperCase();this.children=[];this.attrs={};this.dataset={};this.style={};this.value='';this.innerText='';this.textContent='';this.isConnected=true;this.disabled=false;this.hidden=false; }
     set id(v){this.attrs.id=v;elements.set(v,this);} get id(){return this.attrs.id;}
@@ -16,9 +17,9 @@ function chat({rich=false,hold='',paste=true,toolCount=1}={}) {
     attachShadow(){return this.shadowRoot=new Element();}
     getElementById(id){return elements.get(id);}
     querySelector(q){return q==='small'?small:q==='.glyph'?glyph:q==='.actions'?actions:null;}
-    querySelectorAll(){return [];}
+    querySelectorAll(q){return q==='pre code, code'?(this.codes||[]):[];}
     addEventListener(){} contains(el){return el===this;}
-    closest(q){return this===composer&&q==='form'?form:null;}
+    closest(q){if(q==='form'&&this===composer)return form;if(q==='[data-is-streaming="true"]'&&this.attrs['data-is-streaming']==='true')return this;return null;}
     getRootNode(){return document;}
     getBoundingClientRect(){return {width:600,height:80,top:200};}
     matches(q){return this===composer&&(rich?q.includes('contenteditable'):q.includes('textarea'));}
@@ -31,7 +32,7 @@ function chat({rich=false,hold='',paste=true,toolCount=1}={}) {
   }
   Object.defineProperty(Element.prototype,'value',{get(){return this._value||'';},set(v){this._value=v;},configurable:true});
   const small=new Element(),glyph=new Element(),actions=new Element(),composer=new Element(rich?'div':'textarea'),form=new Element('form'),send=new Element('button');
-  send.setAttribute('aria-label','Send message');send.click=()=>{sent.push(rich?composer.innerText:composer.value);composer.value='';composer.innerText='';};
+  send.setAttribute('aria-label','Send message');send.click=()=>{const value=rich?composer.innerText:composer.value;if(blockResultSend&&value.startsWith('Miracle tool result:'))return;sent.push(value);const turn=new Element();turn.innerText=value;users.push(turn);composer.value='';composer.innerText='';};
   form.querySelectorAll=()=>[send];composer.parentElement=form;
   const selection={removeAllRanges(){},addRange(){}};
   const document={body:new Element(),documentElement:new Element(),getElementById:()=>null,addEventListener(){},getSelection:()=>selection,
@@ -39,23 +40,32 @@ function chat({rich=false,hold='',paste=true,toolCount=1}={}) {
     querySelector:()=>null,querySelectorAll:q=>{
       if(q==='*') {fullScans++;return [];}
       if(q==='#prompt-textarea,textarea[data-id="root"]') return [composer];
-      if(q==='[data-message-author-role="assistant"]') readerScans++;
+      if(q==='[data-message-author-role="assistant"]') {readerScans++;return assistants;}
+      if(q.includes('[data-message-author-role="user"]'))return users;
+      if(q==='[data-testid="stop-button"]')return streaming?[send]:[];
       return [];
     },execCommand:(_cmd,_ui,value)=>{execCalls++;composer.innerText=value;inputs++;return true;}};
-  const runtime={sendMessage(message,callback){requests.push(message.type);const respond=()=>callback(message.type==='MCP_HEALTH'?{online:true,authenticated:true,code:'READY',instance_id:'a'}:message.type==='MCP_TOOLS'?{ok:true,instance_id:'a',tools:Array.from({length:toolCount},(_,i)=>({name:'inspect_'+i,inputSchema:{type:'object',properties:{target:{type:'string'}}}}))}:{ok:true});
+  const runtime={sendMessage(message,callback){requests.push(message.type);messages.push(message);const respond=()=>callback(message.type==='MCP_HEALTH'?{online:true,authenticated:true,code:'READY',instance_id:'a'}:message.type==='MCP_TOOLS'?{ok:true,instance_id:'a',tools:Array.from({length:toolCount},(_,i)=>({name:'inspect_'+i,inputSchema:{type:'object',properties:{target:{type:'string'}}}}))}:message.type==='MCP_CALL'?{ok:true,instance_id:'a',result:{content:[{type:'text',text:'Tool result from Studio'}],isError:false}}:{ok:true});
     if(message.type===hold) pending[message.type]=respond;else respond();}};
   class Event {constructor(type,options={}){this.type=type;Object.assign(this,options);}preventDefault(){this.defaultPrevented=true;}}
   const context={document,Element,HTMLTextAreaElement:Element,HTMLInputElement:Element,InputEvent:Event,ClipboardEvent:Event,
     DataTransfer:class{setData(k,v){this[k]=v;}getData(k){return this[k];}},
-    chrome:{runtime},console:{warn(){}},DOMException,AbortController,crypto:{randomUUID:()=> 'session'},location:{hostname:'chatgpt.com'},
+    chrome:{runtime},console:{warn(){}},DOMException,AbortController,crypto:{randomUUID:()=> 'session'},location:{hostname:'chatgpt.com',href:'https://chatgpt.com/c/test'},Date:{now:()=>now},navigator:{clipboard:{writeText:async()=>{}}},
     window:{getSelection:()=>selection},getComputedStyle:()=>({visibility:'visible',display:'block'}),innerHeight:900,
     matchMedia:()=>({matches:true}),setTimeout:(fn,ms)=>{const id=++nextTimer;timers.set(id,{fn,at:now+ms});return id;},clearTimeout:id=>timers.delete(id),
     MutationObserver:class{constructor(fn){observer=fn;}observe(){}disconnect(){}}};
   vm.createContext(context);
-  for(const file of ['scripts/chat-prompt.js','content/miracle.js']) vm.runInContext(fs.readFileSync(file,'utf8'),context);
+  for(const file of ['scripts/chat-prompt.js','scripts/tool-protocol.js','content/miracle.js']) vm.runInContext(fs.readFileSync(file,'utf8'),context);
   const flush=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
   async function advance(ms){const end=now+ms;await flush();while(true){const entry=[...timers].filter(([,t])=>t.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!entry)break;now=entry[1].at;timers.delete(entry[0]);entry[1].fn();await flush();}now=end;await flush();}
-  return {elements,composer,sent,pending,requests,timers,advance,flush,start:()=>elements.get('agent-start').onclick(),stop:()=>elements.get('agent-stop').onclick(),mutate:()=>observer([{target:document.body}]),
+  function reply(content,{code=false}={}){
+    const node=new Element();node.setAttribute('data-message-author-role','assistant');node.innerText=content;node.textContent=content;
+    if(code){const child=new Element('code');child.textContent=content;node.codes=[child];}
+    assistants.push(node);return node;
+  }
+  return {elements,composer,sent,pending,requests,messages,timers,advance,flush,reply,
+    setStreaming:value=>{streaming=value;},blockResults:value=>{blockResultSend=value;},
+    watch:()=>elements.get('agent-watch').onclick(),retry:()=>elements.get('retry-result').onclick(),start:()=>elements.get('agent-start').onclick(),stop:()=>elements.get('agent-stop').onclick(),mutate:()=>observer([{target:document.body}]),
     stats:()=>({readerScans,fullScans,execCalls,pastes,inputs})};
 }
 
@@ -64,7 +74,8 @@ test('rich editor starts with one paste, no full-page walk and no telemetry wait
   const start=c.start();await c.advance(1200);await start;
   assert.equal(c.sent.length,1);assert(c.sent[0].includes('Inspect my place'));
   assert.match(c.elements.get('status').textContent,/Session active/);
-  assert.deepEqual(c.stats(),{readerScans:1,fullScans:0,execCalls:0,pastes:1,inputs:0});
+  assert.equal(c.stats().fullScans,0);assert.equal(c.stats().execCalls,0);assert.equal(c.stats().pastes,1);assert.equal(c.stats().inputs,0);
+  assert(c.stats().readerScans<=3,'Only bounded reader scans during setup');
   c.stop();await c.advance(16000);
 });
 
@@ -100,7 +111,7 @@ test('continuous page mutations cannot starve the assistant reader or scan per m
   const before=c.stats().readerScans;
   for(let i=0;i<100;i++){c.mutate();await c.advance(10);}
   const scans=c.stats().readerScans-before;
-  assert(scans>=2&&scans<=3,'Reader must run at bounded intervals during a mutation storm');
+  assert(scans>=2&&scans<=5,'Reader must run at bounded intervals during a mutation storm');
   c.stop();
 });
 
@@ -110,4 +121,77 @@ test('stopping with a pending reader does not disable observation on the next se
   start=c.start();await c.advance(1700);await start;
   const before=c.stats().readerScans;c.mutate();await c.advance(450);
   assert.equal(c.stats().readerScans,before+1);c.stop();
+});
+
+const command=(id='call-1',code='return 1')=>JSON.stringify({miracles_tool:{id,name:'inspect_0',arguments:{code}}});
+const calls=c=>c.messages.filter(message=>message.type==='MCP_CALL');
+async function started(c){const task=c.start();await c.advance(1700);await task;}
+
+test('a streamed JSON reply longer than 12 KB is not lost after a partial read',async()=>{
+  const c=chat({hold:'MCP_USAGE'});await started(c);
+  const full=command('long-call','-- '+ 'x'.repeat(14000)+'\nreturn {value="escaped \\\" brace }"}');
+  const reply=c.reply(full.slice(0,-3),{code:true});
+  await c.advance(1800);assert.equal(calls(c).length,0);
+  reply.innerText=reply.textContent=reply.codes[0].textContent=full;
+  await c.advance(4000);
+  assert.equal(calls(c).length,1,c.elements.get('status').textContent);
+  assert.equal(calls(c)[0].arguments.code,JSON.parse(full).miracles_tool.arguments.code);
+  assert(c.sent.at(-1).includes('Tool result from Studio'));
+  assert.equal(c.elements.get('agent-stop').hidden,false);
+  for(let i=0;i<30;i++)c.mutate();await c.advance(2000);assert.equal(calls(c).length,1);
+  c.stop();await c.advance(16000);
+});
+
+test('reader catches completion without a final observed DOM mutation',async()=>{
+  const c=chat();await started(c);c.setStreaming(true);
+  c.reply('I will use this tool: '+command('unfenced')+' Then inspect the result.');
+  await c.advance(2200);assert.equal(calls(c).length,0);
+  c.setStreaming(false);await c.advance(4000);
+  assert.equal(calls(c).length,1);assert(c.sent.at(-1).startsWith('Miracle tool result:'));
+  c.stop();
+});
+
+test('Watch attaches to the latest reply, preserves a draft and retries only result delivery',async()=>{
+  const c=chat();c.reply(command('old-history'));c.reply(command('latest'));
+  c.composer.value='Keep my unsent question';
+  const watch=c.watch();await c.advance(3000);await watch;
+  assert.equal(calls(c).length,1);assert(calls(c)[0].call_id.endsWith(':latest'));
+  assert.equal(c.composer.value,'Keep my unsent question');assert.equal(c.sent.length,0);
+  assert.equal(c.elements.get('last-result').hidden,false);
+  assert.match(c.elements.get('status').textContent,/result is saved/);
+  c.composer.value='';const retry=c.retry();await c.advance(2500);await retry;
+  assert.equal(calls(c).length,1);assert.equal(c.sent.length,1);assert.match(c.sent[0],/Tool result from Studio/);
+  assert.equal(c.elements.get('agent-stop').hidden,false);
+  c.stop();const again=c.watch();await c.advance(3000);await again;
+  assert.equal(calls(c).length,1,'Watching the same reply cannot run the tool again');c.stop();
+});
+
+test('a failed send preserves the result and retry uses the existing result draft',async()=>{
+  const c=chat();await started(c);c.blockResults(true);c.reply(command('send-fails'));
+  await c.advance(4000);assert.equal(calls(c).length,1);
+  assert.match(c.composer.value,/Miracle tool result:/);assert.equal(c.sent.length,1);
+  assert.match(c.elements.get('status').textContent,/result is saved/);
+  c.blockResults(false);const retry=c.retry();await c.advance(2200);await retry;
+  assert.equal(calls(c).length,1);assert.equal(c.sent.length,2);c.stop();
+});
+
+test('Stop retains a late tool result without posting it to the chat',async()=>{
+  const c=chat({hold:'MCP_CALL'});await started(c);c.reply(command('late'));
+  await c.advance(1600);assert.equal(calls(c).length,1);c.stop();
+  c.pending.MCP_CALL();await c.advance(1600);
+  assert.equal(c.sent.length,1);assert.equal(c.elements.get('last-result').hidden,false);
+  assert.match(c.elements.get('last-result-text').value,/Tool result from Studio/);
+});
+
+test('historical assistant JSON remains ineligible even when its text changes',async()=>{
+  const c=chat();const old=c.reply(command('old'));await started(c);
+  old.innerText=old.textContent=command('changed-old');await c.advance(3000);
+  assert.equal(calls(c).length,0);c.stop();
+});
+
+test('malformed envelopes show a diagnostic and a corrected reply can still run',async()=>{
+  const c=chat();await started(c);const reply=c.reply('{"miracles_tool":{"id":"bad id","name":"inspect_0","arguments":{}}}');
+  await c.advance(1800);assert.equal(calls(c).length,0);assert.match(c.elements.get('status').textContent,/unique id/);
+  reply.innerText=reply.textContent=command('fixed-id');await c.advance(4000);
+  assert.equal(calls(c).length,1);c.stop();
 });

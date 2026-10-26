@@ -1,18 +1,17 @@
-# Miracle 2.2.0 — Rounded, animated and easier to install
+# Miracle 2.9.0 — Reliable chat tools and bridge recovery
 
-The main website has a new pill style, larger curved cards, cool glass, all-screen entrances, an animated service strip, scroll navigation and pointer reactions. Motion controls and reduced-motion preferences apply throughout.
+The chat relay now waits for stable replies and keeps reading when a site's final streaming update is missed. Long JSON replies are no longer discarded after an incomplete first read. Fenced JSON, JSON surrounded by prose and the `miracle_tool` spelling alias are supported; only explicit Miracle tool envelopes execute.
 
-The dashboard includes nine separate screens, mobile swipe navigation, pill controls, stable Beautify optics and desktop interactions. The welcome page cycles through 30 typewritten starter ideas and copies the complete current brief.
+- **Watch this chat** attaches after manually pasted instructions and can run the latest assistant tool reply once. User messages and older history are excluded, and your draft is preserved.
+- **Last tool result** keeps a result when chat delivery fails. Retry sending it without re-running the tool, copy it, or dismiss it. Stop keeps late results available without posting them automatically.
+- **Chat agent** on Home distinguishes Studio connectivity from a running reader, shows paused/incomplete sessions and detects version mismatches. Connection reports omit credentials, chat text, code, arguments and results.
+- Duplicate launches reuse one bridge. Windows launch locking, exclusive port binding and an authenticated shutdown route allow verified older bridges to be cleaned up. Unrelated applications are not stopped. `release/stop.bat` closes an idle bridge.
+- The Lime Soda dashboard design and motion preferences are retained. Session usage reporting no longer delays tool-result delivery.
 
-## Installation
+## Install or update
 
-Download **miracle-mcp-2.2.0.zip**, extract it completely and keep these two folders next to each other:
+Extract **miracle-mcp-2.9.0.zip** completely. Keep **plugin/** and **release/** together. Load or reload **plugin/** through Chrome/Edge's extensions page, run **release/run.bat**, enable Studio MCP and refresh your open chat tabs. Choose **Miracle → Start session**, or **Watch this chat** if instructions were pasted manually. Copying instructions alone does not activate the reader.
 
-- **plugin/** — load this folder through Chrome/Edge → Extensions → Developer mode → Load unpacked.
-- **release/** — run **run.bat** here to start the local Studio bridge.
+Python 3.10+, Windows 10/11 and Roblox Studio with Studio MCP are required. No npm or additional Python packages are needed to use the release. In-page saved tool results are cleared by reloading a chat tab; inspect Studio before repeating an action after a reload.
 
-Enable Studio MCP in Roblox Studio Assistant, then open your AI chat and choose **Miracle → Start session**. Both folders include **INSTALL.md** with complete Russian instructions and troubleshooting. Python 3.10+ and Windows 10/11 are required. No npm or extra Python packages are needed.
-
-After updating, restart the old bridge, reload the browser extension and refresh your chat tabs.
-
-Other assets: the standalone website archive, optimized wallpapers and SHA256SUMS.txt. All downloads are built from this release revision; tokens, local caches and test fixtures are excluded.
+The website preview uses sample data and cannot run Studio commands. Source, standalone website and wallpaper archives are built from the same revision, with SHA-256 checksums. Local credentials, caches, user data and test fixtures are excluded.

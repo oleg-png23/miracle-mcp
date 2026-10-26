@@ -75,6 +75,7 @@ class BridgeFlowTests(unittest.TestCase):
             bridge.QUEUE.clear()
             bridge.RESULTS.clear()
             bridge.RECENT.clear()
+            bridge._AGENTS.clear()
         with bridge._NATIVE_LOCK:
             bridge._NATIVE_TOOLS.clear()
         self.native.calls.clear()
@@ -114,6 +115,23 @@ class BridgeFlowTests(unittest.TestCase):
         self.assertEqual(code, 403)
         code, _ = self.request("/api/bootstrap", {}, origin=origin, content_type="text/plain")
         self.assertEqual(code, 415)
+
+    def test_agent_status_requires_auth_and_stores_only_operational_fields(self):
+        event = {"client_id": "tab:1", "session_id": "session-1", "site": "chatgpt.com", "state": "watching",
+                 "calls": 2, "client_version": "2.9.0", "extension_version": "2.9.0", "code": "", "tool_name": "",
+                 "text": "PRIVATE_CHAT", "arguments": {"code": "PRIVATE_CODE"}}
+        self.assertEqual(self.request("/api/agent/state", event, token=False)[0], 401)
+        self.assertEqual(self.request("/api/agent/state", event)[0], 200)
+        with urllib.request.urlopen(self.url + "/api/status") as response:
+            status = json.loads(response.read())
+        self.assertEqual(status["agent_sessions"][0]["site"], "chatgpt.com")
+        self.assertEqual(status["agent_sessions"][0]["state"], "watching")
+        self.assertNotIn("PRIVATE_", json.dumps(status))
+        self.assertEqual(self.request("/api/agent/state", {**event, "state": "unknown"})[0], 400)
+        for i in range(40):
+            bridge.record_agent({**event, "client_id": f"tab:{i}"})
+        self.assertEqual(len(bridge._AGENTS), 32)
+        self.assertEqual(len(bridge.agent_sessions()), 12)
 
     def test_auth_and_origin_cors_policy(self):
         code, _ = self.request("/api/auth", {"token": "wrong"}, token=False)

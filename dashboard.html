@@ -23,10 +23,11 @@
   <script src="scripts/executor.js" defer></script>
   <script src="scripts/dashboard-glass.js" defer></script>
   <script src="scripts/surfaces.js" defer></script>
+  <script src="scripts/agent-status.js" defer></script>
 <link rel="stylesheet" href="styles/desktop-motion.css"><script src="scripts/desktop-motion.js" defer></script>
   <link rel="stylesheet" href="styles/dashboard-soda.css">
 </head>
-<body class="dashboard-page" data-glass-mode="clear" data-connection="checking">
+<body class="dashboard-page" data-app-version="2.9.0" data-glass-mode="clear" data-connection="checking">
   <svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
     <symbol id="i-plug" viewBox="0 0 24 24"><path d="M8 3v5m8-5v5M6 8h12v4a6 6 0 0 1-12 0V8Zm6 10v4"/></symbol>
@@ -66,6 +67,7 @@
 
 
       <div class="connection-actions"><button class="button button-primary button-small" id="checkConnection">Check connection</button><button class="button button-small" id="studioStatus">Studio: checking…</button><a class="button button-small" href="#setupGuide">Instructions</a></div>
+      <section class="agent-status glass" id="chatAgent" aria-labelledby="agentStatusTitle" data-state="idle"><div><span class="section-kicker" id="agentStatusTitle">CHAT AGENT</span><strong id="agentState" role="status" aria-live="polite">No chat session detected</strong><p id="agentHint">In your AI chat, choose Miracle → Start session. Already pasted instructions? Choose Watch this chat.</p></div><button class="button button-small" id="copyDiagnostics" type="button">Copy connection report</button></section>
       <section class="metrics" aria-label="Bridge status">
         <article class="metric glass"><div class="metric-top"><span>Task queue</span><svg aria-hidden="true" class="icon"><use href="#i-stack"/></svg></div><strong id="stQueue">—</strong><span class="metric-description" id="queueNote">Waiting for connection</span></article>
         <article class="metric glass"><div class="metric-top"><span>Uptime</span><svg aria-hidden="true" class="icon"><use href="#i-clock"/></svg></div><strong id="stUptime">—</strong><span class="metric-description">Since the bridge started</span></article>

@@ -36,8 +36,9 @@ function worker(initialSettings = {}, options = {}) {
         return body.token === token ? makeResponse(200, { ok: true }) : makeResponse(401, { ok: false, code: 'TOKEN_REJECTED' });
       }
       if (url.endsWith('/api/status')) {
-        return makeResponse(200, { online: true, studio_linked: nativeState === 'ready', native_mcp: { state: nativeState, message: 'Studio state' }, instance_id: instance });
+        return makeResponse(200, { online: true, version:options.bridgeVersion, studio_linked: nativeState === 'ready', native_mcp: { state: nativeState, message: 'Studio state' }, instance_id: instance });
       }
+      if (url.endsWith('/api/agent/state')) return makeResponse(200, {ok:true});
       if (url.endsWith('/api/usage/event')) return makeResponse(200, {ok:true});
       if (url.endsWith('/api/tools/list')) {
         if (body.token !== token) return makeResponse(401, { ok: false, code: 'TOKEN_REJECTED' });
@@ -53,7 +54,7 @@ function worker(initialSettings = {}, options = {}) {
       throw new Error('Unexpected request ' + url);
     },
     chrome: {
-      runtime: { onInstalled: { addListener: fn => { listeners.install = fn; } }, onStartup: { addListener: fn => { listeners.startup = fn; } }, onMessage: { addListener: fn => { listeners.message = fn; } }, getURL: file => 'chrome-extension://test/' + file },
+      runtime: { getManifest:()=>({version:'2.9.0'}), onInstalled: { addListener: fn => { listeners.install = fn; } }, onStartup: { addListener: fn => { listeners.startup = fn; } }, onMessage: { addListener: fn => { listeners.message = fn; } }, getURL: file => 'chrome-extension://test/' + file },
       action: { onClicked: { addListener: fn => { listeners.click = fn; } } },
       tabs: {
         create: async values => { calls.push({opened: values.url}); },
@@ -192,3 +193,18 @@ test('invalid hosts never make network requests', async () => {
  assert.equal(result.ok,true);const entry=w.calls.find(c=>c.url.endsWith('/api/usage/event'));const body=JSON.parse(entry.init.body);assert.equal(body.site,'chatgpt.com');assert.equal(body.characters,120);assert(!JSON.stringify(body).includes('private'));assert(!JSON.stringify(body).includes('forged'));
  const rejected=await new Promise(resolve=>w.listeners.message({type:'MCP_USAGE'},{},resolve));assert.equal(rejected.ok,false);
  });
+
+
+test('agent diagnostics use the real tab and never forward chat text or tool arguments',async()=>{
+ const w=worker({bridgeToken:'fresh-token'});
+ const result=await new Promise(resolve=>w.listeners.message({type:'MCP_AGENT_STATE',session_id:'session-a',state:'running',calls:1,code:'native_timeout',tool_name:'run_code',client_version:'2.9.0',site:'forged.example',text:'PRIVATE_CHAT',arguments:{code:'PRIVATE_CODE'},token:'FORGED'},{tab:{id:4,url:'https://chatgpt.com/c/private?secret=discard'}},resolve));
+ assert.equal(result.ok,true);const request=w.calls.find(call=>call.url?.endsWith('/api/agent/state'));const data=JSON.parse(request.init.body);
+ assert.equal(data.site,'chatgpt.com');assert.equal(data.client_id,'tab:4');assert.equal(data.extension_version,'2.9.0');assert.equal(data.code,'NATIVE_TIMEOUT');assert.equal(data.token,'fresh-token');
+ assert.doesNotMatch(request.init.body,/PRIVATE_|forged|secret=discard|FORGED/);
+ const rejected=await new Promise(resolve=>w.listeners.message({type:'MCP_AGENT_STATE'},{},resolve));assert.equal(rejected.ok,false);
+});
+
+test('health identifies an old running bridge before starting the chat reader',async()=>{
+ const w=worker({bridgeToken:'fresh-token'},{bridgeVersion:'2.2.0'});const result=await w.context.checkBridgeHealth();
+ assert.equal(result.code,'VERSION_MISMATCH');assert.equal(result.authenticated,true);assert.match(result.message,/new release/);
+});
