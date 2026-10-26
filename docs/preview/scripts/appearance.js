@@ -1,11 +1,12 @@
-/* Exactly two local palettes. Legacy landscape settings fall back to Lime Soda. */
+/* One palette, two backgrounds. Removed themes fall back to Lime Soda. */
 (() => {
   'use strict';
   const wallpapers = Object.freeze({
     lime:{file:'lime-soda.svg',thumb:'lime-soda.svg',name:'Lime Soda',tint:'#d9f5b0'},
-    solar:{file:'solar-flare.svg',thumb:'solar-flare.svg',name:'Solar Flare',tint:'#ffd2b9'}
+    gradient:{file:'lime-gradient.svg',thumb:'lime-gradient.svg',name:'Animated gradient',tint:'#2be0a0'}
   });
   const normalize = key => Object.hasOwn(wallpapers,key) ? key : 'lime';
+  const normalizeMaterial = value => value === 'liquid' ? 'liquid' : 'clear';
   let requestId=0,timer=0;
   function clock(hour=new Date().getHours()) {
     if(hour>=5&&hour<12)return {greeting:'Good morning.',period:'Morning'};
@@ -22,7 +23,7 @@
       if(current!==requestId)return false;
       photo.src=image.src;document.body.dataset.wallpaper=key;
       photo.getAnimations?.().forEach(animation=>animation.cancel());
-      if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&document.documentElement.dataset.motion!=='paused'&&!document.hidden&&photo.animate)
+      if(key!=='gradient'&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&document.documentElement.dataset.motion!=='paused'&&!document.hidden&&photo.animate)
         photo.animate([{opacity:.45},{opacity:1}],{duration:450,easing:'ease-out'});
     }
     document.documentElement.style.setProperty('--sidebar-accent',choice.tint);
@@ -46,5 +47,5 @@
   }
   document.addEventListener('visibilitychange',refreshClock);
   window.addEventListener('pagehide',()=>clearTimeout(timer));
-  window.MiracleAppearance={wallpapers,normalize,apply,clock,setMode};
+  window.MiracleAppearance={wallpapers,normalize,normalizeMaterial,apply,clock,setMode};
 })();

@@ -8,6 +8,7 @@
   let paused = false;
   try { paused = localStorage.getItem(key) === 'true'; } catch { /* optional */ }
   const headline = document.getElementById('welcomeTitle');
+  const still = headline?.hasAttribute?.('data-headline-static');
   const lead = document.getElementById('welcomeTitleLead');
   const end = document.getElementById('welcomeTitleEnd');
   const phrases = [['Welcome to', 'Helium.'], ['Your ideas.', 'In Studio.'],
@@ -44,7 +45,7 @@
   function syncType() {
     clearTimeout(timer); timer = 0;
     if (!lead || !end) return;
-    if (paused || reduced.matches) {
+    if (still || paused || reduced.matches) {
       count = total(); phase = 'hold'; started = true; paint(); return;
     }
     if (!canType()) { paint(); return; }

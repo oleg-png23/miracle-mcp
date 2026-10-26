@@ -28,9 +28,9 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     const errors = []; page.on('pageerror', e => errors.push(e.message));
-    await check('only two scalable palette graphics are shipped', async () => {
+    await check('only two backgrounds in the Lime Soda palette are shipped', async () => {
       const graphics=fs.readdirSync(path.join(root,'assets/bg')).filter(name=>/\.(svg|webp)$/.test(name)).sort();
-      assert.deepEqual(graphics,['lime-soda.svg','solar-flare.svg']);
+      assert.deepEqual(graphics,['lime-gradient.svg','lime-soda.svg']);
       for(const name of graphics){const metadata=await sharp(path.join(root,'assets/bg',name)).metadata();assert.equal(metadata.format,'svg');assert.equal(metadata.width,2560);}
     });
     await check('dashboard bootstraps automatically without Studio script or token entry', async () => {
@@ -43,18 +43,18 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
       assert(!/LoadStringEnabled|ServerScriptService|Play Solo/.test(await page.locator('#setupGuide').innerText()));
       assert.deepEqual(missing, []);
     });
-    await check('two themes switch, persist and expose no removed wallpaper controls',async()=>{
+    await check('two backgrounds switch, persist and expose no removed wallpaper controls',async()=>{
       await openSection(page,'appearance');
       assert.equal(await page.locator('.wallpaper-option').count(),2);
       assert.equal(await page.locator('#autoWallpaper').count(),0);
-      await page.locator('[data-wallpaper="solar"]').click();
-      await page.waitForSelector('body[data-wallpaper="solar"]');
-      await page.waitForFunction(()=>JSON.parse(localStorage.getItem('miracles.settings')||'{}').dashboardWallpaper==='solar');
-      await page.reload();await page.waitForSelector('body[data-wallpaper="solar"]');
+      await page.locator('[data-wallpaper="gradient"]').click();
+      await page.waitForSelector('body[data-wallpaper="gradient"]');
+      await page.waitForFunction(()=>JSON.parse(localStorage.getItem('miracles.settings')||'{}').dashboardWallpaper==='gradient');
+      await page.reload();await page.waitForSelector('body[data-wallpaper="gradient"]');
       await openSection(page,'overview');
-      await page.screenshot({path:path.join(out,'solar-flare-desktop.png'),fullPage:true});
+      await page.screenshot({path:path.join(out,'gradient-desktop.png'),fullPage:true});
       await page.setViewportSize({width:390,height:844});
-      await page.screenshot({path:path.join(out,'solar-flare-mobile.png'),fullPage:true});
+      await page.screenshot({path:path.join(out,'gradient-mobile.png'),fullPage:true});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),390);
       await page.setViewportSize({width:1440,height:1000});
       await openSection(page,'appearance');await page.locator('[data-wallpaper="lime"]').click();
@@ -62,7 +62,7 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
       await openSection(page,'overview');
       await page.screenshot({path:path.join(out,'lime-soda-desktop.png'),fullPage:true});
     });
-    await check('real refraction is bounded and light mode disables effects', async () => {
+    await check('real refraction is bounded and liquid glass uses a single colorless lens', async () => {
       await selectMaterial(page, 'clear');
       await page.locator('.hero-card').scrollIntoViewIfNeeded();
       await page.waitForFunction(() => !!document.querySelector('feImage')?.getAttribute('href'));
@@ -74,10 +74,13 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
       assert(changed > 100);
       assert.equal(await page.locator('[data-glass-active="true"]').count(), 2);
       assert.equal(await page.locator('feDisplacementMap').count(), 6);
-      await selectMaterial(page, 'light');
-      assert.equal(await hero.evaluate(el => getComputedStyle(el, '::before').backdropFilter), 'none');
+      await selectMaterial(page, 'liquid');
+      await page.waitForFunction(()=>document.querySelectorAll('feColorMatrix').length===0);
+      assert.equal(await page.locator('feColorMatrix').count(),0);
+      assert.equal(await page.locator('feDisplacementMap').count(),2);
+      assert.match(await hero.evaluate(el => getComputedStyle(el,'::before').backgroundImage),/255, 255, 255/);
     });
-    await check('rail hover magnifies icons and the tooltip sits above the hero card', async () => {
+    await check('rail hover gives subtle feedback and the tooltip sits above the hero card', async () => {
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
       const heroBox=await page.locator('.hero-card').boundingBox();
@@ -89,8 +92,8 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
       const before = await icon.boundingBox();
       await control.hover();
       await page.waitForFunction(() => document.querySelector('#railTooltip')?.matches(':popover-open'));
-      await page.waitForFunction(element => element.getBoundingClientRect().width > 45, await icon.elementHandle());
-      assert((await icon.boundingBox()).width > before.width * 1.15);
+      await page.waitForFunction(element => element.getBoundingClientRect().width > 39, await icon.elementHandle());
+      assert((await icon.boundingBox()).width > before.width * 1.01 && (await icon.boundingBox()).width <= before.width * 1.08);
       assert.equal(await page.locator('#railTooltip').innerText(), label);
       const tooltip = await page.locator('#railTooltip').boundingBox();
       const hero = await page.locator('.hero-card').boundingBox();
@@ -98,7 +101,7 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
       assert(tooltip.y < hero.y + hero.height && tooltip.y + tooltip.height > hero.y);
       await page.mouse.move(0, 0);
     });
-    await check('cards tilt with the pointer and settle without moving the rail logo', async () => {
+    await check('glass surfaces stay stationary while their highlights follow the pointer', async () => {
       await selectMaterial(page, 'clear');
       await page.evaluate(() => { document.activeElement.blur(); scrollTo({ top: 0, behavior: 'instant' }); });
       await page.mouse.move(0, 0); await page.waitForTimeout(450);
@@ -109,16 +112,16 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
       const hero = page.locator('.hero-card'), before = await hero.boundingBox();
       await page.mouse.move(before.x + before.width * .8, before.y + before.height * .2);
       await page.waitForTimeout(400);
-      assert.match(await hero.evaluate(el => getComputedStyle(el).transform), /^matrix3d/);
-      const tilted = await hero.boundingBox();
-      assert(Math.abs(tilted.y - before.y) > .5);
+      assert.equal(await hero.evaluate(el => getComputedStyle(el).transform),'none');
+      const settled = await hero.boundingBox();
+      assert(Math.abs(settled.y - before.y) < .2);
       await page.mouse.move(0, 0);
       await page.waitForFunction(() => getComputedStyle(document.querySelector('.hero-card')).transform === 'none');
-      await selectMaterial(page, 'light');
+      await selectMaterial(page, 'liquid');
       await hero.hover({ position: { x: 30, y: 30 } });
       await page.waitForTimeout(400);
-      assert.match(await hero.evaluate(el => getComputedStyle(el).transform), /^matrix3d/);
-      assert.equal(await hero.evaluate(el => getComputedStyle(el, '::before').backdropFilter), 'none');
+      assert.equal(await hero.evaluate(el => getComputedStyle(el).transform),'none');
+      assert.match(await hero.evaluate(el => getComputedStyle(el, '::before').backdropFilter), /url\(/);
       await page.mouse.move(0, 0);
     });
     await check('sections preserve editor drafts and browser navigation', async () => {

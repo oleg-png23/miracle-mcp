@@ -23,11 +23,11 @@
     seen.add(el);
     if(!allowed()||typeof el.animate!=='function'||el.contains(document.activeElement))return;
     active.get(el)?.cancel();
-    const distance=window.innerWidth<=650?12:24;
+    const distance=window.innerWidth<=650?6:8;
     const animation=el.animate([
-      {opacity:0,translate:`${direction*distance}px 18px`},
+      {opacity:0,translate:`${direction*distance}px 8px`},
       {opacity:1,translate:'0px 0px'}
-    ],{duration:desktop.matches?650:520,delay:Math.min(index*(desktop.matches?55:35),desktop.matches?385:210),easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'});
+    ],{duration:desktop.matches?360:320,delay:Math.min(index*28,112),easing:'cubic-bezier(.2,.8,.2,1)',fill:'backwards'});
     active.set(el,animation);
     animation.onfinish=()=>{if(active.get(el)===animation)active.delete(el);animation.cancel();};
   }

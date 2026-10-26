@@ -4,8 +4,7 @@
 .rail-brand,.rail-brand:hover{transform:none;transition:none}
 .pointer-card{--card-rx:0deg;--card-ry:0deg;--card-glow-x:50%;--card-glow-y:50%;transform-origin:center;transition:transform .35s cubic-bezier(.2,.8,.25,1),box-shadow .35s}
 @media(hover:hover) and (pointer:fine){
-  .pointer-card:hover{transform:perspective(1200px) translateY(-1px) scale(.999)}
-  .pointer-card.pointer-tracking{transform:perspective(1200px) rotateX(var(--card-rx)) rotateY(var(--card-ry)) translateY(-2px) scale(1.001)}
+  .pointer-card:hover,.pointer-card.pointer-tracking{transform:none}
   body .pointer-card:focus-within{transform:none!important}
   .pointer-card::after{background:radial-gradient(ellipse at var(--card-glow-x) var(--card-glow-y),#ffffff16,transparent 62%)}
 }

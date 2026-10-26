@@ -87,14 +87,15 @@ async function difference(a, b, edge = 36) {
     });
     assert.equal(scales.channels, 3);
     assert(scales.high > scales.low * 2);
-    await selectMaterial(page, 'frosted');
-    assert.match(await hero.evaluate(el => getComputedStyle(el, '::before').backdropFilter), /blur\(18px\)/);
-    await selectMaterial(page, 'light');
-    assert.equal(await hero.evaluate(el => getComputedStyle(el, '::before').backdropFilter), 'none');
-    assert.equal(await page.locator('[data-glass-active="true"]').count(), 0);
-    console.log('PASS depth, RGB dispersion, frosted and disabled modes');
+    await selectMaterial(page, 'liquid');
+    assert.equal(await page.locator('feColorMatrix').count(), 0, 'Liquid glass adds no RGB separation');
+    assert.equal(await page.locator('feDisplacementMap').count(), 2);
+    const material=await hero.evaluate(el=>getComputedStyle(el,'::before').backgroundImage);
+    assert(!/rgb\((?!255, 255, 255)[0-9]/.test(material), 'The material fill must be neutral');
+    await page.reload();await page.waitForSelector('body[data-glass-mode="liquid"]');
+    await page.screenshot({path:path.join(out,'liquid-glass-clear-desktop.png')});
+    console.log('PASS depth, tinted dispersion, transparent liquid glass and persistence');
 
-    await selectMaterial(page, 'clear');
     await page.setViewportSize({width: 390, height: 844});
     await hero.scrollIntoViewIfNeeded();
     await page.waitForFunction(() => {
@@ -113,6 +114,7 @@ async function difference(a, b, edge = 36) {
     console.log('PASS responsive geometry and offscreen filter suspension');
 
     await page.setViewportSize({width: 1440, height: 1000});
+    await selectMaterial(page,'clear');
     await page.goto(base + '/ui/welcome.html');
     await page.waitForFunction(() => document.querySelector('.welcome-connect').dataset.glassActive === 'true');
     await page.waitForTimeout(250);

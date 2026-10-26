@@ -18,9 +18,9 @@
       phrases[0][0]=greeting;el.setAttribute('aria-label',greeting+' Helium workspace.');
     }
     const reveal=el.dataset.typeEffect==='reveal';
-    return {el,lines,phrases,reveal,phrase:0,count:reveal?phrases[0].join('').length:0,phase:reveal?'hold':'typing',timer:0,effects:[],visible:true,started:false};
+    return {el,lines,phrases,reveal,still:el.dataset.typeStatic==='true',phrase:0,count:reveal?phrases[0].join('').length:0,phase:reveal?'hold':'typing',timer:0,effects:[],visible:true,started:false};
   }).filter(Boolean);
-  const canType=s=>!paused&&!reduced.matches&&!document.hidden&&s.visible;
+  const canType=s=>!s.still&&!paused&&!reduced.matches&&!document.hidden&&s.visible;
   const length=s=>s.phrases[s.phrase].join('').length;
   function paint(s,cursor=false) {
     let left=s.count;

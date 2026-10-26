@@ -1,107 +1,135 @@
-/* Shared palette tokens. Only the two user-selected colorways are available. */
+/* One Lime Soda palette, with color reserved for useful accents. */
 :root {
   --palette-1: #00b8ff;
   --palette-2: #2be0a0;
   --palette-3: #c6ff3d;
   --palette-4: #ffe53b;
   --palette-ink: #142b2c;
-  --palette-muted: #4b6656;
-  --palette-accent: #267b5e;
-  --palette-paper: #f5faf0;
+  --palette-muted: #465e56;
+  --palette-accent: #146c55;
+  --palette-paper: #fafbf7;
   --palette-soft: #e9f8d6;
   --palette-line: #c6dcb8;
 }
-body[data-wallpaper="solar"] {
-  --palette-1: #ff5a1f;
-  --palette-2: #ff2e63;
-  --palette-3: #ffb020;
-  --palette-4: #ff8a00;
-  --palette-ink: #3d2724;
-  --palette-muted: #78574f;
-  --palette-accent: #a33d2b;
-  --palette-paper: #fff7f1;
-  --palette-soft: #ffe0ca;
-  --palette-line: #e7c9b5;
-}
-body.dashboard-page,body.welcome-page {
+body.dashboard-page, body.welcome-page {
   --ink: var(--palette-ink);
   --accent: var(--palette-accent);
   color: var(--palette-ink);
   background: var(--palette-paper);
 }
-body.dashboard-page .wallpaper,body.welcome-page .wallpaper { background: var(--palette-paper); }
-body.dashboard-page .wallpaper #bgPhoto,body.welcome-page .wallpaper #bgPhoto { opacity: 1; }
-body.dashboard-page .wallpaper-veil {
-  background: linear-gradient(105deg, #ffffffc9, #ffffff80 48%, #ffffff24);
+body:is(.dashboard-page,.welcome-page) .wallpaper { background: var(--palette-paper); }
+body:is(.dashboard-page,.welcome-page) .wallpaper #bgPhoto { opacity: 1; }
+body:is(.dashboard-page,.welcome-page) .wallpaper-veil {
+  background: linear-gradient(105deg, #ffffff80, #ffffff3d 48%, #ffffff14);
 }
-body.dashboard-page .wallpaper::after {
-  background: radial-gradient(ellipse at 94% 8%, color-mix(in srgb, var(--palette-1) 8%, transparent), transparent 48%);
+body.dashboard-page .wallpaper::after { background: none; }
+/* A single composited layer: no hue cycling, animated blur, or frame loop. */
+body[data-wallpaper="gradient"] .wallpaper::before {
+  content: '';
+  position: absolute;
+  inset: -16%;
+  background:
+    radial-gradient(ellipse at 16% 22%, #00b8ffbd, transparent 54%),
+    radial-gradient(ellipse at 78% 18%, #2be0a0d9, transparent 54%),
+    radial-gradient(ellipse at 34% 86%, #c6ff3de0, transparent 54%),
+    radial-gradient(ellipse at 96% 82%, #ffe53bd9, transparent 52%),
+    #fafbf7;
+  animation: lime-flow 28s ease-in-out infinite alternate;
 }
-body.dashboard-page .soda-light {
-  background: radial-gradient(ellipse at 26% 28%, color-mix(in srgb, var(--palette-1) 70%, transparent), transparent 46%),
-    radial-gradient(ellipse at 66% 42%, color-mix(in srgb, var(--palette-2) 90%, transparent), transparent 45%),
-    radial-gradient(ellipse at 48% 65%, color-mix(in srgb, var(--palette-3) 98%, transparent), transparent 43%),
-    radial-gradient(ellipse at 76% 70%, color-mix(in srgb, var(--palette-4) 78%, transparent), transparent 36%);
+body[data-wallpaper="gradient"] .wallpaper #bgPhoto { opacity: 0; }
+@keyframes lime-flow {
+  0% { transform: translate3d(-2%, -1%, 0) scale(1.02); }
+  50% { transform: translate3d(2%, 2%, 0) scale(1.07); }
+  100% { transform: translate3d(1%, -2%, 0) scale(1.03); }
 }
+body.dashboard-page .hero-card::before {
+  background-image: linear-gradient(110deg, #ffffff8a, #f5fff54d 48%, #ffffff24);
+}
+body.dashboard-page :is(.panel,.metric,.sidebar.glass,.agent-status.glass) {
+  --glass-wash-top: .52;
+  --glass-wash-bottom: .32;
+}
+body.dashboard-page .metric::before {
+  background-image: linear-gradient(145deg, #ffffff9c, #ffffff61);
+}
+body.dashboard-page .soda-atmosphere { opacity: .5; }
+body.dashboard-page .soda-light { animation: none; }
 body.dashboard-page .wallpaper-options { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
 body.dashboard-page .wallpaper-option { height: 112px; border-radius: 22px; }
 body.dashboard-page .wallpaper-option > span {
   left: 10px; bottom: 9px; padding: 4px 10px; border-radius: 999px;
-  color: #26382b; background: #ffffffe6; text-shadow: none; font-size: 11px;
+  color: var(--palette-ink); background: #ffffffe6; text-shadow: none; font-size: 11px;
 }
 body.dashboard-page .wallpaper-option::after { background: transparent; }
 body.dashboard-page .wallpaper-option.selected { outline-color: var(--palette-accent); }
 body.dashboard-page .hero-copy h2 > span { color: var(--palette-accent); }
-body.dashboard-page .hero-copy .button-primary {
-  background: var(--palette-3); border-color: color-mix(in srgb,var(--palette-3) 60%,white);
+body.dashboard-page .button-primary {
+  background: var(--palette-3);
+  border-color: #ffffffa6;
   color: var(--palette-ink);
 }
-body.dashboard-page .hero-copy .button-primary:hover { background: color-mix(in srgb,var(--palette-3) 75%,white); }
-body.dashboard-page .navigation::before { background: linear-gradient(135deg,var(--palette-soft),color-mix(in srgb,var(--palette-2) 18%,white)); }
-body.dashboard-page .metric-top .icon,body.dashboard-page .motion-toggle,body.dashboard-page .orb-monogram,
-body.dashboard-page .orb-monogram > span { color: var(--palette-accent); }
-body.dashboard-page .connection-flow { background: var(--palette-accent); box-shadow: 0 0 0 3px #ffffff85,0 0 12px var(--palette-3); }
-body.dashboard-page .workspace-shortcuts a:nth-child(1) .icon { background: color-mix(in srgb,var(--palette-1) 17%,white); color: var(--palette-accent); }
-body.dashboard-page .workspace-shortcuts a:nth-child(2) .icon { background: color-mix(in srgb,var(--palette-2) 17%,white); color: var(--palette-accent); }
-body.dashboard-page .workspace-shortcuts a:nth-child(3) .icon { background: color-mix(in srgb,var(--palette-3) 25%,white); color: var(--palette-accent); }
-body.dashboard-page[data-wallpaper="solar"] :is(.page-heading,.section-view-heading,.hero-copy h2,.desktop-brand,.workspace-shortcuts a) { color: var(--palette-ink); }
-body.dashboard-page[data-wallpaper="solar"] :is(.page-heading p,.breadcrumb,.section-view-heading p,.hero-copy p,.hero-footer,.metric-top,.metric-description,.workspace-shortcuts a > span,.agent-status p) { color: var(--palette-muted); }
-body.dashboard-page[data-wallpaper="solar"] .hero-card::before { background-image: linear-gradient(110deg,#fffaf5ed,#fff2e8b8 44%,#fff0e04d); }
-body.dashboard-page[data-wallpaper="solar"] .metric::before { background-image: linear-gradient(145deg,#fffaf5e0,#fff0e4c2); }
-body.dashboard-page[data-wallpaper="solar"] .button-primary { background: #693a30; border-color: #693a30; }
-body.dashboard-page[data-wallpaper="solar"] .hero-copy .button-primary { background: var(--palette-3); border-color: #ffd183; }
-body.dashboard-page[data-wallpaper="solar"] .hero-copy .button-primary:hover { background: #ffc661; }
-body.dashboard-page[data-wallpaper="solar"] .hero-copy h2 > span { color: var(--palette-accent); }
-body.dashboard-page[data-wallpaper="solar"] .node-orb { background: linear-gradient(135deg,#ffffffe6,#ffffff5e 50%,#ffddc5a6); }
-body.dashboard-page[data-wallpaper="solar"] .studio-mark { border-color: #c05237; }
-body.dashboard-page[data-wallpaper="solar"] .connection-node > :is(strong,span),
-body.dashboard-page[data-wallpaper="solar"] .sidebar .nav-link.active { color: #693a30; }
-body.dashboard-page[data-wallpaper="solar"] .wire-line { background: linear-gradient(90deg,#b76b4552,#ff8a0059); }
-body.dashboard-page[data-wallpaper="solar"] .wire-symbol { color: #9a5039; background: #fff7f1c4; }
-body.dashboard-page[data-wallpaper="solar"] .workspace-shortcuts a { background: linear-gradient(140deg,#ffffffd1,#fff3e9b3); }
-body.dashboard-page[data-wallpaper="solar"] :is(.agent-status .button,.section-menu-links a.active) { background: #fff0e0; border-color: #dfbca0; color: #693a30; }
-body.dashboard-page[data-wallpaper="solar"] .section-menu { background: #fff6eff5; color: var(--palette-ink); }
-body.dashboard-page[data-wallpaper="solar"] .section-swipe-hint { background: #fff6efd9; color: #78574f; }
-body.dashboard-page[data-wallpaper="solar"] .code-editor { background: #352522; color: #ffe9d4; border-color: #745044; caret-color: #ffb020; }
-body.dashboard-page[data-wallpaper="solar"] .switch[aria-checked="true"] { background: #a95336; }
-
-/* The welcome page uses the same selected palette and a calm reading surface. */
-body.welcome-page .wallpaper-veil { background: linear-gradient(90deg,#ffffffdf,#ffffff66 58%,#ffffff33); }
+body.dashboard-page .button-primary:hover { background: color-mix(in srgb,var(--palette-3) 80%,white); }
+body.dashboard-page .navigation::before {
+  background: linear-gradient(135deg, #c6ff3d66, #2be0a047);
+}
+body.dashboard-page .metric-top .icon {
+  width: 28px; height: 28px; padding: 6px; border-radius: 9px;
+  color: var(--palette-ink);
+  background: color-mix(in srgb,var(--metric-color,var(--palette-1)) 38%,transparent);
+}
+body.dashboard-page .metric:nth-child(2) { --metric-color: var(--palette-2); }
+body.dashboard-page .metric:nth-child(3) { --metric-color: var(--palette-3); }
+body.dashboard-page .metric:nth-child(4) { --metric-color: var(--palette-4); }
+body.dashboard-page .workspace-shortcuts a:nth-child(1) .icon { background: #00b8ff45; color: var(--palette-ink); }
+body.dashboard-page .workspace-shortcuts a:nth-child(2) .icon { background: #2be0a054; color: var(--palette-ink); }
+body.dashboard-page .workspace-shortcuts a:nth-child(3) .icon { background: #c6ff3d70; color: var(--palette-ink); }
+body.dashboard-page .connection-flow { background: var(--palette-2); box-shadow: 0 0 0 3px #ffffff85; }
+body.dashboard-page .switch[aria-checked="true"] { background: var(--palette-2); }
+body.dashboard-page input[type="range"] {
+  background: linear-gradient(90deg,var(--palette-1),var(--palette-2) 42%,var(--palette-3) 76%,var(--palette-4));
+}
+[data-type-static] [data-type-line]::after, [data-headline-static] .is-current::after { display: none; }
+/* Welcome shares the same background, ink, and color hierarchy. */
 body.welcome-page :is(.welcome-copy h1,.welcome-wordmark,.welcome-clock time,.welcome-connect h2,.welcome-connect strong,.welcome-status-detail,.welcome-card-link) { color: var(--palette-ink); text-shadow: none; }
 body.welcome-page :is(.welcome-eyebrow,.welcome-description,.welcome-clock,.welcome-help,.welcome-idea-label,.welcome-footer,.welcome-top-link,.welcome-motion-toggle,.welcome-connect p,.welcome-connect small,.welcome-capabilities p > span) { color: var(--palette-muted); }
 body.welcome-page .welcome-wordmark img { filter: none; }
-body.welcome-page .welcome-connect { --glass-wash-top: .87; --glass-wash-bottom: .68; color: var(--palette-ink); text-shadow: none; }
-body.welcome-page :is(.welcome-prompt,.welcome-top-link) { background: #ffffff9c; border-color: var(--palette-line); color: var(--palette-ink); }
-body.welcome-page .welcome-enter { background: var(--palette-3); color: var(--palette-ink); border-color: color-mix(in srgb,var(--palette-3) 50%,white); }
-body.welcome-page .welcome-eyebrow > span { background: var(--palette-accent); }
+body.welcome-page .welcome-connect { --glass-wash-top: .58; --glass-wash-bottom: .35; color: var(--palette-ink); text-shadow: none; animation: none; }
+body.welcome-page .welcome-connect::before { background: linear-gradient(135deg,#ffffff99,#ffffff59); }
+body.welcome-page :is(.welcome-prompt,.welcome-top-link) { background: #ffffff70; border-color: #ffffffb3; color: var(--palette-ink); }
+body.welcome-page .welcome-enter { background: var(--palette-3); color: var(--palette-ink); border-color: #ffffff80; }
+body.welcome-page .welcome-eyebrow > span { background: var(--palette-2); }
 body.welcome-page .welcome-help { border-color: var(--palette-line); }
 body.welcome-page .welcome-capabilities strong { color: var(--palette-ink); }
 body.welcome-page .welcome-orb { color: var(--palette-accent); }
 body.welcome-page .welcome-footer { border-color: var(--palette-line); }
-@media(max-width:650px) { body.dashboard-page .wallpaper-option { height: 90px; } }
+body.welcome-page .welcome-capabilities > div:nth-child(1) > svg { color: #0079a8; }
+body.welcome-page .welcome-capabilities > div:nth-child(2) > svg { color: var(--palette-accent); }
+body.welcome-page .welcome-capabilities > div:nth-child(3) > svg { color: #6b660e; }
+/* These are material fills, so clear glass removes their color as well. */
+body.dashboard-page[data-glass-mode="liquid"] .navigation::before { background: #ffffff38; border-color: #ffffff9c; }
+body.dashboard-page[data-glass-mode="liquid"] .soda-atmosphere { display: none; }
+body.dashboard-page[data-glass-mode="liquid"] .workspace-shortcuts a { background: #ffffff26; border-color: #ffffffa6; }
+body:is(.dashboard-page,.welcome-page)[data-glass-mode="liquid"] :is(.node-orb,.welcome-orb) { background: #ffffff29; }
+@media(max-width:650px) {
+  body.dashboard-page .wallpaper-option { height: 90px; }
+  body:is(.dashboard-page,.welcome-page) .wallpaper-veil { background: #ffffff52; }
+}
+@media(prefers-reduced-motion:reduce) {
+  body[data-wallpaper="gradient"] .wallpaper::before { animation: none; }
+}
+@media(prefers-contrast:more) {
+  body:is(.dashboard-page,.welcome-page) .wallpaper-veil { background: #ffffffe6; }
+}
 @media(forced-colors:active) {
   body.dashboard-page,body.welcome-page { background: Canvas; color: CanvasText; }
+  body:is(.dashboard-page,.welcome-page) .wallpaper { display: none; }
   body.welcome-page :is(.welcome-copy h1,.welcome-wordmark,.welcome-description,.welcome-clock,.welcome-clock time,.welcome-help,.welcome-footer,.welcome-connect,.welcome-connect h2,.welcome-status-detail,.welcome-capabilities strong) { color: CanvasText; }
   body.dashboard-page .hero-copy h2 > span { color: CanvasText; }
-  body.dashboard-page .hero-copy .button-primary,body.welcome-page .welcome-enter { background: ButtonFace; color: ButtonText; border-color: ButtonText; }
+  body.dashboard-page .button-primary,body.welcome-page .welcome-enter { background: ButtonFace; color: ButtonText; border-color: ButtonText; }
+  body.dashboard-page .metric-top .icon { color: CanvasText; background: Canvas; }
 }
+
+/* Background motion is enough atmosphere; status ornaments stay still. */
+body.dashboard-page .connection-flow,
+body.welcome-page :is(.welcome-orb,.welcome-eyebrow > span,.welcome-bridge-line::after) { animation: none!important; }
+body.welcome-page :is(.welcome-topbar,.welcome-copy > *,.welcome-capabilities > div,.welcome-footer) { animation-duration: .5s; animation-delay: 0s; }

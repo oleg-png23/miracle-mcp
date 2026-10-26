@@ -41,9 +41,11 @@
     updateTime();
     try {
       settings = await client.storage.read();
-      const material = ['clear', 'beautify', 'frosted', 'light'].includes(settings.dashboardMaterial) ? settings.dashboardMaterial : client.defaults.dashboardMaterial;
+      const material = window.MiracleAppearance.normalizeMaterial(settings.dashboardMaterial);
       document.body.dataset.glassMode = material;
-      document.body.dataset.glassChoice = material;
+      const system = settings.dashboardMaterial === 'light' && matchMedia('(prefers-reduced-transparency: reduce)').matches;
+      document.body.dataset.glassChoice = system ? 'system' : material;
+      if(!system&&settings.dashboardMaterial!==material)await client.storage.set({dashboardMaterial:material});
       const theme=window.MiracleAppearance.normalize(settings.dashboardWallpaper);
       const applied=await window.MiracleAppearance.setMode('manual',theme);
       if(applied&&(settings.dashboardWallpaper!==theme||settings.dashboardWallpaperMode!=='manual'))await client.storage.set({dashboardWallpaper:theme,dashboardWallpaperMode:'manual'});

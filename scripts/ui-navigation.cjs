@@ -9,6 +9,9 @@ async function openSection(page,key) {
 }
 async function selectMaterial(page,mode) {
   await openSection(page,'appearance');await page.locator('[data-material="'+mode+'"]').click();await openSection(page,'overview');
-  if(mode==='clear'||mode==='beautify')await page.waitForFunction(()=>document.querySelector('.hero-card').dataset.glassActive==='true');
+  if(mode==='clear'||mode==='liquid')await page.waitForFunction(mode=>{
+    const hero=document.querySelector('.hero-card'),id=hero.style.getPropertyValue('--glass-filter').match(/#([^)]*)/)?.[1];
+    return hero.dataset.glassActive==='true'&&id&&document.getElementById(id)?.querySelectorAll('feDisplacementMap').length===(mode==='liquid'?1:3);
+  },mode);
 }
 module.exports={openSection,selectMaterial};

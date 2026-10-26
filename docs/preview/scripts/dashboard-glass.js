@@ -55,10 +55,10 @@
   const byElement = new Map(surfaces.map(surface => [surface.el, surface]));
 
   function mode() {
-    if (contrast.matches || (transparency.matches && !['clear', 'beautify'].includes(document.body.dataset.glassChoice))) return 'light';
+    if (contrast.matches || (transparency.matches && !['clear', 'liquid', 'beautify'].includes(document.body.dataset.glassChoice))) return 'light';
     return document.body.dataset.glassMode || 'clear';
   }
-  function enabled() { return supported && ['clear', 'beautify'].includes(mode()); }
+  function enabled() { return supported && ['clear', 'liquid', 'beautify'].includes(mode()); }
   function eligible(surface) { return mode() === 'beautify' || surface.primary; }
   function retained(surface) { return mode() === 'beautify' || surface.visible; }
   function setActive(surface, active) {
@@ -224,7 +224,7 @@
       if (surface.el.clientWidth !== width || surface.el.clientHeight !== height) { surface.requestedGeometry = ''; schedule(surface); return; }
       if (!maps.loaded) { surface.requestedGeometry = ''; return; }
       // Build an immutable replacement while the previous lens remains attached.
-      const next = {id: `${surface.idBase}-${++surface.revision}`, chromatic: surface.chromatic, displacements: []};
+      const next = {id: `${surface.idBase}-${++surface.revision}`, chromatic: material !== 'liquid', displacements: []};
       createFilter(next);
       const padding = Math.ceil(maps.scale * 2.6);
       for (const [key, value] of Object.entries({x: -padding, y: -padding, width: width + padding * 2, height: height + padding * 2})) next.filter.setAttribute(key, value);
@@ -267,7 +267,8 @@
     if (hint) hint.textContent = material === 'light' ? 'Effects off.'
       : material === 'frosted' ? 'Soft, frosted glass.'
       : material === 'beautify' ? (supported ? 'Beautify · persistent refraction and RGB glass on every surface.' : 'Beautify · rich frosted glass. Live refraction needs Chrome or Edge.')
-      : supported ? 'Liquid glass · live refraction and light.' : 'Soft glass · refraction needs Chrome or Edge.';
+      : material === 'liquid' ? 'Transparent glass. No added color, just light and the background.'
+      : 'Tinted glass. A soft wash of Lime Soda color.';
   }
   window.DashboardGlass = {
     getMetrics() { return {...metrics, activeSurfaces: surfaces.filter(surface => surface.el.dataset.glassActive === 'true').length}; },

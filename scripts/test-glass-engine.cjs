@@ -75,3 +75,22 @@ test('Beautify retains the old lens until replacement images decode',async()=>{
   el.clientWidth+=17;f.resize(el);el.clientWidth=width;f.resize(el);
   await f.decode();assert.equal(el.style.values.get('--glass-filter'),stable,'An obsolete resize must not replace the restored geometry');
 });
+
+test('Liquid glass is colorless and retains the visible focal-lens budget across mode changes',async()=>{
+  const f=fixture({material:'liquid',deferred:true});
+  f.elements.forEach(el=>f.seen(el,true));await f.decode();
+  const {engine,body,elements}=f;
+  assert.equal(engine.getMetrics().activeSurfaces,2);
+  const neutral=()=>f.filter(elements[0]).children;
+  assert.equal(neutral().filter(n=>n.attrs.in==='SourceGraphic').length,1);
+  assert.equal(neutral().filter(n=>String(n.attrs.result).startsWith('rgb-')).length,0);
+  const original=elements[0].style.values.get('--glass-filter');
+  body.dataset.glassMode=body.dataset.glassChoice='clear';engine.refresh();f.flush();await f.decode();
+  assert.notEqual(elements[0].style.values.get('--glass-filter'),original);
+  assert.equal(f.filter(elements[0]).children.filter(n=>String(n.attrs.result).startsWith('rgb-')).length,3);
+  body.dataset.glassMode=body.dataset.glassChoice='liquid';engine.refresh();f.flush();await f.decode();
+  assert.equal(neutral().filter(n=>String(n.attrs.result).startsWith('rgb-')).length,0);
+  assert.equal(engine.getMetrics().activeSurfaces,2);
+  const maps=engine.getMetrics().mapsBuilt;engine.setDepth(90);f.flush();assert.equal(engine.getMetrics().mapsBuilt,maps);
+  f.seen(elements[0],false);assert.equal(elements[0].dataset.glassActive,'false');
+});

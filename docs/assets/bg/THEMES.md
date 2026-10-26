@@ -1,10 +1,10 @@
-# Two color themes
+# Lime Soda
 
-Only Lime Soda and Solar Flare are shipped. The local SVG graphics are authored for Helium using the user-provided palette references, with soft gradients and ribbed-glass highlights. They contain no labels, watermarks, external resources or landscape photographs.
+The only accent colors are `#00B8FF`, `#2BE0A0`, `#C6FF3D`, and `#FFE53B`, balanced with neutral reading surfaces and dark text.
 
-| Theme | Colors |
-| --- | --- |
-| Lime Soda | `#00B8FF`, `#2BE0A0`, `#C6FF3D`, `#FFE53B` |
-| Solar Flare | `#FF5A1F`, `#FF2E63`, `#FFB020`, `#FF8A00` |
+- **Lime Soda** (`lime-soda.svg`): the original soft, ribbed wallpaper.
+- **Animated gradient** (`lime-gradient.svg`): a static SVG fallback and thumbnail; the page animates an oversized CSS gradient with a slow transform. Pause motion, hidden tabs, and reduced motion stop the animation.
 
-Both graphics use a 2560 × 1440 viewBox and scale without a separate thumbnail. Helium's MIT license applies to these authored SVG files.
+Tinted glass retains the existing soft wash. Liquid glass adds no colored fill, saturation boost, or RGB separation; its subtle rim refracts the real backdrop. Only visible navigation and the focal card retain live optical layers.
+
+All assets are local, authored SVGs without labels, watermarks, external resources, or photography. Removed saved theme and material names migrate to Lime Soda and Tinted glass.

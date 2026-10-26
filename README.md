@@ -60,7 +60,7 @@ Tools loads the catalog advertised by the connected Studio and supports name/des
 
 ## Appearance
 
-Only **Solar Flare** and **Lime Soda** are available in Appearance. Their soft gradients and ribbed-glass highlights use the supplied color palettes, with no landscape photography or extra wallpaper collection. Both lightweight SVGs are also used by the welcome page and website previews. See `assets/bg/THEMES.md` for the colors and graphic details.
+Appearance uses only the four **Lime Soda** colors. Choose the ribbed wallpaper or a slowly animated gradient, then select **Tinted glass** or transparent, colorless **Liquid glass**. Both backgrounds are local SVGs shared by the welcome page and website previews. Background animation respects Pause motion, hidden tabs, and reduced motion. See `assets/bg/THEMES.md` for the colors and graphic details.
 
 Your theme stays selected until you change it. Saved settings for removed landscapes or automatic wallpaper mode migrate to Lime Soda in manual mode. Pause motion, reduced motion, transparency preferences and high-contrast mode remain supported.
 
