@@ -532,7 +532,7 @@ class H(BaseHTTPRequestHandler):
             if path == "/api/ui/claim":
                 global _LAST_UI_OPEN
                 with _STATE_LOCK:
-                    open_ui = time.monotonic() - _LAST_UI_OPEN > 3
+                    open_ui = _LAST_UI_OPEN == 0 or time.monotonic() - _LAST_UI_OPEN > 3
                     if open_ui:
                         _LAST_UI_OPEN = time.monotonic()
                 self._json({"ok": True, "open_ui": open_ui})
