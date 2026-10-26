@@ -13,11 +13,12 @@
     let phrases;
     try { phrases=JSON.parse(el.dataset.typePhrases); } catch { return null; }
     if(!lines.length || !Array.isArray(phrases) || !phrases.length || phrases.some(p=>!Array.isArray(p)||p.length!==lines.length||p.some(t=>typeof t!=='string'||!t.length))) return null;
-    if(el.dataset.typewriter==='dashboard') {
+    if(el.dataset.typewriter==='dashboard'&&el.dataset.typeGreeting!=='false') {
       const greeting=window.MiracleAppearance?.clock().greeting || phrases[0][0];
       phrases[0][0]=greeting;el.setAttribute('aria-label',greeting+' Miracle workspace.');
     }
-    return {el,lines,phrases,phrase:0,count:0,phase:'typing',timer:0,visible:true,started:false};
+    const reveal=el.dataset.typeEffect==='reveal';
+    return {el,lines,phrases,reveal,phrase:0,count:reveal?phrases[0].join('').length:0,phase:reveal?'hold':'typing',timer:0,effects:[],visible:true,started:false};
   }).filter(Boolean);
   const canType=s=>!paused&&!reduced.matches&&!document.hidden&&s.visible;
   const length=s=>s.phrases[s.phrase].join('').length;
@@ -36,6 +37,20 @@
   }
   function tick(s) {
     s.timer=0;if(!canType(s)) return;
+    if(s.reveal) {
+      s.effects.forEach(effect=>effect.cancel());s.effects=[];
+      s.phrase=(s.phrase+1)%s.phrases.length;s.count=length(s);paint(s);
+      s.lines.forEach(line=>{
+        if(!line.animate)return;
+        const effect=line.animate([
+          {opacity:0,translate:'0 12px',filter:'blur(4px)'},
+          {opacity:1,translate:'0 0',filter:'blur(0)'}
+        ],{duration:620,easing:'cubic-bezier(.16,1,.3,1)'});
+        s.effects.push(effect);
+        effect.onfinish=()=>{effect.cancel();s.effects=s.effects.filter(item=>item!==effect);};
+      });
+      queue(s,5200);return;
+    }
     if(s.phase==='hold'){s.phase='deleting';queue(s,100);return;}
     if(s.phase==='deleting') {
       s.count=Math.max(0,s.count-1);
@@ -46,8 +61,13 @@
     if(s.count>=length(s)){s.count=length(s);s.phase='hold';}
     paint(s,true);queue(s,s.phase==='hold'?2800:80);
   }
-  function sync(s) {
+  function stop(s) {
     clearTimeout(s.timer);s.timer=0;
+    s.effects.forEach(effect=>effect.cancel());s.effects=[];
+  }
+  function sync(s) {
+    stop(s);
+    if(s.reveal){s.count=length(s);s.phase='hold';paint(s);queue(s,5200);return;}
     if(paused||reduced.matches){s.count=length(s);s.phase='hold';paint(s);return;}
     paint(s,canType(s));queue(s,!s.started?900:s.phase==='hold'?1800:120);s.started=true;
   }
@@ -66,7 +86,7 @@
   }));
   reduced.addEventListener('change',render);
   document.addEventListener('visibilitychange',()=>states.forEach(sync));
-  window.addEventListener('pagehide',()=>states.forEach(s=>clearTimeout(s.timer)));
+  window.addEventListener('pagehide',()=>states.forEach(stop));
   window.addEventListener('pageshow',()=>states.forEach(sync));
   if('IntersectionObserver' in window) {
     const byElement=new Map(states.map(s=>[s.el,s]));

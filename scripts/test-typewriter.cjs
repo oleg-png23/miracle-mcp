@@ -32,3 +32,33 @@ test('shared headlines type on both pages and pause without leaving incomplete t
   context.document.hidden=false;events.visibilitychange();assert.equal(timers.size,1);
   media.matches=true;mediaChange();assert.equal(timers.size,0);assert.equal(button.disabled,true);assert.equal(motionEvents.at(-1).detail.paused,true);
 });
+
+test('reveal headlines stay complete and cancel transitions when paused or hidden',()=>{
+  const timers=new Map(),events={},effects=[];let id=0,mediaChange,intersect;
+  const media={matches:false,addEventListener:(_event,fn)=>{mediaChange=fn;}};
+  const line={textContent:'',classList:{toggle(){}},animate(){
+    const effect={canceled:false,cancel(){this.canceled=true;}};effects.push(effect);return effect;
+  }};
+  const heading={dataset:{typewriter:'dashboard',typeEffect:'reveal',typeGreeting:'false',typePhrases:'[["Your next world."],["Dream it. Build it."]]'},
+    querySelectorAll:()=>[line],setAttribute(){}};
+  const button={setAttribute(){},addEventListener:(_event,fn)=>{events.click=fn;}};
+  const document={hidden:false,documentElement:{setAttribute(){}},dispatchEvent(){},
+    querySelectorAll:q=>q==='[data-typewriter]'?[heading]:[button],addEventListener:(event,fn)=>{events[event]=fn;}};
+  const context={document,window:{IntersectionObserver:true,addEventListener:(event,fn)=>{events[event]=fn;}},matchMedia:()=>media,
+    CustomEvent:class{},localStorage:{getItem:()=>null,setItem(){}},
+    IntersectionObserver:class{constructor(fn){intersect=fn;}observe(){}},
+    setTimeout:fn=>{timers.set(++id,fn);return id;},clearTimeout:id=>timers.delete(id)};
+  const step=()=>{const [id,fn]=timers.entries().next().value;timers.delete(id);fn();};
+  vm.runInNewContext(fs.readFileSync('scripts/typewriter.js','utf8'),context);
+  assert.equal(line.textContent,'Your next world.');assert.equal(timers.size,1);
+  step();assert.equal(line.textContent,'Dream it. Build it.');assert.equal(effects.length,1);
+  events.click();assert.equal(timers.size,0);assert(effects.at(-1).canceled);
+  assert.equal(line.textContent,'Dream it. Build it.');
+  events.click();step();assert.equal(line.textContent,'Your next world.');
+  document.hidden=true;events.visibilitychange();assert.equal(timers.size,0);assert(effects.at(-1).canceled);
+  document.hidden=false;events.visibilitychange();assert.equal(timers.size,1);
+  intersect([{target:heading,isIntersecting:false}]);assert.equal(timers.size,0);
+  intersect([{target:heading,isIntersecting:true}]);assert.equal(timers.size,1);
+  media.matches=true;mediaChange();assert.equal(timers.size,0);assert.equal(button.disabled,true);
+  assert.equal(line.textContent,'Your next world.');
+});

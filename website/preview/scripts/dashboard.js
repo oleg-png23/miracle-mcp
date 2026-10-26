@@ -86,14 +86,14 @@
     setText('pillText',linked?'Studio connected':diagnosis.title);
     setText('stStatus','Bridge online');
     setText('stQueue',String(Number(data.queue)||0));
-    setText('queueNote',data.queue?'Waiting for Studio':'No pending tasks');
+    setText('queueNote',data.queue?'Waiting for Studio':'All clear. Ready for your next idea.');
     setText('stUptime',formatUptime(data.uptime_s));
     setText('stSafety',data.safe?'On':'Off');
     setText('safetyNote',data.safe?'Server code checks enabled':'Server code checks disabled');
     setText('stStudio', linked ? 'Connected' : 'Waiting');
     setText('studioNote', linked ? (nativeMcp ? `Available tools: ${Number(data.native_mcp?.tools_count) || 0}` : `Response ${Number(data.studio_seen_s) || 0} seconds ago`) : diagnosis.title);
     setText('studioVisualStatus', linked ? 'MCP connected' : 'Waiting for connection');
-    setText('bridgeDescription', linked ? 'Studio MCP is connected. Start a session in your AI chat.' : diagnosis.message);
+    setText('bridgeDescription', linked ? 'Your tools are ready. Open your AI chat and select Miracle → Start session.' : diagnosis.message);
     feedback(panelError || diagnosis.message, !!panelError || diagnosis.state !== 'linked');
     setText('studioStatus', diagnosis.title);
     setText('latencyValue', `${latency} ms`);
@@ -118,7 +118,7 @@
     document.body.dataset.studio = 'waiting';
     setText('pillText', 'Waiting for bridge');
     setText('stStatus', 'Server not responding');
-    setText('bridgeDescription', 'Start run.bat from the project folder to connect.');
+    setText('bridgeDescription', 'Start run.bat in your project folder. Keep it open, then check the connection.');
     ['stQueue','stUptime','stSafety','stStudio'].forEach(id => setText(id, '—'));
     setText('queueNote', 'Waiting for connection');
     setText('safetyNote', 'No server data');
