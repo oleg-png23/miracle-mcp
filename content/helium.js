@@ -47,6 +47,7 @@
     .panel::after,.toggle::after{content:'';position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;box-shadow:inset 0 1px 1px #ffffffa0,inset 1px 0 1px #ffffff35,inset -1px -1px 1px #a9c8ff35;background:radial-gradient(ellipse at 18% 0%,#ffffff18,transparent 65%)}
     .toggle{--surface-wash:linear-gradient(135deg,#ffffffd9,#eff4ff85 68%,#ffffffbf);display:flex;align-items:center;gap:10px;margin-left:auto;max-width:100%;border:1px solid #ffffffb8;border-radius:999px;padding:12px 20px 12px 14px;color:#202a40;box-shadow:0 8px 26px #0b142d28,0 2px 7px #111d3220;font-size:13px;font-weight:600;letter-spacing:-.2px;text-align:left;overflow:hidden;transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s,border-color .25s;animation:launcher-in .55s cubic-bezier(.2,.8,.2,1) both}
     .toggle:hover{transform:translateY(-3px);border-color:#fff;box-shadow:0 14px 34px #0b142d35,0 0 20px #c8dbff20}.toggle:active{transform:translateY(0) scale(.96)}.toggle[aria-expanded="true"]{border-color:#c4d7ff;box-shadow:0 9px 30px #0b142d35,0 0 0 3px #ffffff20}.toggle-copy{line-height:1.2}.toggle small{display:none}
+    .close svg{display:block;width:16px;height:16px}
     .toggle .glyph{position:relative;display:grid;place-items:center;flex:none;width:24px;height:24px;color:#26334f}.glyph svg{display:block}.monogram{position:relative;display:inline-block;font:600 29px/1 system-ui,sans-serif;letter-spacing:-3px;padding-right:5px;color:currentColor}.monogram>span{position:absolute;right:-3px;top:-2px;font:14px/1 system-ui,sans-serif;letter-spacing:0}.toggle .monogram{font-size:24px;transition:opacity .25s,transform .4s}.toggle .monogram>span{font-size:10px;top:-1px;right:-1px;transition:rotate .5s}.toggle:hover .monogram>span{rotate:90deg}
     .panel{--surface-wash:linear-gradient(140deg,#171d2ce8,#232b3dd6 70%,#171d2ce6);margin-bottom:13px;border:1px solid #dce8ff55;border-radius:30px;box-shadow:0 24px 65px #050b1d66,0 4px 15px #050b1d38;max-height:calc(100dvh - 110px);overflow:auto;padding:22px;color:#edf3ff;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#aebcd255 transparent}.panel:not([hidden]){animation:panel-in .4s cubic-bezier(.2,.8,.2,1) both}
     .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.brand{display:flex;align-items:center;gap:11px;min-width:0}.brand-mark{width:39px;height:39px;display:grid;place-items:center;flex:none;border:1px solid #d7e6ff52;border-radius:15px;background:linear-gradient(135deg,#ffffff20,#a9c6ff0d);color:#f0f5ff;box-shadow:inset 0 1px #ffffff40}.brand-mark .monogram{font-size:29px}h2{font-size:16px;font-weight:650;letter-spacing:-.4px;margin:0;color:#f6f8ff}.eyebrow{display:block;margin-top:2px;color:#aebbd2;font-size:9px;letter-spacing:.14em;text-transform:uppercase}.intro{margin:16px 0 17px;color:#bdc8dc;font-size:12px;line-height:1.65}.close{border:1px solid #ffffff20;border-radius:50%;background:#ffffff08;width:30px;height:30px;padding:0;font-size:19px;line-height:1;color:#bbc9df;transition:background .2s,rotate .3s}.close:hover{background:#ffffff19;color:#fff;rotate:90deg}
@@ -74,8 +75,21 @@
     element.append(...children); return element;
   }
   function mark() { return node('span', {class:'monogram','aria-hidden':'true'}, 'h', node('span',{},'✦')); }
+  // Unmodified Lucide geometry at c29c276f16590cf017126671535ad8c792be64d8; assets/icons/LICENSE-Lucide.txt.
+  const interfaceIcons = {"x":[["path",{"d":"M18 6 6 18"}],["path",{"d":"m6 6 12 12"}]],"check":[["path",{"d":"M20 6 9 17l-5-5"}]],"loader-circle":[["path",{"d":"M21 12a9 9 0 1 1-6.219-8.56"}]]};
+  function interfaceIcon(name) {
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    for(const [key,value] of Object.entries({viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'2','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true'}))svg.setAttribute(key,value);
+    for(const [tag,attrs] of interfaceIcons[name]){
+      const shape=document.createElementNS('http://www.w3.org/2000/svg',tag);
+      for(const [key,value] of Object.entries(attrs))shape.setAttribute(key,value);
+      svg.append(shape);
+    }
+    return svg;
+  }
+
   const button = (id, label, className = 'action') => node('button', { id, type: 'button', class: className }, label);
-  const close = button('close', '×', 'close'); close.setAttribute('aria-label', 'Close Helium');
+  const close = button('close', '', 'close'); close.append(interfaceIcon('x')); close.setAttribute('aria-label', 'Close Helium');
   shadow.append(node('div', { class: 'widget' },
     node('section', { class: 'panel', id: 'panel', 'aria-label': 'Helium for Roblox Studio', hidden: '' },
       node('header', { class: 'panel-head' }, node('div', { class: 'brand' }, node('span', { class: 'brand-mark' }, mark('')), node('div', {}, node('h2', {}, 'Helium'), node('span', { class: 'eyebrow' }, 'Studio MCP'))), close),
@@ -90,11 +104,14 @@
   const $ = id => shadow.getElementById(id);
   const stateIcon=document.createElementNS('http://www.w3.org/2000/svg','svg');
   stateIcon.setAttribute('viewBox','0 0 24 24');stateIcon.setAttribute('class','toggle-state-icon');stateIcon.setAttribute('aria-hidden','true');
-  for(const [className,tag,attrs] of [
-    ['state-ring','circle',{cx:'12',cy:'12',r:'8',pathLength:'100'}],
-    ['state-check','path',{d:'m5 12 4.5 4.5L19 7'}],
-    ['state-cross','path',{d:'m7 7 10 10m0-10L7 17'}]
-  ]){const shape=document.createElementNS('http://www.w3.org/2000/svg',tag);shape.setAttribute('class',className);for(const[k,v]of Object.entries(attrs))shape.setAttribute(k,v);stateIcon.append(shape);}
+  for(const [className,name] of [['state-ring','loader-circle'],['state-check','check'],['state-cross','x']]){
+    for(const [tag,attrs] of interfaceIcons[name]){
+      const shape=document.createElementNS('http://www.w3.org/2000/svg',tag);shape.setAttribute('class',className);
+      for(const [key,value] of Object.entries(attrs))shape.setAttribute(key,value);
+      if(className==='state-ring')shape.setAttribute('pathLength','100');
+      stateIcon.append(shape);
+    }
+  }
   $('toggle').querySelector('.glyph').append(stateIcon);
   const glass = globalThis.MiracleWidgetGlass?.mount(shadow);
   $('prompt').value = INTRO;

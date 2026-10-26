@@ -72,3 +72,6 @@ html[data-motion="paused"] :is(.pointer-card, .workspace-shortcuts a, .chat-serv
   .section-swipe-hint { background: Canvas; color: CanvasText; border-color: CanvasText; }
   #sectionPosition { border-color: CanvasText; }
 }
+
+/* Inline directional icons share the same Lucide set as the navigation. */
+.icon-inline { display: inline-block; width: 1em; height: 1em; vertical-align: -.12em; flex: none; }

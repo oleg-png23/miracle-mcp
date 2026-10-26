@@ -196,7 +196,7 @@ body.dashboard-page .node-orb {
 body.dashboard-page .studio-orb { background: linear-gradient(135deg, #ffffffed, #ebfcff85 50%, #b3f3ff94); }
 body.dashboard-page .orb-monogram { color: #225b40; }
 body.dashboard-page .orb-monogram > span { color: #327c50; }
-body.dashboard-page .studio-mark { border-color: #1685a9; }
+body.dashboard-page .studio-mark { color: var(--soda-blue); }
 body.dashboard-page .connection-node > strong { color: #234739; font-size: 12px; text-shadow: none; }
 body.dashboard-page .connection-node > span { color: #406453; text-shadow: none; }
 body.dashboard-page .connection-wire { margin-top: 34px; width: 88px; --soda-wire-travel: 82px; }
