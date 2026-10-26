@@ -52,6 +52,13 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
       await page.waitForFunction(()=>JSON.parse(localStorage.getItem('miracles.settings')||'{}').dashboardWallpaper==='gradient');
       await page.reload();await page.waitForSelector('body[data-wallpaper="gradient"]');
       await openSection(page,'overview');
+      assert.equal(await page.locator('.wallpaper').evaluate(el=>getComputedStyle(el,'::before').animationName),'lime-flow');
+      await page.locator('[data-motion-toggle]').click();
+      assert.equal(await page.locator('.wallpaper').evaluate(el=>getComputedStyle(el,'::before').animationName),'none');
+      await page.locator('[data-motion-toggle]').click();
+      await page.emulateMedia({reducedMotion:'reduce'});
+      assert.equal(await page.locator('.wallpaper').evaluate(el=>getComputedStyle(el,'::before').animationName),'none');
+      await page.emulateMedia({reducedMotion:'no-preference'});
       await page.screenshot({path:path.join(out,'gradient-desktop.png'),fullPage:true});
       await page.setViewportSize({width:390,height:844});
       await page.screenshot({path:path.join(out,'gradient-mobile.png'),fullPage:true});

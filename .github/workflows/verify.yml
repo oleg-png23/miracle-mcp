@@ -63,6 +63,10 @@ jobs:
             if ('${{ matrix.view }}' -eq 'agent') { $env:HELIUM_AGENT_ONLY = '1' } else { $env:HELIUM_DASHBOARD_ONLY = '1' }
             npm run test:ui
             if ($LASTEXITCODE -ne 0) { throw 'Browser checks failed.' }
+            if ('${{ matrix.view }}' -eq 'dashboard') {
+              npm run test:glass
+              if ($LASTEXITCODE -ne 0) { throw 'Glass checks failed.' }
+            }
           } finally { Stop-Process -Id $fixture.Id -Force -ErrorAction SilentlyContinue }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
