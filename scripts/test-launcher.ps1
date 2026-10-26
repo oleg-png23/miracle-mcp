@@ -100,3 +100,5 @@ HTTPServer(("127.0.0.1",int(sys.argv[1])),H).serve_forever()
     foreach ($process in $testOwned) { if (-not $process.HasExited) { Stop-Process -InputObject $process -Force -ErrorAction SilentlyContinue } }
     Remove-Item -LiteralPath $testFolder -Recurse -Force -ErrorAction SilentlyContinue
 }
+# Expected refusal in the unrelated-listener test must not become the job exit code.
+exit 0

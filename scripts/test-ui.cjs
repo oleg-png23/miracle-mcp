@@ -285,6 +285,7 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
     });
     await check('long partial JSON completes and runs once without relying on a stop button',async()=>{
       await seed([]);await start();
+      await page.waitForFunction(()=>document.querySelector('#miracles-mcp-widget').shadowRoot.getElementById('agent-start').hidden);
       await page.evaluate(()=>{
         const text=JSON.stringify({miracles_tool:{id:'long-stream',name:'run_code',arguments:{code:'-- '+ 'x'.repeat(14000)+'\\nreturn 1'}}});
         const reply=document.createElement('div');reply.id='long-stream';reply.setAttribute('data-message-author-role','assistant');
