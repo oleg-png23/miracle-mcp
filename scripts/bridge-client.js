@@ -3,7 +3,7 @@
   "use strict";
   const pageURL = new URL(location.href);
   const pageHost = pageURL.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(pageURL.hostname) ? pageURL.host : '127.0.0.1:19731';
-  const defaults = { host: pageHost, bridgeToken: "", safeMode: true, pollInterval: 1500, dashboardWallpaper: "fjord", dashboardMaterial: window.matchMedia?.('(prefers-reduced-transparency: reduce)').matches ? 'light' : 'clear', dashboardGlassDepth: 68, dashboardWallpaperMode: "auto" };
+  const defaults = { host: pageHost, bridgeToken: "", safeMode: true, pollInterval: 1500, dashboardWallpaper: "lime", dashboardMaterial: window.matchMedia?.('(prefers-reduced-transparency: reduce)').matches ? 'light' : 'clear', dashboardGlassDepth: 68, dashboardWallpaperMode: "manual" };
   function savedObject(key) {
     try { const value = JSON.parse(localStorage.getItem(key) || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
     catch { return {}; }

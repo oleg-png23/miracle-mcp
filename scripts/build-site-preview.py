@@ -12,8 +12,9 @@ def build():
     preview.mkdir(exist_ok=True)
     for folder in ['styles', 'assets/icons']:
         shutil.copytree(ROOT / folder, preview / folder, dirs_exist_ok=True)
+    shutil.rmtree(preview / 'assets/bg', ignore_errors=True)
     backgrounds = (ROOT / 'scripts/appearance.js').read_text(encoding='utf-8')
-    for name in set(re.findall(r"(?:file|thumb):'([^']+)'", backgrounds)) | {'PHOTO-SOURCES.md'}:
+    for name in set(re.findall(r"(?:file|thumb):'([^']+)'", backgrounds)) | {'THEMES.md'}:
         destination = preview / 'assets/bg' / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / 'assets/bg' / name, destination)

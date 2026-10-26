@@ -250,7 +250,6 @@
   $('#refreshStatus').addEventListener('click', checkConnection);
   $$('[data-wallpaper]').forEach(button => button.addEventListener('click', async () => { if(await applyWallpaper(button.dataset.wallpaper)) { window.MiracleAppearance.setMode('manual');persist({dashboardWallpaper:button.dataset.wallpaper,dashboardWallpaperMode:'manual'}); } }));
   $$('[data-material]').forEach(button => button.addEventListener('click', () => { applyMaterial(button.dataset.material); persist({dashboardMaterial:button.dataset.material}); }));
-  $('#autoWallpaper').addEventListener('click', async () => { const mode=document.body.dataset.wallpaperMode==='auto'?'manual':'auto';window.MiracleAppearance.setMode(mode);await persist({dashboardWallpaperMode:mode,dashboardWallpaper:document.body.dataset.wallpaper}); });
   $('#glassDepth').addEventListener('input', event => applyDepth(event.target.value));
   $('#glassDepth').addEventListener('change', event => persist({dashboardGlassDepth:Number(event.target.value)}));
   $('#safeMode').addEventListener('click', async () => {
@@ -284,7 +283,9 @@
     $('#setHost').value = currentHost; setText('endpointLabel', currentHost);
     if (typeof settings.bridgeToken === 'string') $('#setToken').value = settings.bridgeToken;
     $('#safeMode').setAttribute('aria-checked', String(settings.safeMode !== false));
-    window.MiracleAppearance.setMode(settings.dashboardWallpaperMode, settings.dashboardWallpaper || 'fjord');
+    const theme=window.MiracleAppearance.normalize(settings.dashboardWallpaper);
+    const applied=await window.MiracleAppearance.setMode('manual',theme);
+    if(applied&&(settings.dashboardWallpaper!==theme||settings.dashboardWallpaperMode!=='manual'))await persist({dashboardWallpaper:theme,dashboardWallpaperMode:'manual'});
     applyMaterial(settings.dashboardMaterial);
     applyDepth(settings.dashboardGlassDepth ?? 68);
     await tick();

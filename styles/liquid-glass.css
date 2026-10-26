@@ -95,13 +95,6 @@
 .panel[data-glass-passive="true"] { --glass-wash-top: .78; --glass-wash-bottom: .64; }
 .metric[data-glass-passive="true"] { --glass-wash-top: .7; --glass-wash-bottom: .56; }
 
-body[data-wallpaper="aurora"] .page-heading,
-body[data-wallpaper="forest"] .page-heading {
-  color: #f0fff9;
-  text-shadow: 0 2px 16px #041b2c80;
-}
-body[data-wallpaper="aurora"] .page-heading :is(p, .breadcrumb),
-body[data-wallpaper="forest"] .page-heading :is(p, .breadcrumb) { color: #dfefed; }
 
 .metric-top,
 .metric-description,

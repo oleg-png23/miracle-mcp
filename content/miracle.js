@@ -4,7 +4,7 @@
   'use strict';
   if (document.getElementById('miracles-mcp-widget')) return;
   const { marker: MARKER, intro: INTRO } = globalThis.MiraclesPrompt;
-  const CLIENT_VERSION = '2.9.0';
+  const CLIENT_VERSION = '2.9.1';
 
   const siteEditors = {
     'chatgpt.com': '#prompt-textarea,textarea[data-id="root"]',

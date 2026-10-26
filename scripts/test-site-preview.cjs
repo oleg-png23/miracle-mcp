@@ -15,10 +15,10 @@ test('preview transport stays offline, blocks execution and isolates stored cred
   assert.equal((await client.request('any','/api/status')).native_mcp.state,'ready');
   await assert.rejects(client.request('any','/api/execute'),/Preview only/);
   await assert.rejects(client.request('any','/api/tools/call'),/Preview only/);
-  await client.storage.set({bridgeToken:'sensitive',host:'remote.example',dashboardWallpaper:'aurora'});
+  await client.storage.set({bridgeToken:'sensitive',host:'remote.example',dashboardWallpaper:'solar'});
   assert.equal((await client.storage.read()).host,'127.0.0.1:19731');
   assert.equal((await client.storage.read()).bridgeToken,'preview-only');
-  assert.equal((await client.storage.read()).dashboardWallpaper,'aurora');
+  assert.equal((await client.storage.read()).dashboardWallpaper,'solar');
   assert.match(values.get('miracles.settings'),/private-real-token/);
   assert.doesNotMatch(values.get('miracle.website.preview.settings'),/sensitive/);
 });

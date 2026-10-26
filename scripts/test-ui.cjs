@@ -28,13 +28,10 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     const errors = []; page.on('pageerror', e => errors.push(e.message));
-    await check('wallpapers have native 4K assets separate from their thumbnails', async () => {
-      for (const name of ['fjord','alpine','coast','aurora','dunes','lavender','forest','sunset']) {
-        const full = await sharp(path.join(root, 'assets/bg', name + '.webp')).metadata();
-        const thumb = await sharp(path.join(root, 'assets/bg', name + '-thumb.webp')).metadata();
-        assert(full.width >= 3840, name + ' full resolution');
-        assert(thumb.width <= 480, name + ' thumbnail');
-      }
+    await check('only two scalable palette graphics are shipped', async () => {
+      const graphics=fs.readdirSync(path.join(root,'assets/bg')).filter(name=>/\.(svg|webp)$/.test(name)).sort();
+      assert.deepEqual(graphics,['lime-soda.svg','solar-flare.svg']);
+      for(const name of graphics){const metadata=await sharp(path.join(root,'assets/bg',name)).metadata();assert.equal(metadata.format,'svg');assert.equal(metadata.width,2560);}
     });
     await check('dashboard bootstraps automatically without Studio script or token entry', async () => {
       const missing = []; page.on('response', r => { if (r.status() >= 400 && !r.url().includes('/api/')) missing.push(r.url()); });
@@ -45,6 +42,25 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
       assert.equal(await page.locator('#guideCopyStudio').count(), 0);
       assert(!/LoadStringEnabled|ServerScriptService|Play Solo/.test(await page.locator('#setupGuide').innerText()));
       assert.deepEqual(missing, []);
+    });
+    await check('two themes switch, persist and expose no removed wallpaper controls',async()=>{
+      await openSection(page,'appearance');
+      assert.equal(await page.locator('.wallpaper-option').count(),2);
+      assert.equal(await page.locator('#autoWallpaper').count(),0);
+      await page.locator('[data-wallpaper="solar"]').click();
+      await page.waitForSelector('body[data-wallpaper="solar"]');
+      await page.waitForFunction(()=>JSON.parse(localStorage.getItem('miracles.settings')||'{}').dashboardWallpaper==='solar');
+      await page.reload();await page.waitForSelector('body[data-wallpaper="solar"]');
+      await openSection(page,'overview');
+      await page.screenshot({path:path.join(out,'solar-flare-desktop.png'),fullPage:true});
+      await page.setViewportSize({width:390,height:844});
+      await page.screenshot({path:path.join(out,'solar-flare-mobile.png'),fullPage:true});
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),390);
+      await page.setViewportSize({width:1440,height:1000});
+      await openSection(page,'appearance');await page.locator('[data-wallpaper="lime"]').click();
+      await page.waitForSelector('body[data-wallpaper="lime"]');
+      await openSection(page,'overview');
+      await page.screenshot({path:path.join(out,'lime-soda-desktop.png'),fullPage:true});
     });
     await check('real refraction is bounded and light mode disables effects', async () => {
       await selectMaterial(page, 'clear');

@@ -44,11 +44,13 @@
       const material = ['clear', 'beautify', 'frosted', 'light'].includes(settings.dashboardMaterial) ? settings.dashboardMaterial : client.defaults.dashboardMaterial;
       document.body.dataset.glassMode = material;
       document.body.dataset.glassChoice = material;
-      window.MiracleAppearance.setMode(settings.dashboardWallpaperMode, settings.dashboardWallpaper);
+      const theme=window.MiracleAppearance.normalize(settings.dashboardWallpaper);
+      const applied=await window.MiracleAppearance.setMode('manual',theme);
+      if(applied&&(settings.dashboardWallpaper!==theme||settings.dashboardWallpaperMode!=='manual'))await client.storage.set({dashboardWallpaper:theme,dashboardWallpaperMode:'manual'});
       window.DashboardGlass?.setDepth(settings.dashboardGlassDepth ?? 68);
       window.DashboardGlass?.refresh();
     } catch {
-      window.MiracleAppearance.setMode('auto');
+      window.MiracleAppearance.setMode('manual','lime');
     }
     checkConnection();
   }
