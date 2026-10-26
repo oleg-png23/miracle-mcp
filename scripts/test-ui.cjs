@@ -23,6 +23,7 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
 
 (async () => {
   await post('/__fixture/reset');
+  if (!process.env.MIRACLES_AGENT_ONLY) {
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -63,14 +64,18 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
     await check('rail hover magnifies icons and the tooltip sits above the hero card', async () => {
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-      const control = page.locator('.sidebar [href="#executor"]'), icon = control.locator('.nav-icon');
+      const heroBox=await page.locator('.hero-card').boundingBox();
+      const links=page.locator('.sidebar .nav-link');let control;
+      for(let i=0;i<await links.count();i++) { const candidate=links.nth(i),box=await candidate.boundingBox();if(box&&box.y+box.height/2>heroBox.y+10&&box.y+box.height/2<heroBox.y+heroBox.height-10){control=candidate;break;} }
+      assert(control,'A rail item alongside the hero is available to test tooltip stacking');
+      const icon=control.locator('.nav-icon'), label=await control.getAttribute('aria-label');
       await page.mouse.move(0, 0); await page.waitForTimeout(450);
       const before = await icon.boundingBox();
       await control.hover();
       await page.waitForFunction(() => document.querySelector('#railTooltip')?.matches(':popover-open'));
-      await page.waitForFunction(() => document.querySelector('.sidebar [href="#executor"] .nav-icon').getBoundingClientRect().width > 45);
+      await page.waitForFunction(element => element.getBoundingClientRect().width > 45, await icon.elementHandle());
       assert((await icon.boundingBox()).width > before.width * 1.15);
-      assert.equal(await page.locator('#railTooltip').innerText(), 'Code');
+      assert.equal(await page.locator('#railTooltip').innerText(), label);
       const tooltip = await page.locator('#railTooltip').boundingBox();
       const hero = await page.locator('.hero-card').boundingBox();
       assert(tooltip.x + tooltip.width > hero.x);
@@ -186,7 +191,8 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       assert.deepEqual(errors, []);
     });
-  } finally { await browser.close(); }
+  } catch(error) { await browser.contexts()[0]?.pages()[0]?.screenshot({path:path.join(out,'dashboard-failure.png'),fullPage:true}).catch(()=>{}); throw error; } finally { await browser.close(); }
+  }
   if (process.env.MIRACLES_DASHBOARD_ONLY) return;
 
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'miracles-native-qa-'));

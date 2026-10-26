@@ -35,6 +35,10 @@ jobs:
         run: ./scripts/test-launcher.ps1
   browser:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        view: [dashboard, agent]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -56,12 +60,13 @@ jobs:
             }
             if (-not $ready) { throw 'Studio simulator did not start.' }
             $env:MIRACLES_QUICK_QA = '1'
+            if ('${{ matrix.view }}' -eq 'agent') { $env:MIRACLES_AGENT_ONLY = '1' } else { $env:MIRACLES_DASHBOARD_ONLY = '1' }
             npm run test:ui
             if ($LASTEXITCODE -ne 0) { throw 'Browser checks failed.' }
           } finally { Stop-Process -Id $fixture.Id -Force -ErrorAction SilentlyContinue }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: miracle-browser-qa
+          name: miracle-browser-qa-${{ matrix.view }}
           path: .mcp_cache/qa
           include-hidden-files: false

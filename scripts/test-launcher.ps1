@@ -43,10 +43,16 @@ try {
     for ($i = 0; $i -lt 3; $i++) {
         $file = Join-Path $testNew 'release\scripts\start.ps1'
         $process = Start-Process powershell.exe -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + $file + '"'),'-NoOpen','-Port',"$testPort") -PassThru -RedirectStandardOutput (Join-Path $testFolder "launch-$i.out") -RedirectStandardError (Join-Path $testFolder "launch-$i.err")
+        $null = $process.Handle
         $testOwned.Add($process); $launches += $process
     }
     foreach ($process in $launches) {
-        if (-not $process.WaitForExit(45000) -or $process.ExitCode -ne 0) { throw 'Concurrent launcher failed.' }
+        $finished = $process.WaitForExit(45000)
+        $process.Refresh()
+        if (-not $finished -or $process.ExitCode -ne 0) {
+            Get-ChildItem -LiteralPath $testFolder -File | Where-Object { $_.Extension -in '.out','.err' } | ForEach-Object { Write-Host $_.Name; Get-Content -LiteralPath $_.FullName | Out-Host }
+            throw "Concurrent launcher failed: PID $($process.Id), finished=$finished, exit=$($process.ExitCode)."
+        }
     }
     $first = Wait-Version $testVersion
     $listeners = @(Get-NetTCPConnection -LocalPort $testPort -State Listen | Select-Object -ExpandProperty OwningProcess -Unique)

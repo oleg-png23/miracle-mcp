@@ -157,10 +157,16 @@ try {
     $taskPython = $null
     foreach ($taskCandidate in ($taskCandidates | Select-Object -Unique)) {
         try {
-            $taskProbeCode = '"import sys; sys.exit(0 if sys.version_info >= (3,10) else 1)"'
-            $taskProbe = Start-Process -FilePath $taskCandidate -ArgumentList @('-c', $taskProbeCode) -WindowStyle Hidden -PassThru
-            if ($taskProbe.WaitForExit(3000) -and $taskProbe.ExitCode -eq 0) { $taskPython = $taskCandidate; break }
-            if (-not $taskProbe.HasExited) { Stop-Process -Id $taskProbe.Id -Force -ErrorAction SilentlyContinue }
+            $taskProbeInfo = [System.Diagnostics.ProcessStartInfo]::new()
+            $taskProbeInfo.FileName = $taskCandidate
+            $taskProbeInfo.Arguments = '-c "import sys; sys.exit(0 if sys.version_info >= (3,10) else 1)"'
+            $taskProbeInfo.UseShellExecute = $false
+            $taskProbeInfo.CreateNoWindow = $true
+            $taskProbe = [System.Diagnostics.Process]::Start($taskProbeInfo)
+            try {
+                if ($taskProbe.WaitForExit(3000) -and $taskProbe.ExitCode -eq 0) { $taskPython = $taskCandidate; break }
+                if (-not $taskProbe.HasExited) { $taskProbe.Kill() }
+            } finally { $taskProbe.Dispose() }
         } catch { }
     }
     if (-not $taskPython) { throw 'Не найден Python 3.10 или новее. Установите Python с python.org, затем запустите run.bat снова.' }
@@ -170,6 +176,7 @@ try {
     $taskArgs = @('-u', ('"' + $taskServer + '"'), '--port', "$taskPort")
     $taskProcess = Start-Process -FilePath $taskPython -ArgumentList $taskArgs -WorkingDirectory $taskRoot -WindowStyle Hidden -PassThru `
         -RedirectStandardOutput (Join-Path $taskLogs 'bridge.stdout.log') -RedirectStandardError (Join-Path $taskLogs 'bridge.stderr.log')
+    $null = $taskProcess.Handle
     $taskReady = $false
     for ($taskAttempt = 0; $taskAttempt -lt 30; $taskAttempt++) {
         $taskProcess.Refresh()
