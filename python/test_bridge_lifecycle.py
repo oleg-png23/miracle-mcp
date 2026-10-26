@@ -90,7 +90,7 @@ class LifecycleTests(unittest.TestCase):
             result = subprocess.run([sys.executable, str(folder / 'mcp_server.py'), '--port', str(self.server.server_port)],
                                     capture_output=True, text=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn('reusing v2.9.0', result.stdout)
+            self.assertIn('reusing v'+bridge.VERSION, result.stdout)
             self.assertEqual(token.stat().st_mtime_ns, before)
             self.assertEqual(token.read_text(), 'untouched-local-token')
 

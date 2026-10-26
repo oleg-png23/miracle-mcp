@@ -165,5 +165,5 @@ test('corrupted browser settings do not prevent dashboard startup', async () => 
   const { client } = browser({ 'miracles.dashboard.settings': 'not json', 'miracles.settings': '[]' });
   const settings = await client.storage.read();
   assert.equal(settings.bridgeToken, '');
-  assert.equal(settings.dashboardWallpaper, 'fjord');
+  assert.equal(settings.dashboardWallpaper, 'lime');
 });

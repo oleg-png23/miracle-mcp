@@ -20,4 +20,4 @@ python scripts/build-site-preview.py
 
 The builder copies active runtime assets into `website/preview/`, then replaces `docs/` with the contents of `website/` for GitHub Pages. Treat `docs/` as generated output; edit `website/` instead. The release builder runs this step automatically.
 
-The landing page uses one stylesheet and one small script. Shared app effects remain confined to the app previews. Font licenses are in `assets/fonts/`; landscape provenance is in `assets/bg/PHOTO-SOURCES.md`; icon sources and licenses are in `assets/icons/`. Source code follows the root project's MIT license.
+The landing page uses one stylesheet and one small script. Shared app effects remain confined to the app previews. Font licenses are in `assets/fonts/`; the two palette graphics are described in `assets/bg/THEMES.md`; icon sources and licenses are in `assets/icons/`. Source code follows the root project's MIT license.

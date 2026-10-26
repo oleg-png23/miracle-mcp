@@ -34,7 +34,7 @@ def runtime_entries():
     plugin.extend((ROOT / 'scripts').glob('*.js'))
     plugin.extend(ROOT / 'icons' / name for name in ['icon16.png', 'icon48.png', 'icon128.png'])
     registry = (ROOT / 'scripts' / 'appearance.js').read_text(encoding='utf-8')
-    backgrounds = set(re.findall(r"(?:file|thumb):'([^']+)'", registry)) | {'PHOTO-SOURCES.md'}
+    backgrounds = set(re.findall(r"(?:file|thumb):'([^']+)'", registry)) | {'THEMES.md'}
     plugin = [file for file in plugin if file.parent != ROOT / 'assets' / 'bg' or file.name in backgrounds]
     bridge = [ROOT / name for name in ['run.bat', 'stop.bat', 'scripts/start.ps1', 'python/mcp_server.py',
         'python/studio_mcp.py', 'python/usage_stats.py', 'INSTALL.md', 'LICENSE', 'THIRD_PARTY.md', 'RELEASE_NOTES.md']]
@@ -51,7 +51,7 @@ def build():
     if not (ROOT / 'website' / 'index.html').is_file():
         raise RuntimeError('Website is not ready: website/index.html is missing')
     outputs.append(archive(f'miracle-website-{VERSION}.zip', [(file, file.relative_to(ROOT / 'website')) for file in site]))
-    wallpapers = [file for file in files_under('assets/bg') if '-new' in file.name or file.name == 'PHOTO-SOURCES.md']
+    wallpapers = files_under('assets/bg')
     outputs.append(archive(f'miracle-wallpapers-{VERSION}.zip', [(file, file.name) for file in wallpapers]))
     checksums = OUT / 'SHA256SUMS.txt'
     checksums.write_text(''.join(f'{hashlib.sha256(file.read_bytes()).hexdigest()}  {file.name}\n' for file in outputs), encoding='utf-8')

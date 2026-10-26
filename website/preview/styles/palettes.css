@@ -1,0 +1,107 @@
+/* Shared palette tokens. Only the two user-selected colorways are available. */
+:root {
+  --palette-1: #00b8ff;
+  --palette-2: #2be0a0;
+  --palette-3: #c6ff3d;
+  --palette-4: #ffe53b;
+  --palette-ink: #142b2c;
+  --palette-muted: #4b6656;
+  --palette-accent: #267b5e;
+  --palette-paper: #f5faf0;
+  --palette-soft: #e9f8d6;
+  --palette-line: #c6dcb8;
+}
+body[data-wallpaper="solar"] {
+  --palette-1: #ff5a1f;
+  --palette-2: #ff2e63;
+  --palette-3: #ffb020;
+  --palette-4: #ff8a00;
+  --palette-ink: #3d2724;
+  --palette-muted: #78574f;
+  --palette-accent: #a33d2b;
+  --palette-paper: #fff7f1;
+  --palette-soft: #ffe0ca;
+  --palette-line: #e7c9b5;
+}
+body.dashboard-page,body.welcome-page {
+  --ink: var(--palette-ink);
+  --accent: var(--palette-accent);
+  color: var(--palette-ink);
+  background: var(--palette-paper);
+}
+body.dashboard-page .wallpaper,body.welcome-page .wallpaper { background: var(--palette-paper); }
+body.dashboard-page .wallpaper #bgPhoto,body.welcome-page .wallpaper #bgPhoto { opacity: 1; }
+body.dashboard-page .wallpaper-veil {
+  background: linear-gradient(105deg, #ffffffc9, #ffffff80 48%, #ffffff24);
+}
+body.dashboard-page .wallpaper::after {
+  background: radial-gradient(ellipse at 94% 8%, color-mix(in srgb, var(--palette-1) 8%, transparent), transparent 48%);
+}
+body.dashboard-page .soda-light {
+  background: radial-gradient(ellipse at 26% 28%, color-mix(in srgb, var(--palette-1) 70%, transparent), transparent 46%),
+    radial-gradient(ellipse at 66% 42%, color-mix(in srgb, var(--palette-2) 90%, transparent), transparent 45%),
+    radial-gradient(ellipse at 48% 65%, color-mix(in srgb, var(--palette-3) 98%, transparent), transparent 43%),
+    radial-gradient(ellipse at 76% 70%, color-mix(in srgb, var(--palette-4) 78%, transparent), transparent 36%);
+}
+body.dashboard-page .wallpaper-options { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+body.dashboard-page .wallpaper-option { height: 112px; border-radius: 22px; }
+body.dashboard-page .wallpaper-option > span {
+  left: 10px; bottom: 9px; padding: 4px 10px; border-radius: 999px;
+  color: #26382b; background: #ffffffe6; text-shadow: none; font-size: 11px;
+}
+body.dashboard-page .wallpaper-option::after { background: transparent; }
+body.dashboard-page .wallpaper-option.selected { outline-color: var(--palette-accent); }
+body.dashboard-page .hero-copy h2 > span { color: var(--palette-accent); }
+body.dashboard-page .hero-copy .button-primary {
+  background: var(--palette-3); border-color: color-mix(in srgb,var(--palette-3) 60%,white);
+  color: var(--palette-ink);
+}
+body.dashboard-page .hero-copy .button-primary:hover { background: color-mix(in srgb,var(--palette-3) 75%,white); }
+body.dashboard-page .navigation::before { background: linear-gradient(135deg,var(--palette-soft),color-mix(in srgb,var(--palette-2) 18%,white)); }
+body.dashboard-page .metric-top .icon,body.dashboard-page .motion-toggle,body.dashboard-page .orb-monogram,
+body.dashboard-page .orb-monogram > span { color: var(--palette-accent); }
+body.dashboard-page .connection-flow { background: var(--palette-accent); box-shadow: 0 0 0 3px #ffffff85,0 0 12px var(--palette-3); }
+body.dashboard-page .workspace-shortcuts a:nth-child(1) .icon { background: color-mix(in srgb,var(--palette-1) 17%,white); color: var(--palette-accent); }
+body.dashboard-page .workspace-shortcuts a:nth-child(2) .icon { background: color-mix(in srgb,var(--palette-2) 17%,white); color: var(--palette-accent); }
+body.dashboard-page .workspace-shortcuts a:nth-child(3) .icon { background: color-mix(in srgb,var(--palette-3) 25%,white); color: var(--palette-accent); }
+body.dashboard-page[data-wallpaper="solar"] :is(.page-heading,.section-view-heading,.hero-copy h2,.desktop-brand,.workspace-shortcuts a) { color: var(--palette-ink); }
+body.dashboard-page[data-wallpaper="solar"] :is(.page-heading p,.breadcrumb,.section-view-heading p,.hero-copy p,.hero-footer,.metric-top,.metric-description,.workspace-shortcuts a > span,.agent-status p) { color: var(--palette-muted); }
+body.dashboard-page[data-wallpaper="solar"] .hero-card::before { background-image: linear-gradient(110deg,#fffaf5ed,#fff2e8b8 44%,#fff0e04d); }
+body.dashboard-page[data-wallpaper="solar"] .metric::before { background-image: linear-gradient(145deg,#fffaf5e0,#fff0e4c2); }
+body.dashboard-page[data-wallpaper="solar"] .button-primary { background: #693a30; border-color: #693a30; }
+body.dashboard-page[data-wallpaper="solar"] .hero-copy .button-primary { background: var(--palette-3); border-color: #ffd183; }
+body.dashboard-page[data-wallpaper="solar"] .hero-copy .button-primary:hover { background: #ffc661; }
+body.dashboard-page[data-wallpaper="solar"] .hero-copy h2 > span { color: var(--palette-accent); }
+body.dashboard-page[data-wallpaper="solar"] .node-orb { background: linear-gradient(135deg,#ffffffe6,#ffffff5e 50%,#ffddc5a6); }
+body.dashboard-page[data-wallpaper="solar"] .studio-mark { border-color: #c05237; }
+body.dashboard-page[data-wallpaper="solar"] .connection-node > :is(strong,span),
+body.dashboard-page[data-wallpaper="solar"] .sidebar .nav-link.active { color: #693a30; }
+body.dashboard-page[data-wallpaper="solar"] .wire-line { background: linear-gradient(90deg,#b76b4552,#ff8a0059); }
+body.dashboard-page[data-wallpaper="solar"] .wire-symbol { color: #9a5039; background: #fff7f1c4; }
+body.dashboard-page[data-wallpaper="solar"] .workspace-shortcuts a { background: linear-gradient(140deg,#ffffffd1,#fff3e9b3); }
+body.dashboard-page[data-wallpaper="solar"] :is(.agent-status .button,.section-menu-links a.active) { background: #fff0e0; border-color: #dfbca0; color: #693a30; }
+body.dashboard-page[data-wallpaper="solar"] .section-menu { background: #fff6eff5; color: var(--palette-ink); }
+body.dashboard-page[data-wallpaper="solar"] .section-swipe-hint { background: #fff6efd9; color: #78574f; }
+body.dashboard-page[data-wallpaper="solar"] .code-editor { background: #352522; color: #ffe9d4; border-color: #745044; caret-color: #ffb020; }
+body.dashboard-page[data-wallpaper="solar"] .switch[aria-checked="true"] { background: #a95336; }
+
+/* The welcome page uses the same selected palette and a calm reading surface. */
+body.welcome-page .wallpaper-veil { background: linear-gradient(90deg,#ffffffdf,#ffffff66 58%,#ffffff33); }
+body.welcome-page :is(.welcome-copy h1,.welcome-wordmark,.welcome-clock time,.welcome-connect h2,.welcome-connect strong,.welcome-status-detail,.welcome-card-link) { color: var(--palette-ink); text-shadow: none; }
+body.welcome-page :is(.welcome-eyebrow,.welcome-description,.welcome-clock,.welcome-help,.welcome-idea-label,.welcome-footer,.welcome-top-link,.welcome-motion-toggle,.welcome-connect p,.welcome-connect small,.welcome-capabilities p > span) { color: var(--palette-muted); }
+body.welcome-page .welcome-wordmark img { filter: none; }
+body.welcome-page .welcome-connect { --glass-wash-top: .87; --glass-wash-bottom: .68; color: var(--palette-ink); text-shadow: none; }
+body.welcome-page :is(.welcome-prompt,.welcome-top-link) { background: #ffffff9c; border-color: var(--palette-line); color: var(--palette-ink); }
+body.welcome-page .welcome-enter { background: var(--palette-3); color: var(--palette-ink); border-color: color-mix(in srgb,var(--palette-3) 50%,white); }
+body.welcome-page .welcome-eyebrow > span { background: var(--palette-accent); }
+body.welcome-page .welcome-help { border-color: var(--palette-line); }
+body.welcome-page .welcome-capabilities strong { color: var(--palette-ink); }
+body.welcome-page .welcome-orb { color: var(--palette-accent); }
+body.welcome-page .welcome-footer { border-color: var(--palette-line); }
+@media(max-width:650px) { body.dashboard-page .wallpaper-option { height: 90px; } }
+@media(forced-colors:active) {
+  body.dashboard-page,body.welcome-page { background: Canvas; color: CanvasText; }
+  body.welcome-page :is(.welcome-copy h1,.welcome-wordmark,.welcome-description,.welcome-clock,.welcome-clock time,.welcome-help,.welcome-footer,.welcome-connect,.welcome-connect h2,.welcome-status-detail,.welcome-capabilities strong) { color: CanvasText; }
+  body.dashboard-page .hero-copy h2 > span { color: CanvasText; }
+  body.dashboard-page .hero-copy .button-primary,body.welcome-page .welcome-enter { background: ButtonFace; color: ButtonText; border-color: ButtonText; }
+}

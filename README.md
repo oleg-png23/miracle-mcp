@@ -2,7 +2,7 @@
 
 A local bridge between AI chats and Roblox Studio's built-in MCP server.
 
-The workspace includes a compact glass navigation rail, a welcome page, optimized local landscape wallpapers, an optional Luau editor and usage statistics. The rounded **Miracle** glass button in supported AI chats opens a neutral graphite panel and starts or stops Studio tool sessions. Its button and panel refract the live backdrop in supported Chromium browsers, with frosted fallback, bright rims and animated opening/closing. The optical maps are cached per size and suspended while hidden; the widget makes no requests for visual assets.
+The workspace includes a compact glass navigation rail, a welcome page, two local color themes, an optional Luau editor and usage statistics. The rounded **Miracle** glass button in supported AI chats opens a neutral graphite panel and starts or stops Studio tool sessions. Its button and panel refract the live backdrop in supported Chromium browsers, with frosted fallback, bright rims and animated opening/closing. The optical maps are cached per size and suspended while hidden; the widget makes no requests for visual assets.
 
 [Website](https://oleg-png23.github.io/miracle-mcp/) · [Dashboard preview](https://oleg-png23.github.io/miracle-mcp/preview/dashboard.html) · [Start page preview](https://oleg-png23.github.io/miracle-mcp/preview/welcome.html) · [Download the latest release](https://github.com/oleg-png23/miracle-mcp/releases/latest)
 
@@ -17,7 +17,7 @@ Python uses the standard library. Node.js is needed only for development and bro
 
 ## Install a release
 
-Download `miracle-mcp-2.9.0.zip` and extract both folders together. Load **plugin/** as the unpacked Chrome/Edge extension, enable Studio MCP, then run **release/run.bat**. The local bridge serves the interface from the sibling plugin folder. See [the installation guide](INSTALL.md) for the full Russian instructions.
+Download `miracle-mcp-2.9.1.zip` and extract both folders together. Load **plugin/** as the unpacked Chrome/Edge extension, enable Studio MCP, then run **release/run.bat**. The local bridge serves the interface from the sibling plugin folder. See [the installation guide](INSTALL.md) for the full Russian instructions.
 
 ## Start from source
 
@@ -52,9 +52,9 @@ Tools loads the catalog advertised by the connected Studio and supports name/des
 
 ## Appearance
 
-The new Coast, Alps and Aurora wallpapers are optimized original landscape illustrations, 1672 × 941 pixels, together about 459 KB. The remaining five landscapes use lightweight 1920-pixel derivatives; all eight active backgrounds total about 1.27 MB. The original 4K collection remains in the source repository. Wallpapers and thumbnails are separate files; provenance and actual dimensions are recorded in `assets/bg/PHOTO-SOURCES.md`.
+Only **Solar Flare** and **Lime Soda** are available in Appearance. Their soft gradients and ribbed-glass highlights use the supplied color palettes, with no landscape photography or extra wallpaper collection. Both lightweight SVGs are also used by the welcome page and website previews. See `assets/bg/THEMES.md` for the colors and graphic details.
 
-Automatic mode follows local time: Alps in the morning, Coast in the afternoon and Aurora in the evening/night. Selecting a landscape enables manual mode. Turn on **Match time of day** to restore automatic changes.
+Your theme stays selected until you change it. Saved settings for removed landscapes or automatic wallpaper mode migrate to Lime Soda in manual mode. Pause motion, reduced motion, transparency preferences and high-contrast mode remain supported.
 
 The desktop rail trails scrolling by at most 16 pixels and settles when scrolling stops. The mobile dock stays fixed. Reduced-motion preferences disable these animations. Tooltips use the browser's top layer so cards cannot cover them.
 

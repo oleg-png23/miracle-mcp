@@ -65,10 +65,10 @@ try {
     # Reproduce an older release in a different extracted directory. Its disk
     # manifest and served version identify it before the new launcher replaces it.
     $oldServer = Join-Path $testOld 'release\python\mcp_server.py'
-    $source = [System.IO.File]::ReadAllText($oldServer).Replace('VERSION = "2.9.0"','VERSION = "2.8.0"').Replace('"graceful_shutdown",','')
+    $source = [System.IO.File]::ReadAllText($oldServer).Replace(('VERSION = "' + $testVersion + '"'),'VERSION = "2.8.0"').Replace('"graceful_shutdown",','')
     [System.IO.File]::WriteAllText($oldServer, $source)
     $oldManifest = Join-Path $testOld 'plugin\manifest.json'
-    [System.IO.File]::WriteAllText($oldManifest, [System.IO.File]::ReadAllText($oldManifest).Replace('"2.9.0"','"2.8.0"'))
+    [System.IO.File]::WriteAllText($oldManifest, [System.IO.File]::ReadAllText($oldManifest).Replace(('"' + $testVersion + '"'),'"2.8.0"'))
     $legacy = Start-Process $testPython -ArgumentList @('-u',('"' + $oldServer + '"'),'--port',"$testPort") -PassThru -RedirectStandardOutput (Join-Path $testFolder 'legacy.out') -RedirectStandardError (Join-Path $testFolder 'legacy.err')
     $testOwned.Add($legacy)
     Wait-Version '2.8.0' | Out-Null
