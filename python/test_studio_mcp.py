@@ -1,9 +1,12 @@
 import json
+import os
+from pathlib import Path
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
-from studio_mcp import StudioMCP, StudioMCPError
+from studio_mcp import StudioMCP, StudioMCPError, find_studio_mcp
 
 
 FAKE_SERVER = r'''
@@ -50,6 +53,18 @@ for line in sys.stdin:
 
 
 class StudioMCPTests(unittest.TestCase):
+    def test_helium_path_override_takes_precedence_and_legacy_override_still_works(self):
+        with tempfile.TemporaryDirectory() as directory:
+            current = Path(directory) / 'helium.exe'
+            legacy = Path(directory) / 'miracle.exe'
+            current.touch()
+            legacy.touch()
+            with patch.dict(os.environ, {'HELIUM_STUDIO_MCP_PATH': str(current),
+                                         'MIRACLES_STUDIO_MCP_PATH': str(legacy)}, clear=True):
+                self.assertEqual(find_studio_mcp(), current)
+                del os.environ['HELIUM_STUDIO_MCP_PATH']
+                self.assertEqual(find_studio_mcp(), legacy)
+
     def client(self, **kwargs):
         return StudioMCP(command=[sys.executable, "-u", "-c", FAKE_SERVER], timeout=1, **kwargs)
 
@@ -91,7 +106,7 @@ class StudioMCPTests(unittest.TestCase):
     def test_missing_executable(self, _find):
         status = StudioMCP().start_if_needed()
         self.assertEqual(status["state"], "missing")
-        self.assertIn("MIRACLES_STUDIO_MCP_PATH", status["message"])
+        self.assertIn("HELIUM_STUDIO_MCP_PATH", status["message"])
 
     def test_call_when_unavailable_is_meaningful(self):
         client = StudioMCP()

@@ -51,7 +51,7 @@ test('settings survive page reload and migrate both older interfaces', async () 
   assert.equal(settings.dashboardWallpaper, 'coast');
 });
 
-test('reset removes only Miracles settings and updates defaults immediately', async () => {
+test('reset removes only Helium settings and updates defaults immediately', async () => {
   const { client, data } = browser({ unrelated: 'keep', mcp_token: 'old' });
   await client.storage.set({ bridgeToken: 'new' });
   await client.storage.clear();

@@ -19,8 +19,8 @@
       try { const saved = await storage.read(); localStorage.setItem(key,JSON.stringify(Object.fromEntries(allowed.map(k => [k,saved[k]])))); } catch { /* memory fallback */ }
     }
   };
-  const status = () => ({online:true,queue:0,uptime_s:3720,safe:true,version:'2.9.1',
-    studio_linked:true,agent_sessions:[{site:'chatgpt.com',state:'watching',code:'',calls:3,age_s:1,client_version:'2.9.1',extension_version:'2.9.1'}],studio_mode:'native_mcp',native_mcp:{state:'ready',tools_count:12},
+  const status = () => ({online:true,queue:0,uptime_s:3720,safe:true,version:'2.9.2',
+    studio_linked:true,agent_sessions:[{site:'chatgpt.com',state:'watching',code:'',calls:3,age_s:1,client_version:'2.9.2',extension_version:'2.9.2'}],studio_mode:'native_mcp',native_mcp:{state:'ready',tools_count:12},
     usage:{tokens_total:24800,tokens_in:16400,tokens_out:8400,activations:18,sites:[
       {site:'chatgpt.com',activations:12,tokens_in:10400,tokens_out:5600},
       {site:'claude.ai',activations:6,tokens_in:6000,tokens_out:2800}]},
@@ -32,7 +32,7 @@
       {name:'get_scene_info',description:'Example: inspect the open place.',inputSchema:{type:'object',properties:{}},annotations:{readOnlyHint:true}},
       {name:'run_code',description:'Example: execute Luau in the local application. Execution is disabled in this preview.',inputSchema:{type:'object',properties:{code:{type:'string'}},required:['code']}}]};
     if(path === '/api/auth') return {ok:true};
-    throw new Error('Preview only. Download Miracle and open the local workspace to use Studio tools. Nothing was sent.');
+    throw new Error('Preview only. Download Helium and open the local workspace to use Studio tools. Nothing was sent.');
   }
   function report(message,error=false) {
     const feedback = document.getElementById('actionFeedback');

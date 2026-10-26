@@ -15,7 +15,7 @@
     if(!lines.length || !Array.isArray(phrases) || !phrases.length || phrases.some(p=>!Array.isArray(p)||p.length!==lines.length||p.some(t=>typeof t!=='string'||!t.length))) return null;
     if(el.dataset.typewriter==='dashboard'&&el.dataset.typeGreeting!=='false') {
       const greeting=window.MiracleAppearance?.clock().greeting || phrases[0][0];
-      phrases[0][0]=greeting;el.setAttribute('aria-label',greeting+' Miracle workspace.');
+      phrases[0][0]=greeting;el.setAttribute('aria-label',greeting+' Helium workspace.');
     }
     const reveal=el.dataset.typeEffect==='reveal';
     return {el,lines,phrases,reveal,phrase:0,count:reveal?phrases[0].join('').length:0,phase:reveal?'hold':'typing',timer:0,effects:[],visible:true,started:false};

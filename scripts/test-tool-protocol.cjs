@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const context={};vm.runInNewContext(fs.readFileSync('scripts/tool-protocol.js','utf8'),context);
 const parse=context.MiraclesToolProtocol.parse;
-const envelope=call=>JSON.stringify({miracles_tool:call});
+const envelope=call=>JSON.stringify({helium_tool:call});
 const call={id:'step-1',name:'run_code',arguments:{code:'local x = {key="quoted } \\\" value"}; return x'}};
 test('tool JSON survives fences, prose, nested braces and escaped strings',()=>{
   for(const text of [envelope(call),'```json\n'+envelope(call)+'\n```','I will run '+envelope(call)+' and read its result.']) {
@@ -13,8 +13,12 @@ test('streamed fragments stay incomplete and cannot execute',()=>{
   assert.equal(parse(text.slice(0,-2)).calls.length,0);assert(parse(text.slice(0,-2)).incomplete);
   assert.equal(parse(text).calls.length,1);
 });
-test('brand spelling alias works but ordinary JSON and tool results never become commands',()=>{
-  assert.equal(parse(JSON.stringify({miracle_tool:call})).calls.length,1);
+test('legacy brand spelling aliases work but ordinary JSON and tool results never become commands',()=>{
+  for(const key of ['miracles_tool','miracle_tool']) {
+    for(const value of [JSON.stringify({[key]:call}),'Legacy reply: '+JSON.stringify({[key]:call})]) assert.equal(parse(value).calls.length,1);
+  }
+  const mixed=parse(JSON.stringify({helium_tool:call,miracles_tool:{...call,id:'other'}}));
+  assert.equal(mixed.calls.length,0);assert.match(mixed.error,/exactly one/);
   for(const text of [JSON.stringify(call),'{"tool":"run_code","arguments":{}}','{"ok":true,"call_id":"step-1","result":{}}'])assert.equal(parse(text).calls.length,0);
 });
 test('duplicate ids, malformed arguments and oversized messages are diagnosed',()=>{

@@ -44,15 +44,15 @@ def runtime_entries():
 
 def build():
     OUT.mkdir(parents=True, exist_ok=True)
-    outputs = [archive(f'miracle-mcp-{VERSION}.zip', runtime_entries())]
+    outputs = [archive(f'helium-mcp-{VERSION}.zip', runtime_entries())]
     runpy.run_path(str(ROOT / 'scripts' / 'build-site-preview.py'), run_name='__main__')
     site = files_under('website')
     site.append(ROOT / 'website' / '.nojekyll')
     if not (ROOT / 'website' / 'index.html').is_file():
         raise RuntimeError('Website is not ready: website/index.html is missing')
-    outputs.append(archive(f'miracle-website-{VERSION}.zip', [(file, file.relative_to(ROOT / 'website')) for file in site]))
+    outputs.append(archive(f'helium-website-{VERSION}.zip', [(file, file.relative_to(ROOT / 'website')) for file in site]))
     wallpapers = files_under('assets/bg')
-    outputs.append(archive(f'miracle-wallpapers-{VERSION}.zip', [(file, file.name) for file in wallpapers]))
+    outputs.append(archive(f'helium-wallpapers-{VERSION}.zip', [(file, file.name) for file in wallpapers]))
     checksums = OUT / 'SHA256SUMS.txt'
     checksums.write_text(''.join(f'{hashlib.sha256(file.read_bytes()).hexdigest()}  {file.name}\n' for file in outputs), encoding='utf-8')
     for file in [*outputs, checksums]:

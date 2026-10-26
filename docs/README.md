@@ -1,6 +1,6 @@
-# Miracle website
+# Helium website
 
-A self-contained, buildless website for Miracle MCP. The landing page explains the local bridge, links to the two interactive app previews, and provides Windows setup and FAQ sections.
+A self-contained, buildless website for Helium MCP. The landing page explains the local bridge, links to the two interactive app previews, and provides Windows setup and FAQ sections.
 
 From the repository root:
 

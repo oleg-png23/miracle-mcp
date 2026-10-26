@@ -1,12 +1,12 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $testRoot = Split-Path -Parent $PSScriptRoot
 $testVersion = (Get-Content (Join-Path $testRoot 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
 $testFolder = Join-Path $testRoot ('.mcp_cache\launcher with spaces ' + [guid]::NewGuid().ToString('N'))
 $testNew = Join-Path $testFolder 'new'
 $testOld = Join-Path $testFolder 'old'
-$testArchive = Join-Path $testRoot ".mcp_cache\release\miracle-mcp-$testVersion.zip"
+$testArchive = Join-Path $testRoot ".mcp_cache\release\helium-mcp-$testVersion.zip"
 $testPython = (Get-Command python.exe).Source
-$env:MIRACLES_PYTHON_PATH = $testPython
+$env:HELIUM_PYTHON_PATH = $testPython
 $testReservation = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
 $testReservation.Start()
 $testPort = $testReservation.LocalEndpoint.Port
@@ -62,13 +62,13 @@ try {
     Write-Host 'PASS simultaneous and repeated launches reuse one bridge'
     Launch -Stop
 
-    # Reproduce an older release in a different extracted directory. Its disk
+    # Reproduce a pre-rename Miracle release in a different extracted directory. Its disk
     # manifest and served version identify it before the new launcher replaces it.
     $oldServer = Join-Path $testOld 'release\python\mcp_server.py'
-    $source = [System.IO.File]::ReadAllText($oldServer).Replace(('VERSION = "' + $testVersion + '"'),'VERSION = "2.8.0"').Replace('"graceful_shutdown",','')
+    $source = [System.IO.File]::ReadAllText($oldServer).Replace(('VERSION = "' + $testVersion + '"'),'VERSION = "2.8.0"').Replace('"graceful_shutdown",','').Replace('HeliumMCP/', 'MiraclesMCP/').Replace('"helium-mcp"', '"miracle-mcp"')
     [System.IO.File]::WriteAllText($oldServer, $source)
     $oldManifest = Join-Path $testOld 'plugin\manifest.json'
-    [System.IO.File]::WriteAllText($oldManifest, [System.IO.File]::ReadAllText($oldManifest).Replace(('"' + $testVersion + '"'),'"2.8.0"'))
+    [System.IO.File]::WriteAllText($oldManifest, [System.IO.File]::ReadAllText($oldManifest).Replace(('"' + $testVersion + '"'),'"2.8.0"').Replace('Helium — Local Bridge for Roblox Studio', 'Miracle — Local Bridge for Roblox Studio'))
     $legacy = Start-Process $testPython -ArgumentList @('-u',('"' + $oldServer + '"'),'--port',"$testPort") -PassThru -RedirectStandardOutput (Join-Path $testFolder 'legacy.out') -RedirectStandardError (Join-Path $testFolder 'legacy.err')
     $testOwned.Add($legacy)
     Wait-Version '2.8.0' | Out-Null

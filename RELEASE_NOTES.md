@@ -1,12 +1,11 @@
-# Miracle 2.9.1 — Solar Flare and Lime Soda only
+# Helium 2.9.2 — A new name
 
-Appearance now contains exactly two color themes, based on the supplied palette references:
+Miracle is now **Helium**. The dashboard, welcome page, browser chat widget, extension metadata, icons, website and downloads share the new name and h✦ mark.
 
-- **Solar Flare:** `#FF5A1F`, `#FF2E63`, `#FFB020`, `#FF8A00`.
-- **Lime Soda:** `#00B8FF`, `#2BE0A0`, `#C6FF3D`, `#FFE53B`.
+- New chats use `helium_tool`. Existing `miracles_tool` and `miracle_tool` messages remain supported, including streamed replies and saved-result recovery.
+- Existing settings, drafts and motion preferences retain their storage keys. Reload your existing unpacked extension from the same folder to keep its identity and settings.
+- The launcher recognizes verified previous Miracle bridges and retains the shared launch lock. Duplicate launches, graceful replacement and stop.bat continue to work across the rename.
+- `HELIUM_PYTHON_PATH` and `HELIUM_STUDIO_MCP_PATH` are the preferred overrides; the old `MIRACLES_` variables remain supported.
+- **Solar Flare** and **Lime Soda** remain the only two themes. The v2.9.0 relay fixes, Watch this chat, result recovery and diagnostics are retained.
 
-Both use local scalable gradients with ribbed-glass highlights. The dashboard, welcome page, website and offline previews share the two-theme set. Old landscape choices, full-resolution photos, thumbnails and unused background copies have been removed from the source and downloads. A saved removed theme falls back to Lime Soda; automatic wallpaper mode is retired, so the selected palette stays selected.
-
-The v2.9.0 chat-reader fixes, Watch this chat, saved-result recovery, version diagnostics, bridge cleanup and stop.bat are retained. Motion controls and accessibility preferences remain supported.
-
-Extract **miracle-mcp-2.9.1.zip**, keep **plugin/** and **release/** together, reload the extension, run the new **release/run.bat** and refresh open chat tabs. No extra Python packages or npm installation are needed to use the release.
+Extract **helium-mcp-2.9.2.zip**, keep **plugin/** and **release/** together, reload the extension, run **release/run.bat** and refresh open chat tabs. To upgrade an existing extension, replace the files in its current plugin folder before reloading it. Repository and website URLs are unchanged. No extra Python packages or npm installation are needed to use the release.

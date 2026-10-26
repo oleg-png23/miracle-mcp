@@ -41,7 +41,7 @@ def main():
         raise RuntimeError('Expected a verified full commit SHA')
     version = json.loads((ROOT / 'manifest.json').read_text(encoding='utf-8'))['version']
     tag = f'v{version}'
-    files = [OUT / f'miracle-{name}-{version}.zip' for name in ['mcp', 'website', 'wallpapers']]
+    files = [OUT / f'helium-{name}-{version}.zip' for name in ['mcp', 'website', 'wallpapers']]
     files.append(OUT / 'SHA256SUMS.txt')
     for file in files:
         if not file.is_file():
@@ -54,7 +54,7 @@ def main():
     def request(path, method='GET', body=None, binary=None):
         url = path if path.startswith('https://uploads.github.com/') else 'https://api.github.com' + path
         headers = {'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json',
-                   'User-Agent': 'Miracle-Release', 'X-GitHub-Api-Version': '2026-03-10'}
+                   'User-Agent': 'Helium-Release', 'X-GitHub-Api-Version': '2026-03-10'}
         data = json.dumps(body).encode() if body is not None else None
         if binary is not None:
             data = binary
@@ -73,7 +73,7 @@ def main():
             raise
         notes = (ROOT / 'RELEASE_NOTES.md').read_text(encoding='utf-8')
         release = request(base + '/releases', 'POST', {'tag_name': tag, 'target_commitish': args.commit,
-            'name': f'Miracle {version} — A clearer workspace', 'body': notes, 'draft': True, 'prerelease': False})
+            'name': f'Helium {version}', 'body': notes, 'draft': True, 'prerelease': False})
     if release['target_commitish'] not in {args.commit, 'main'}:
         raise RuntimeError('The existing release targets a different revision')
     existing = {asset['name']: asset for asset in release.get('assets', [])}
