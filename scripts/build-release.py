@@ -36,7 +36,7 @@ def runtime_entries():
     registry = (ROOT / 'scripts' / 'appearance.js').read_text(encoding='utf-8')
     backgrounds = set(re.findall(r"(?:file|thumb):'([^']+)'", registry)) | {'PHOTO-SOURCES.md'}
     plugin = [file for file in plugin if file.parent != ROOT / 'assets' / 'bg' or file.name in backgrounds]
-    bridge = [ROOT / name for name in ['run.bat', 'scripts/start.ps1', 'python/mcp_server.py',
+    bridge = [ROOT / name for name in ['run.bat', 'stop.bat', 'scripts/start.ps1', 'python/mcp_server.py',
         'python/studio_mcp.py', 'python/usage_stats.py', 'INSTALL.md', 'LICENSE', 'THIRD_PARTY.md', 'RELEASE_NOTES.md']]
     return [(file, Path('plugin') / file.relative_to(ROOT)) for file in plugin] + [
         (file, Path('release') / file.relative_to(ROOT)) for file in bridge]

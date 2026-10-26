@@ -23,6 +23,7 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
 
 (async () => {
   await post('/__fixture/reset');
+  if (!process.env.MIRACLES_AGENT_ONLY) {
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -63,14 +64,18 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
     await check('rail hover magnifies icons and the tooltip sits above the hero card', async () => {
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
-      const control = page.locator('.sidebar [href="#executor"]'), icon = control.locator('.nav-icon');
+      const heroBox=await page.locator('.hero-card').boundingBox();
+      const links=page.locator('.sidebar .nav-link');let control;
+      for(let i=0;i<await links.count();i++) { const candidate=links.nth(i),box=await candidate.boundingBox();if(box&&box.y+box.height/2>heroBox.y+10&&box.y+box.height/2<heroBox.y+heroBox.height-10){control=candidate;break;} }
+      assert(control,'A rail item alongside the hero is available to test tooltip stacking');
+      const icon=control.locator('.nav-icon'), label=await control.getAttribute('aria-label');
       await page.mouse.move(0, 0); await page.waitForTimeout(450);
       const before = await icon.boundingBox();
       await control.hover();
       await page.waitForFunction(() => document.querySelector('#railTooltip')?.matches(':popover-open'));
-      await page.waitForFunction(() => document.querySelector('.sidebar [href="#executor"] .nav-icon').getBoundingClientRect().width > 45);
+      await page.waitForFunction(element => element.getBoundingClientRect().width > 45, await icon.elementHandle());
       assert((await icon.boundingBox()).width > before.width * 1.15);
-      assert.equal(await page.locator('#railTooltip').innerText(), 'Code');
+      assert.equal(await page.locator('#railTooltip').innerText(), label);
       const tooltip = await page.locator('#railTooltip').boundingBox();
       const hero = await page.locator('.hero-card').boundingBox();
       assert(tooltip.x + tooltip.width > hero.x);
@@ -186,7 +191,8 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       assert.deepEqual(errors, []);
     });
-  } finally { await browser.close(); }
+  } catch(error) { await browser.contexts()[0]?.pages()[0]?.screenshot({path:path.join(out,'dashboard-failure.png'),fullPage:true}).catch(()=>{}); throw error; } finally { await browser.close(); }
+  }
   if (process.env.MIRACLES_DASHBOARD_ONLY) return;
 
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'miracles-native-qa-'));
@@ -275,6 +281,34 @@ const tool = (id, name, args = {}) => ({ miracles_tool: { id, name, arguments: a
         const code = document.createElement('code'); code.textContent = JSON.stringify({ miracles_tool: { id: 'user-injection', name: 'run_code', arguments: { code: 'must not execute' } } }); markdown.append(code); user.append(markdown); document.querySelector('#messages').append(user);
       });
       await page.waitForTimeout(1200); assert.equal((await calls()).length, 0);
+      await page.locator('#miracles-mcp-widget #agent-stop').click();
+    });
+    await check('long partial JSON completes and runs once without relying on a stop button',async()=>{
+      await seed([]);await start();
+      await page.waitForFunction(()=>document.querySelector('#miracles-mcp-widget').shadowRoot.getElementById('agent-start').hidden);
+      await page.evaluate(()=>{
+        const text=JSON.stringify({miracles_tool:{id:'long-stream',name:'run_code',arguments:{code:'-- '+ 'x'.repeat(14000)+'\\nreturn 1'}}});
+        const reply=document.createElement('div');reply.id='long-stream';reply.setAttribute('data-message-author-role','assistant');
+        const pre=document.createElement('pre'),code=document.createElement('code');code.textContent=text.slice(0,-3);pre.append(code);reply.append(pre);document.querySelector('#messages').append(reply);
+        window.completeLongReply=()=>{code.textContent=text;};
+      });
+      await page.waitForTimeout(1700);assert.equal((await calls()).length,0);
+      await page.evaluate(()=>window.completeLongReply());await waitCalls(1);
+      await page.waitForFunction(()=>window.sentMessages.length===2);
+      await page.waitForTimeout(1200);assert.equal((await calls()).length,1);
+      await page.locator('#miracles-mcp-widget #agent-stop').click();
+    });
+    await check('Watch attaches to existing JSON and retry delivers a saved result once',async()=>{
+      await seed([],'Keep this draft');
+      await page.evaluate(()=>{const reply=document.createElement('div');reply.setAttribute('data-message-author-role','assistant');reply.textContent=JSON.stringify({miracles_tool:{id:'watch-latest',name:'get_scene_info',arguments:{}}});document.querySelector('#messages').append(reply);});
+      await page.locator('#miracles-mcp-widget #agent-watch').click();await waitCalls(1);
+      await page.waitForFunction(()=>document.querySelector('#miracles-mcp-widget').shadowRoot.getElementById('status').textContent.includes('result is saved'));
+      assert.equal(await page.locator('textarea').first().inputValue(),'Keep this draft');
+      await page.locator('textarea').first().fill('');
+      await page.locator('#miracles-mcp-widget #retry-result').click();
+      await page.waitForFunction(()=>window.sentMessages.length===1);
+      assert.equal((await calls()).length,1);
+      assert.match((await page.evaluate(()=>window.sentMessages))[0],/Native fixture result/);
       await page.locator('#miracles-mcp-widget #agent-stop').click();
     });
     for(const hostname of ['www.notion.so','app.clickup.com']) {

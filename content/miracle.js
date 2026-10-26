@@ -4,6 +4,7 @@
   'use strict';
   if (document.getElementById('miracles-mcp-widget')) return;
   const { marker: MARKER, intro: INTRO } = globalThis.MiraclesPrompt;
+  const CLIENT_VERSION = '2.9.0';
 
   const siteEditors = {
     'chatgpt.com': '#prompt-textarea,textarea[data-id="root"]',
@@ -203,9 +204,19 @@
   // Agent loop: observes only after explicit Start and disconnects on stop/error.
   const startAgent = button('agent-start', 'Start session', 'action primary');
   const stopAgent = button('agent-stop', 'Stop session'); stopAgent.hidden = true;
-  $('panel').querySelector('.actions').prepend(startAgent, stopAgent);
+  const watchAgent = button('agent-watch', 'Watch this chat');
+  $('panel').querySelector('.actions').prepend(startAgent, watchAgent, stopAgent);
+  $('panel').append(node('p', {class:'intro'}, 'Already pasted instructions? Watch this chat reads new replies and can run the latest tool JSON once.'));
+  const retryResult = button('retry-result', 'Retry sending result');
+  const copyResult = button('copy-result', 'Copy result');
+  const dismissResult = button('dismiss-result', 'Dismiss result');
+  const resultText = node('textarea', {id:'last-result-text', readonly:'', 'aria-label':'Last tool result', spellcheck:'false'});
+  const resultDetails = node('details', {id:'last-result', hidden:''}, node('summary', {}, 'Last tool result'), resultText, retryResult, copyResult, dismissResult);
+  $('panel').append(resultDetails);
   let agentActive = false, observer = null, debounce = 0, seen = new Set(), historicalNodes = new WeakSet(), historicalUserNodes = new WeakSet(), busy = false, sessionInstance = null, sessionId = '', toolCount = 0, watchdog = 0;
-  let startup = null;
+  let startup = null, sessionController = null, readerTimer = 0, sample = null, pendingDelivery = null;
+  let conversation = '', phase = 'idle', phaseCode = '', activeTool = '', lastReport = 0;
+  const executions = new Map();
   const MAX_TOOL_CALLS = 30;
   async function recordUsage(kind, eventId, value) {
     try {
@@ -234,11 +245,14 @@
   });
   function stop(reason, code = 'SESSION_PAUSED') {
     startup?.abort();
+    sessionController?.abort();
     const interrupted=busy&&code==='STOPPED';
-    agentActive = false; busy = false; clearTimeout(debounce); clearTimeout(watchdog); observer?.disconnect(); observer = null;
+    agentActive = false; clearTimeout(debounce); clearTimeout(watchdog); clearTimeout(readerTimer); readerTimer=0;
+    observer?.disconnect(); observer = null;
     debounce = 0;
-    startAgent.hidden = false; stopAgent.hidden = true;
-    status(reason+(interrupted?' A pending tool may still finish. Its result will not be sent to the chat.':''), code === 'STOPPED' ? 'info' : 'error', code);
+    startAgent.hidden = false; watchAgent.hidden = false; stopAgent.hidden = true;
+    reportAgent(code==='STOPPED'?'stopped':'paused',code);
+    status(reason+(interrupted?' A pending tool may still finish. Its result will be kept here; it will not be sent automatically.':''), code === 'STOPPED' ? 'info' : 'error', code);
   }
   function hostKey() { const key=location.hostname.replace(/^www\./,'').toLowerCase(); return key==='kimi.ai'?'kimi.com':key; }
   function siteAdapter() { return globalThis.MiraclesSiteAdapters?.forHost(location.hostname) || null; }
@@ -274,24 +288,80 @@
     if(!modes.length) return true;
     return modes.some(el=>/direct/i.test(el.textContent||'')&&(el.getAttribute('aria-pressed')==='true'||el.getAttribute('aria-selected')==='true'||el.getAttribute('data-state')==='active'||/active|selected/i.test(el.className)));
   }
-  function parseCalls(nodeOrText) {
-    const calls=[]; const blocks=[];
-    if (nodeOrText instanceof Element) {
-      for (const code of nodeOrText.querySelectorAll('pre code, code')) blocks.push(code.textContent||'');
+  function inspectCalls(nodeOrText) {
+    const blocks=[];
+    if(nodeOrText instanceof Element) {
+      for(const code of nodeOrText.querySelectorAll('pre code, code')) blocks.push(code.textContent||'');
       blocks.push(nodeOrText.innerText||nodeOrText.textContent||'');
     } else blocks.push(String(nodeOrText||''));
-    const candidates=[];
-    for (const raw of blocks) {
-      candidates.push(raw.trim());
-      const re=/```(?:json)?\s*([\s\S]*?)```/gi; let m;
-      while ((m=re.exec(raw))) candidates.push(m[1].trim());
+    const result={calls:[],hasEnvelope:false,incomplete:false,error:''}, ids=new Map();
+    for(const block of blocks) {
+      const parsed=globalThis.MiraclesToolProtocol.parse(block);
+      result.hasEnvelope ||= parsed.hasEnvelope; result.incomplete ||= parsed.incomplete;
+      result.error ||= parsed.error;
+      for(const call of parsed.calls) {
+        const encoded=JSON.stringify(call);
+        if(ids.has(call.id)) { if(ids.get(call.id)!==encoded) result.error='One call id has different arguments. Ask for a fresh id.'; continue; }
+        ids.set(call.id,encoded);result.calls.push(call);
+      }
     }
-    const ids=new Set();
-    for (const candidate of candidates) { try {
-      const data=JSON.parse(candidate); const c=data?.miracles_tool;
-      if(c&&typeof c.id==='string'&&c.id&&typeof c.name==='string'&&c.name&&c.arguments&&typeof c.arguments==='object'&&!Array.isArray(c.arguments)&&!ids.has(c.id)) { calls.push(c); ids.add(c.id); }
-    } catch {} }
-    return calls;
+    return result;
+  }
+  function remember(content) {
+    seen.add(content);
+    if(seen.size>128)seen.delete(seen.values().next().value);
+  }
+  function reportAgent(next=phase, code='', tool='') {
+    phase=next;phaseCode=code;activeTool=tool;lastReport=Date.now();
+    if(!sessionId)return;
+    void sendRuntime('MCP_AGENT_STATE',{session_id:sessionId,state:phase,code:phaseCode,tool_name:activeTool,calls:toolCount,client_version:CLIENT_VERSION}).catch(()=>{});
+  }
+  function scheduleReader(delay=750) {
+    if(!agentActive||readerTimer)return;
+    readerTimer=setTimeout(async()=>{
+      readerTimer=0;
+      if(!agentActive)return;
+      if(Date.now()-lastReport>=15000)reportAgent(phase,phaseCode,activeTool);
+      try { await handleAssistant(); }
+      catch(error) { stop(error.message||'Could not read the chat.','READER_ERROR'); }
+      scheduleReader(document.hidden?2000:750);
+    },delay);
+  }
+  function activateReader() {
+    agentActive=true;startAgent.hidden=true;watchAgent.hidden=true;stopAgent.hidden=false;
+    observer?.disconnect();
+    observer=new MutationObserver(records=>{
+      if(!records.some(record=>!host.contains(record.target))||debounce)return;
+      debounce=setTimeout(()=>{
+        debounce=0;if(!agentActive)return;
+        if(!busy)for(const turn of userTurnNodes())if(!historicalUserNodes.has(turn)){historicalUserNodes.add(turn);armAssistantWatchdog();}
+        void handleAssistant().catch(error=>stop(error.message,'READER_ERROR'));
+      },450);
+    });
+    observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['aria-busy','aria-disabled','aria-label','disabled','hidden','data-is-streaming']});
+    scheduleReader(450);armAssistantWatchdog();reportAgent('watching');
+  }
+  function exposeResult(item) {
+    pendingDelivery=item;resultText.value=item.message;resultDetails.hidden=false;
+    retryResult.hidden=false;
+  }
+  async function deliverResult(signal) {
+    const item=pendingDelivery;if(!item)return;
+    signal?.throwIfAborted();
+    const alreadySent=userTurnNodes().some(turn=>{
+      const value=turn.innerText||turn.textContent||'';
+      return value.includes('Miracle tool result:')&&value.includes(item.encoded);
+    });
+    if(!alreadySent) {
+      const pair=composerAndSend();
+      if(pair&&text(pair.composer).trim()===item.message.trim())await clickSend(pair,item.message,signal);
+      else await fillAndSend(item.message,signal);
+    }
+    item.entry.delivered=true;pendingDelivery=null;retryResult.hidden=true;
+    void recordUsage('output',item.eventId,item.message);
+    reportAgent('watching');
+    status(item.requestError?'Request error sent to the chat.':item.toolError?'Tool error sent to the model for correction.':'Result sent. Waiting for the next response.',item.requestError?'error':'success');
+    if(item.requestError)stop('The tool call could not be confirmed. Session paused.',item.code);
   }
   function composerAndSend() {
     const composer=findComposer(); if(!composer) return null;
@@ -357,14 +427,15 @@
     const current=pair.composer.isConnected?pair.composer:findComposer();
     if(current&&text(current).includes(value)) throw new Error('The site did not confirm sending. Your draft is preserved.');
   }
-  async function fillAndSend(value) {
+  async function fillAndSend(value,signal) {
     const pair=composerAndSend(); if(!pair) throw new Error(siteAdapter()?.errorMessage||'Message editor not found. Session paused.');
     if(text(pair.composer).trim()) throw new Error('A draft is in the editor. The result was not sent. Clear or send the draft, then resume the session.');
     setComposerValue(pair.composer,value);
     await new Promise(r=>setTimeout(r,250));
+    signal?.throwIfAborted();
     const current=pair.composer.isConnected?pair.composer:findComposer();
     if(!current||!text(current).includes(value)) throw new Error('The site did not accept the message.');
-    await clickSend({composer:current},value);
+    await clickSend({composer:current},value,signal);
   }
   function generationInProgress(node) {
     const key=hostKey(), config=providerConfig();
@@ -380,36 +451,61 @@
     return stopButton||streaming||node?.getAttribute('data-is-streaming')==='true'||node?.closest('[data-is-streaming="true"]');
   }
   async function handleAssistant() {
-    if(!agentActive||busy) return;
-    const nodes=assistantNodes(); const last=hostKey()==='arena.ai'?[...nodes].find(el=>!historicalNodes.has(el)&&!seen.has((el.innerText||el.textContent||'').slice(0,12000))):[...nodes].reverse().find(el=>!historicalNodes.has(el)&&!seen.has((el.innerText||el.textContent||'').slice(0,12000))); if(!last) return;
-    const content=last.innerText||last.textContent||''; if(!content.trim()) return;
-    if(generationInProgress(last)) return;
+    if(!agentActive||busy)return;
+    if((location.href||location.hostname)!==conversation){stop('The conversation changed. Start or watch this chat again.','CHAT_CHANGED');return;}
+    const nodes=assistantNodes();
+    const fresh=el=>!historicalNodes.has(el)&&!seen.has(el.innerText||el.textContent||'');
+    const last=hostKey()==='arena.ai'?nodes.find(fresh):[...nodes].reverse().find(fresh);
+    if(!last)return;
+    const content=last.innerText||last.textContent||'';if(!content.trim())return;
+    if(content.length>globalThis.MiraclesToolProtocol.maxText){stop('This reply exceeds the 1 MB tool-message limit. Ask for a smaller call.','REPLY_TOO_LARGE');return;}
+    if(!sample||sample.node!==last||sample.content!==content){sample={node:last,content,at:Date.now(),warned:false};return;}
+    if(generationInProgress(last)||Date.now()-sample.at<650)return;
+    const parsed=inspectCalls(last);
+    if(parsed.error||(!parsed.calls.length&&parsed.hasEnvelope)) {
+      if(!sample.warned){sample.warned=true;status(parsed.error||'Tool JSON is incomplete or malformed. Waiting for the completed JSON reply.','waiting','INVALID_TOOL_JSON');reportAgent('waiting_json','INVALID_TOOL_JSON');}
+      return;
+    }
     clearTimeout(watchdog);
-    const key=content.slice(0,12000); if(seen.has(key)) return;
-    const calls=parseCalls(last); if(!calls.length) { seen.add(key); return; }
-    busy=true; seen.add(key);
-    try { for(const call of calls) {
-      if(!agentActive) return;
-      if(sent.has(call.id)) continue;
-      if(toolCount>=MAX_TOOL_CALLS) { stop('This session reached 30 tool calls. Start a new session to continue.','TOOL_LIMIT'); return; }
-      sent.add(call.id); toolCount++;
-      status('Running tool: '+call.name);
+    if(!parsed.calls.length){remember(content);status('Reply received without a tool call. Still watching this chat.');reportAgent('watching','NO_TOOL_CALL');return;}
+    busy=true;remember(content);
+    const runId=sessionId;
+    try { for(const call of parsed.calls) {
+      if(!agentActive||sessionId!==runId)return;
+      if(sent.has(call.id))continue;
+      const executionKey=conversation+'|'+sessionInstance+'|'+call.id;
+      const prior=executions.get(executionKey),fingerprint=JSON.stringify({name:call.name,arguments:call.arguments});
+      if(prior){
+        if(prior.fingerprint!==fingerprint)throw new Error('This tool id was already used with different arguments. Ask the AI for a fresh id.');
+        status('This tool call was already handled. Ask the AI to use a fresh id for a new action.','info','ALREADY_HANDLED');
+        sent.add(call.id);continue;
+      }
+      if(toolCount>=MAX_TOOL_CALLS){stop('This session reached 30 tool calls. Start a new session to continue.','TOOL_LIMIT');return;}
+      sent.add(call.id);toolCount++;
+      const entry={fingerprint,delivered:false};executions.set(executionKey,entry);
+      if(executions.size>256)executions.delete(executions.keys().next().value);
+      status('Running tool: '+call.name);reportAgent('running','',call.name);
       const response=await sendRuntime('MCP_CALL',{name:call.name,arguments:call.arguments,call_id:sessionId+':'+call.id,instance_id:sessionInstance});
-      await recordUsage('input',sessionId+':'+call.id+':in',JSON.stringify({name:call.name,arguments:call.arguments}));
-      if(!agentActive) return;
-      if(response?.code==='BRIDGE_RESTARTED'||(response?.instance_id&&sessionInstance&&response.instance_id!==sessionInstance)) { stop('The bridge restarted. Start a new session; the old result was discarded.','BRIDGE_RESTARTED'); return; }
-      const toolResultError=response?.ok===true&&response.result?.isError===true;
-      const payload=response?.ok===true?(toolResultError?{ok:false,call_id:call.id,result:response.result}:{ok:true,call_id:call.id,result:response.result}):{ok:false,call_id:call.id,code:response?.code||'TOOL_FAILED',message:response?.message||'The tool returned an error.'};
-      const resultMessage='Miracle tool result:\n```json\n'+JSON.stringify(payload)+'\n```';
-      await fillAndSend(resultMessage);
-      await recordUsage('output',sessionId+':'+call.id+':out',resultMessage);
-      status(payload.ok?'Result sent. Waiting for the next response.':toolResultError?'Tool error sent to the model for correction.':'Request error sent to the chat.',payload.ok||toolResultError?'success':'error');
-      if(!payload.ok&&!toolResultError) { stop('The tool call could not be confirmed. Session paused.',payload.code); return; }
-      await new Promise(r=>setTimeout(r,350));
-    }} catch(error) { stop(error.message||'Tool loop error.','AGENT_PAUSED'); }
-    finally { busy=false; if(agentActive) { armAssistantWatchdog(); setTimeout(handleAssistant,450); } }
+      void recordUsage('input',sessionId+':'+call.id+':in',JSON.stringify({name:call.name,arguments:call.arguments}));
+      if(sessionId!==runId)return;
+      if(response?.code==='BRIDGE_RESTARTED'||(response?.instance_id&&sessionInstance&&response.instance_id!==sessionInstance)){stop('The bridge restarted. Start a new session; the old result was discarded.','BRIDGE_RESTARTED');return;}
+      const toolError=response?.ok===true&&response.result?.isError===true;
+      const payload=response?.ok===true?{ok:!toolError,call_id:call.id,result:response.result}:{ok:false,call_id:call.id,code:response?.code||'TOOL_FAILED',message:response?.message||'The tool returned an error.'};
+      const encoded=JSON.stringify(payload);
+      exposeResult({entry,encoded,message:'Miracle tool result:\n```json\n'+encoded+'\n```',eventId:sessionId+':'+call.id+':out',instance:sessionInstance,toolError,requestError:response?.ok!==true,code:payload.code});
+      if(!agentActive)return;
+      reportAgent('sending_result','',call.name);
+      await deliverResult(sessionController?.signal);
+    }} catch(error) {
+      if(pendingDelivery){resultDetails.open=true;retryResult.hidden=false;stop('The tool result is saved here. '+(error.message||'Could not send it.')+' Use Retry sending result after the chat is ready.','RESULT_NOT_SENT');}
+      else if(agentActive)stop(error.message||'Tool loop error.','AGENT_PAUSED');
+    } finally { busy=false; }
   }
-  async function beginAgent(signal) {
+  async function beginAgent(signal,watchOnly=false) {
+    if(pendingDelivery)throw new Error('A tool result is waiting. Retry sending it, copy it or dismiss it before starting another session.');
+    if(busy)throw new Error('The previous tool is still finishing. Wait for its result before starting again.');
+    sessionId=crypto.randomUUID();toolCount=0;conversation=location.href||location.hostname;sample=null;
+    reportAgent('starting');
     status('Checking the bridge and Studio tools…');
     const health=await sendRuntime('MCP_HEALTH',{},signal);
     signal.throwIfAborted();
@@ -422,14 +518,17 @@
     sessionInstance=listed.instance_id||health.instance_id||null;
     const tools=listed.tools;
     if(!tools.length) throw new Error('No tools available. Session was not started.');
-    const priorNodes=assistantNodes(); historicalNodes=new WeakSet(priorNodes);
-    seen=new Set(priorNodes.map(el=>(el.innerText||el.textContent||'').slice(0,12000)));
+    const priorNodes=assistantNodes();
+    const latest=watchOnly?(hostKey()==='arena.ai'?priorNodes[0]:priorNodes.at(-1)):null;
+    historicalNodes=new WeakSet(priorNodes.filter(el=>el!==latest));
+    seen=new Set();
     historicalUserNodes=new WeakSet(userTurnNodes());
     const supportedHost=!!providerConfig();
     const genericAdapter=!!document.querySelector('[data-message-author-role="assistant"],[data-message-author="assistant"]');
     if(!supportedHost&&!genericAdapter) throw new Error('This site has no supported response adapter. Session was not started.');
     if(hostKey()==='arena.ai'&&!arenaDirectMode()) throw new Error('Switch Arena to Direct mode before starting a session.');
-    sent.clear(); toolCount=0; sessionId=crypto.randomUUID();
+    sent.clear();
+    if(watchOnly){activateReader();status('Watching this chat. The latest JSON tool reply can run once; your draft is preserved.','success');return;}
     const pair=composerAndSend(); if(!pair) throw new Error(siteAdapter()?.errorMessage||'Message editor not found.');
     const draft=text(pair.composer).trim();
     const instructions=globalThis.MiraclesPrompt.build(tools,draft||'Ask the user what to do in Roblox Studio.');
@@ -442,36 +541,42 @@
     const readyPair=composerAndSend(); if(!readyPair||readyPair.composer!==current) throw new Error('Send button not found. Your draft is preserved.');
     status('Sending the session instructions…');
     await clickSend({composer:current},instructions,signal);
-    agentActive=true; startAgent.hidden=true; stopAgent.hidden=false;
-    observer=new MutationObserver(records=>{
-      if(!records.some(record=>!host.contains(record.target))) return;
-      // Throttle rather than restart a debounce for every host mutation.
-      // Animated chats can mutate continuously, otherwise starving the reader.
-      if (!debounce) debounce=setTimeout(()=>{
-        debounce=0;
-        if(!agentActive) return;
-        if(!busy) for(const turn of userTurnNodes()) if(!historicalUserNodes.has(turn)) { historicalUserNodes.add(turn); armAssistantWatchdog(); }
-        handleAssistant();
-      },450);
-    });
-    observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['aria-busy','disabled','data-is-streaming']});
-    setTimeout(handleAssistant,450);
-    status('Session active. Tools: '+tools.length+'.','success'); armAssistantWatchdog();
+    activateReader();
+    status('Session active. Tools: '+tools.length+'.','success');
     void recordUsage('activation',sessionId+':start',instructions);
   }
-  startAgent.onclick=()=>run(startAgent,async()=>{
-    const controller=new AbortController(); startup=controller;
-    stopAgent.textContent='Cancel start'; stopAgent.hidden=false;
-    try { await beginAgent(controller.signal); }
-    finally { startup=null; stopAgent.textContent='Stop session'; stopAgent.hidden=!agentActive; }
+  async function launchAgent(watchOnly=false) {
+    if(startup)throw new Error('Session setup is already in progress.');
+    const controller=new AbortController();startup=controller;sessionController=controller;
+    stopAgent.textContent='Cancel start';stopAgent.hidden=false;
+    try { await beginAgent(controller.signal,watchOnly); }
+    catch(error){reportAgent('paused','START_FAILED');throw error;}
+    finally {startup=null;stopAgent.textContent='Stop session';stopAgent.hidden=!agentActive;}
+  }
+  startAgent.onclick=()=>run(startAgent,()=>launchAgent());
+  watchAgent.onclick=()=>run(watchAgent,()=>launchAgent(true));
+  retryResult.onclick=()=>run(retryResult,async()=>{
+    if(busy)throw new Error('The current tool is still finishing.');
+    if(!pendingDelivery)return;
+    const health=await sendRuntime('MCP_HEALTH');
+    if(health?.code!=='READY')throw new Error(health?.message||'The bridge is not ready.');
+    if(health.instance_id&&pendingDelivery.instance&&health.instance_id!==pendingDelivery.instance)throw new Error('The bridge restarted. Copy or dismiss this old result, then start a new session.');
+    const controller=new AbortController();sessionController=controller;
+    await deliverResult(controller.signal);
+    if(!pendingDelivery&&!phaseCode){activateReader();status('Result sent. Session resumed without running the tool again.','success');}
   });
+  copyResult.onclick=()=>run(copyResult,async()=>{
+    try{await navigator.clipboard.writeText(resultText.value);status('Tool result copied. Paste it into your chat.','success');}
+    catch{resultDetails.open=true;resultText.focus();resultText.select();status('Copy the selected tool result manually.','error','CLIPBOARD_DENIED');}
+  });
+  dismissResult.onclick=()=>{pendingDelivery=null;resultDetails.hidden=true;status('Saved result dismissed. The tool was not run again.');};
   stopAgent.onclick=()=>stop('Session stopped.','STOPPED');
   $('copy').onclick=()=>run($('copy'),async()=>{
     const health=await sendRuntime('MCP_HEALTH'); if(health?.code!=='READY') throw new Error(health?.message||'The bridge or Roblox Studio is not ready.');
     const listed=await sendRuntime('MCP_TOOLS'); if(listed?.ok!==true||!Array.isArray(listed.tools)) throw new Error(listed?.message||'Could not load Studio tools.');
     const prompt=globalThis.MiraclesPrompt.build(listed.tools,'Ask the user what to do in Roblox Studio.');
     $('prompt').value=prompt; $('manual').open=true;
-    try { await navigator.clipboard.writeText(prompt); status('Tool instructions copied. Paste them into the chat.','success'); }
+    try { await navigator.clipboard.writeText(prompt); status('Instructions copied. Paste them into the chat, then click Watch this chat to execute tool replies.','success'); }
     catch { $('prompt').focus(); $('prompt').select(); status('Instructions are in the text field. Copy them manually.','error','CLIPBOARD_DENIED'); }
   });
 })();

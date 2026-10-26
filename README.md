@@ -17,7 +17,7 @@ Python uses the standard library. Node.js is needed only for development and bro
 
 ## Install a release
 
-Download `miracle-mcp-2.2.0.zip` and extract both folders together. Load **plugin/** as the unpacked Chrome/Edge extension, enable Studio MCP, then run **release/run.bat**. The local bridge serves the interface from the sibling plugin folder. See [the installation guide](INSTALL.md) for the full Russian instructions.
+Download `miracle-mcp-2.9.0.zip` and extract both folders together. Load **plugin/** as the unpacked Chrome/Edge extension, enable Studio MCP, then run **release/run.bat**. The local bridge serves the interface from the sibling plugin folder. See [the installation guide](INSTALL.md) for the full Russian instructions.
 
 ## Start from source
 
@@ -26,9 +26,21 @@ Download `miracle-mcp-2.2.0.zip` and extract both folders together. Load **plugi
 3. Open `edge://extensions` or `chrome://extensions`, enable Developer mode and choose **Load unpacked**. Select this repository's root folder.
 4. Open a supported AI chat and select **Miracle → Start session**. Then describe the change you want to make in Studio.
 
-The bridge creates its access token locally. It does not belong in Studio, an AI chat, or source control. Keep the bridge running while using the extension. After an update, restart the bridge, reload the extension and refresh open chat tabs.
+The bridge creates its access token locally. It does not belong in Studio, an AI chat, or source control. Keep the bridge running while using the extension. After an update, run the new launcher, reload the extension and refresh open chat tabs. The dashboard reports version mismatches.
 
 The m✦ logo in the navigation rail opens `/ui/welcome.html`. Installation and the first extension launch open the welcome page. Browser startup or a later launch can show it again after five hours. During the cooldown, toolbar clicks open the workspace and browser startup stays quiet. Existing welcome/workspace tabs are reused.
+
+## Chat relay and recovery (2.9.0)
+
+Choose **Start session** in the chat widget to load Studio tools and activate the reader. **Copy instructions** only copies text; after pasting it, choose **Watch this chat** to activate the reader without replacing your draft. Watch can process the latest assistant tool reply once; older history and user messages stay excluded.
+
+The reader waits for stable replies, supports fenced or prose-surrounded Miracle JSON and retries reading when a site's final streaming update is missed. Incomplete JSON produces a visible diagnostic. Tool calls keep unique IDs and cannot replay from repeated DOM updates or repeated Watch clicks within the same page.
+
+If sending a result fails, **Last tool result** keeps it available. **Retry sending result** retries delivery without executing the Studio tool again. You can also copy or dismiss it. Stop prevents automatic posting of a late result. Reloading the chat clears this in-page recovery state; check Studio before asking to repeat an action.
+
+Home shows chat-agent state separately from Studio connectivity, including outdated extension/chat versions and stale heartbeats. **Copy connection report** includes versions, hostname, agent state and tool counts; it excludes credentials, prompts, code, tool arguments and results.
+
+Repeated launches reuse the healthy bridge. A per-port Windows mutex and exclusive listener prevent simultaneous duplicate processes. A verified previous Miracle release can be replaced automatically; active tools block graceful replacement. **release/stop.bat** stops the bridge and its owned MCP connection. Unrelated port owners are left running.
 
 ## Workspace sections
 
@@ -48,7 +60,7 @@ The desktop rail trails scrolling by at most 16 pixels and settles when scrollin
 
 On desktop with a mouse or trackpad, the dashboard, welcome page and website reveal content in sequence. Buttons have press rims and spring feedback; arrows, refresh icons, navigation links, wallpaper choices, toggles, fields, cards and connection nodes react to interaction. Instructions, FAQs and dynamically loaded tool schemas expand and collapse smoothly. Changed metrics get a short transition, while unchanged usage rows stay in place across status polling. Landing-page sections reveal on scroll and visible connection cues animate gently. These effects keep glass containers stationary and respect Pause motion, reduced motion and hidden tabs; touch devices retain their existing gestures.
 
-The dashboard and website also have rotating typewriter headlines with blinking cursors and a **Pause motion** control. Both suspend typing offscreen and in hidden tabs, show complete text when paused or with reduced motion, and keep an accessible static title. The welcome headline types and erases four short two-line phrases with a blinking cursor, reserving its height so the layout stays steady. Screen readers receive a stable title. Pausing motion or enabling reduced motion shows a complete heading; typing also pauses when the heading or tab is hidden. The welcome page’s **A PLACE TO START** button types and cycles through 30 distinct Studio ideas, holding each completed idea for nine seconds. Its counter shows the current position; each idea has a full brief that is copied on click. Hover, focus or copying completes and holds the current text. The idea carousel follows Pause motion, reduced motion and page visibility, with a shared fixed-height text slot to keep mobile and desktop layouts steady. The welcome page reveals its headline, actions and capabilities in sequence, floats the connection card, lights the bridge nodes and animates the connection line when Studio is ready. **Pause motion** stops the ambient animations and remembers the choice. Hidden/offscreen panels pause, and reduced-motion preferences disable the animations. Cards tilt gently toward the cursor and settle when it leaves. The logo remains anchored inside the rail, sections have subtle dividers, and instructions expand smoothly. The workspace uses more horizontal space on wide screens.
+The dashboard uses complete phrase reveals; the website has a rotating typewriter headline with a blinking cursor and a **Pause motion** control. Both suspend typing offscreen and in hidden tabs, show complete text when paused or with reduced motion, and keep an accessible static title. The welcome headline types and erases four short two-line phrases with a blinking cursor, reserving its height so the layout stays steady. Screen readers receive a stable title. Pausing motion or enabling reduced motion shows a complete heading; typing also pauses when the heading or tab is hidden. The welcome page’s **A PLACE TO START** button types and cycles through 30 distinct Studio ideas, holding each completed idea for nine seconds. Its counter shows the current position; each idea has a full brief that is copied on click. Hover, focus or copying completes and holds the current text. The idea carousel follows Pause motion, reduced motion and page visibility, with a shared fixed-height text slot to keep mobile and desktop layouts steady. The welcome page reveals its headline, actions and capabilities in sequence, floats the connection card, lights the bridge nodes and animates the connection line when Studio is ready. **Pause motion** stops the ambient animations and remembers the choice. Hidden/offscreen panels pause, and reduced-motion preferences disable the animations. Cards tilt gently toward the cursor and settle when it leaves. The logo remains anchored inside the rail, sections have subtle dividers, and instructions expand smoothly. The workspace uses more horizontal space on wide screens.
 
 **Clear** uses rounded refractive lenses on the main card, rail and welcome panel in Chrome and Edge. Content cards retain their translucent tint and rim without a live filter. Each lens uses at most 65,536 map pixels, a cached optical profile, RGB dispersion and a separate highlight. Only two surfaces run on the dashboard; offscreen lenses suspend their filters. The depth slider changes refraction strength. **Beautify** applies deeper live refraction, RGB dispersion, brighter rims and richer shadows to every visible glass surface. It uses higher-resolution optical maps and more GPU work. Beautify keeps every lens attached while scrolling and across tab visibility changes, and disables card tilt/float so the sampled backdrop stays stable. Resized lenses switch only after replacement maps decode; Clear keeps its lighter offscreen suspension. The choice persists and is also available in the website preview. **Frosted** uses a soft blur, and **Light** disables backdrop effects. The initial choice follows system transparency preferences; explicitly choosing Clear takes precedence. Other browsers use a frosted fallback.
 
@@ -56,7 +68,7 @@ Optics references: [Liquid Glass in the Browser](https://kube.io/blog/liquid-gla
 
 ## Usage
 
-**Token Transfared** records successful chat-session activations, sites and estimated traffic in each direction. The estimate is one token per four Unicode characters, calculated separately for each transferred message. It covers bridge instructions, tool calls and results, rather than the entire conversation or the AI provider's quota.
+**Token activity** records successful chat-session activations, sites and estimated traffic in each direction. The estimate is one token per four Unicode characters, calculated separately for each transferred message. It covers bridge instructions, tool calls and results, rather than the entire conversation or the AI provider's quota.
 
 Tracking starts when this version is enabled; earlier sessions cannot be reconstructed. Counts survive restarts in `.mcp_cache/usage-stats.json`. The usage tracker stores aggregates, hostnames and event IDs, without storing prompts, code, results or full page URLs.
 
@@ -74,6 +86,9 @@ For Notion, open **Notion AI chat** first. For ClickUp, open **Brain Chat**. Mir
 - `POST /api/tools/call`: call an advertised tool.
 - `POST /api/execute`: optional manual Luau execution.
 - `POST /api/usage/event`: authenticated aggregate usage event.
+- `POST /api/agent/state`: bounded, in-memory chat-agent diagnostics.
+- `POST /api/bridge/shutdown`: authenticated, instance-matched graceful shutdown while idle.
+- `POST /api/ui/claim`: coalesce duplicate launcher requests to open the workspace.
 
 Mutation requests require the local token. The server validates loopback hosts, origins, request sizes and call IDs. Code checks apply on the server as well as in the editor. A successful transport response does not imply a successful Studio tool result; tool errors remain visible to the chat agent.
 

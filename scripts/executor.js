@@ -83,7 +83,7 @@
       if (!listed.ok || !Array.isArray(listed.tools) || !listed.tools.length) throw new Error(listed.message || 'Studio tools are not available yet.');
       $('aiPromptText').value = window.MiraclesPrompt.build(listed.tools, 'Wait for the user task and complete it using the available Studio tools.');
       await client.copy($('aiPromptText').value);
-      client.report('Instructions copied. Paste them into your chat.', false);
+      client.report('Instructions copied. Paste them into your chat, then choose Miracle → Watch this chat to execute tool replies.', false);
     } catch (error) {
       $('aiPromptText').focus(); $('aiPromptText').select();
       client.report(error.message + ' Select the text to copy it manually, or use Start session in the extension.', true);
