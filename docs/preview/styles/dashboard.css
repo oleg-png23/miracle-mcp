@@ -120,3 +120,6 @@ body[data-glass-mode="light"] .glass::before{backdrop-filter:none;-webkit-backdr
 
 .page-heading{color:#193e48;text-shadow:0 1px 1px #ffffffa3}.page-heading p,.breadcrumb{color:#244d58}.connection-node>strong,.connection-node>span{text-shadow:0 1px 5px #ffffffc4}
 @media(max-width:650px){.hero-card::before{background:linear-gradient(105deg,#f4fcfbe0,#e9f8f5ba 70%,#e0f3f380)}}
+
+/* Small directional glyphs remain inline on both entry pages. */
+svg.icon.icon-inline { display: inline-block; width: 1em; height: 1em; padding: 0; border-radius: 0; vertical-align: -.12em; flex: none; background: none; }
