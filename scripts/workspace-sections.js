@@ -3,7 +3,7 @@
   'use strict';
   const screens=new Map([...document.querySelectorAll('[data-workspace-screen]')].map(el=>[el.dataset.workspaceScreen,el]));
   if(!screens.size) return;
-  const labels={overview:['Home','Your local creative workspace.'],executor:['Code','Write Luau, inspect the result and keep your draft.'],tools:['Studio tools','Explore the capabilities advertised by Studio.'],chats:['AI chats','Choose the chat where you want to create.'],connection:['Connection','Manage your local bridge connection.'],appearance:['Appearance','Choose your landscape and glass material.'],usage:['Usage','See the traffic passing through your bridge.'],events:['Events','Inspect recent bridge and Studio activity.'],setupGuide:['Setup guide','Connect Studio, the bridge and your chat.']};
+  const labels={overview:['Home','Your local creative workspace.'],executor:['Code','From a first line of Luau to something you can play.'],tools:['Studio tools','Find the right tool for your next idea.'],chats:['AI chats','Your favourite AI. Your creative flow.'],connection:['Connection','Manage your local bridge connection.'],appearance:['Appearance','A workspace with a little more atmosphere.'],usage:['Usage','Follow the conversation between your chat and Studio.'],events:['Events','Inspect recent bridge and Studio activity.'],setupGuide:['Setup guide','Connect Studio, the bridge and your chat.']};
   const aliases={home:'overview',code:'executor',guide:'setupGuide'};
   const title=document.getElementById('sectionViewTitle');
   const heading=document.getElementById('sectionHeading');
