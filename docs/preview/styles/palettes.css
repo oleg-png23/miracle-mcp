@@ -80,9 +80,9 @@ body.dashboard-page .metric-top .icon {
 body.dashboard-page .metric:nth-child(2) { --metric-color: var(--palette-2); }
 body.dashboard-page .metric:nth-child(3) { --metric-color: var(--palette-3); }
 body.dashboard-page .metric:nth-child(4) { --metric-color: var(--palette-4); }
-body.dashboard-page .workspace-shortcuts a:nth-child(1) .icon { background: #00b8ff45; color: var(--palette-ink); }
-body.dashboard-page .workspace-shortcuts a:nth-child(2) .icon { background: #2be0a054; color: var(--palette-ink); }
-body.dashboard-page .workspace-shortcuts a:nth-child(3) .icon { background: #c6ff3d70; color: var(--palette-ink); }
+body.dashboard-page .workspace-shortcuts a:nth-child(1) > .icon { background: #00b8ff45; color: var(--palette-ink); }
+body.dashboard-page .workspace-shortcuts a:nth-child(2) > .icon { background: #2be0a054; color: var(--palette-ink); }
+body.dashboard-page .workspace-shortcuts a:nth-child(3) > .icon { background: #c6ff3d70; color: var(--palette-ink); }
 body.dashboard-page .connection-flow { background: var(--palette-2); box-shadow: 0 0 0 3px #ffffff85; }
 body.dashboard-page .switch[aria-checked="true"] { background: var(--palette-2); }
 body.dashboard-page input[type="range"] {

@@ -35,7 +35,7 @@
     icon.classList.add('icon');
     icon.setAttribute('aria-hidden', 'true');
     const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-    use.setAttribute('href', error ? '#i-info' : '#i-check');
+    use.setAttribute('href', error ? 'assets/icons/interface.svg#info' : 'assets/icons/interface.svg#check');
     icon.append(use);
     item.append(icon, document.createTextNode(message));
     $('#toasts').append(item);
