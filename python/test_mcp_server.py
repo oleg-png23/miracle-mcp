@@ -2,11 +2,13 @@ import importlib.util
 import json
 from pathlib import Path
 import sys
+import tempfile
 import threading
 import time
 import unittest
 import urllib.error
 import urllib.request
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent))
 spec = importlib.util.spec_from_file_location("bridge_under_test", Path(__file__).with_name("mcp_server.py"))
@@ -87,6 +89,8 @@ class BridgeFlowTests(unittest.TestCase):
         if token and isinstance(payload, dict) and path != "/api/bootstrap":
             payload = dict(payload)
             payload.setdefault("token", bridge.TOKEN)
+            if path in {"/api/tools/call", "/api/execute"}:
+                payload.setdefault("instance_id", bridge.INSTANCE_ID)
             data = json.dumps(payload).encode()
         if origin is not None:
             headers["Origin"] = origin
@@ -99,22 +103,15 @@ class BridgeFlowTests(unittest.TestCase):
         except urllib.error.HTTPError as exc:
             return exc.code, json.loads(exc.read())
 
-    def test_bootstrap_returns_token_only_to_trusted_origins(self):
-        origin = self.url
-        code, body = self.request("/api/bootstrap", {}, origin=origin)
-        self.assertEqual(code, 200)
-        self.assertEqual(body["bridgeToken"], bridge.TOKEN)
-        self.assertEqual(body["host"], f"127.0.0.1:{self.server.server_port}")
-        self.assertEqual(body["instance_id"], bridge.INSTANCE_ID)
-
-        for evil in ("null", "https://evil.example", "http://127.0.0.1:1", "http://localhost.evil:123"):
-            code, body = self.request("/api/bootstrap", {}, origin=evil)
-            self.assertEqual(code, 403, evil)
+    def test_bootstrap_never_returns_the_token_even_for_a_spoofed_loopback_origin(self):
+        for origin in (None, self.url, "null", "https://evil.example", "http://127.0.0.1:1", "http://localhost.evil:123",
+                       "chrome-extension://abcdefghijklmnopabcdefghijklmnop"):
+            code, body = self.request("/api/bootstrap", {}, origin=origin)
+            self.assertEqual(code, 403, origin)
+            self.assertEqual(body["code"], "pairing_required")
             self.assertNotIn("bridgeToken", body)
-        code, _ = self.request("/api/bootstrap", {}, origin=origin, host="evil.example:1234")
+        code, _ = self.request("/api/bootstrap", {}, origin=self.url, host="evil.example:1234")
         self.assertEqual(code, 403)
-        code, _ = self.request("/api/bootstrap", {}, origin=origin, content_type="text/plain")
-        self.assertEqual(code, 415)
 
     def test_agent_status_requires_auth_and_stores_only_operational_fields(self):
         event = {"client_id": "tab:1", "session_id": "session-1", "site": "chatgpt.com", "state": "watching",
@@ -122,8 +119,7 @@ class BridgeFlowTests(unittest.TestCase):
                  "text": "PRIVATE_CHAT", "arguments": {"code": "PRIVATE_CODE"}}
         self.assertEqual(self.request("/api/agent/state", event, token=False)[0], 401)
         self.assertEqual(self.request("/api/agent/state", event)[0], 200)
-        with urllib.request.urlopen(self.url + "/api/status") as response:
-            status = json.loads(response.read())
+        _, status = self.request("/api/status", {})
         self.assertEqual(status["agent_sessions"][0]["site"], "chatgpt.com")
         self.assertEqual(status["agent_sessions"][0]["state"], "watching")
         self.assertNotIn("PRIVATE_", json.dumps(status))
@@ -232,6 +228,34 @@ class BridgeFlowTests(unittest.TestCase):
         self.assertTrue(status["studio_linked"])
         self.assertIn("native_mcp", status)
         self.assertEqual(status["instance_id"], bridge.INSTANCE_ID)
+        self.assertNotIn("results", status)
+        self.assertNotIn("recent", status)
+        self.assertNotIn("usage", status)
+        self.assertNotIn("agent_sessions", status)
+        self.assertNotIn("message", status["native_mcp"])
+
+    def test_status_details_require_token_and_all_routes_require_loopback_host(self):
+        with bridge._STATE_LOCK:
+            bridge.RESULTS.append({"id": 1, "output": "private Studio output"})
+        with urllib.request.urlopen(self.url + "/api/status") as response:
+            self.assertNotIn("private Studio output", response.read().decode())
+        self.assertEqual(self.request("/api/status", {}, token=False)[0], 401)
+        code, body = self.request("/api/status", {})
+        self.assertEqual(code, 200)
+        self.assertEqual(body["results"][0]["output"], "private Studio output")
+        request = urllib.request.Request(self.url + "/api/status", headers={"Host": f"evil.example:{self.server.server_port}"})
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(request)
+        self.assertEqual(error.exception.code, 403)
+        self.assertEqual(self.request("/api/status", {}, host=f"evil.example:{self.server.server_port}")[0], 403)
+
+    def test_stale_instance_never_executes_a_tool(self):
+        payload = {"name": "run_code", "arguments": {"code": "return 1"}, "call_id": "old-instance", "instance_id": "old"}
+        code, body = self.request("/api/tools/call", payload)
+        self.assertEqual((code, body["code"]), (409, "instance_changed"))
+        code, body = self.request("/api/execute", {"luau": "return 1", "instance_id": "old"})
+        self.assertEqual((code, body["code"]), (409, "instance_changed"))
+        self.assertEqual(self.native.calls, [])
 
     def test_native_offline_is_structured(self):
         self.native.state = "studio_closed"
@@ -245,6 +269,15 @@ class BridgeFlowTests(unittest.TestCase):
         code, body = self.request("/api/tools/call", {"name": "run_code", "arguments": {"code": "loadstring('x')"}, "call_id": "unsafe"})
         self.assertEqual(code, 403)
         self.assertEqual(body["error"]["code"], "blocked_by_safe_mode")
+        code, body = self.request("/api/tools/call", {"name": "run_code", "arguments": {"code": "local r = require; return r(12345)"}, "call_id": "unsafe-alias"})
+        self.assertEqual((code, body["error"]["code"]), (403, "blocked_by_safe_mode"))
+
+    def test_missing_token_file_cannot_silently_create_an_unusable_ephemeral_token(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(bridge, '__file__', str(Path(directory) / 'mcp_server.py')), \
+             patch.object(Path, 'write_text', side_effect=PermissionError('read only')):
+            with self.assertRaisesRegex(SystemExit, 'Could not save the local bridge token'):
+                bridge._load_token()
 
 
 if __name__ == "__main__":

@@ -68,21 +68,24 @@ test('extension reset preserves unrelated extension keys', async () => {
   assert(!removed.includes('unrelated'));
 });
 
-test('loopback bootstrap posts an empty JSON body to the same origin and stores credentials', async () => {
+test('local setup verifies a user-provided token without requesting credentials over HTTP', async () => {
   let call;
-  const { client, data } = browser({}, { fetch: async (url, init) => {
+  const { client } = browser({mcp_token:'local-token'}, { fetch: async (url, init) => {
     call = { url: String(url), init };
-    return response(200, { host: '127.0.0.1:19732', bridgeToken: 'local-token' });
+    return response(200, {ok:true});
   } });
   const settings = await client.bootstrap();
-  assert.equal(call.url, 'http://127.0.0.1:19732/api/bootstrap');
+  assert.equal(call.url, 'http://127.0.0.1:19732/api/auth');
   assert.equal(call.init.method, 'POST');
   assert.equal(call.init.headers['Content-Type'], 'application/json');
-  assert.equal(call.init.body, '{}');
+  assert.equal(JSON.parse(call.init.body).token, 'local-token');
   assert.equal(settings.host, '127.0.0.1:19732');
   assert.equal(settings.bridgeToken, 'local-token');
   assert.equal((await client.storage.read()).bridgeToken, 'local-token');
-  assert.equal(data.get('mcp_token'), 'local-token');
+  let requested = false;
+  const unpaired = browser({}, {fetch:async()=>{requested=true;}});
+  await assert.rejects(unpaired.client.bootstrap(),/python\/token\.txt/);
+  assert.equal(requested, false);
 });
 
 test('bootstrap refuses file and remote origins without making a request', async () => {
@@ -94,8 +97,8 @@ test('bootstrap refuses file and remote origins without making a request', async
   assert.equal(calls, 0);
 });
 
-test('extension bootstrap asks the worker to bootstrap and reads its stored credentials', async () => {
-  const state = { host: 'localhost:19731', bridgeToken: '' };
+test('extension setup asks the worker to verify its saved credentials', async () => {
+  const state = { host: 'localhost:19731', bridgeToken: 'worker-token' };
   let message;
   const local = {
     get: async () => ({ ...state }),
@@ -106,8 +109,7 @@ test('extension bootstrap asks the worker to bootstrap and reads its stored cred
     id: 'extension-id', lastError: null,
     sendMessage(request, callback) {
       message = request;
-      state.bridgeToken = 'worker-token';
-      callback({ ok: true });
+      callback({ authenticated: true });
     },
   };
   const { client } = browser({}, { chrome: { runtime, storage: { local } }, fetch: async () => { throw new Error('extension bootstrap must use the worker'); } });
@@ -116,6 +118,13 @@ test('extension bootstrap asks the worker to bootstrap and reads its stored cred
   assert.equal(Object.keys(message).length, 1);
   assert.equal(settings.host, 'localhost:19731');
   assert.equal(settings.bridgeToken, 'worker-token');
+});
+
+test('extension setup reports the manual pairing instruction', async () => {
+  const local = {get:async()=>({}),set:async()=>{},remove:async()=>{}};
+  const runtime = {id:'extension-id',lastError:null,sendMessage(_request,callback){callback({authenticated:false,message:'Copy the token from the local workspace.'});}};
+  const {client}=browser({}, {chrome:{runtime,storage:{local}}});
+  await assert.rejects(client.bootstrap(),/Copy the token from the local workspace/);
 });
 
 test('HTTP errors preserve structured root and policy details; tokens stay in POST bodies', async () => {

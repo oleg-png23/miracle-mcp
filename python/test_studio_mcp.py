@@ -1,8 +1,10 @@
 import json
 import os
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from unittest.mock import patch
 
@@ -113,6 +115,57 @@ class StudioMCPTests(unittest.TestCase):
         with patch("studio_mcp.find_studio_mcp", return_value=None):
             with self.assertRaisesRegex(StudioMCPError, "not found"):
                 client.call_tool("ping")
+
+    def test_rediscovers_an_updated_executable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            old, new = Path(directory) / 'old.exe', Path(directory) / 'new.exe'
+            old.touch(); new.touch()
+            def fake_popen(_command, **kwargs):
+                return subprocess.Popen([sys.executable, '-u', '-c', FAKE_SERVER], **kwargs)
+            client = StudioMCP(timeout=1, process_factory=fake_popen)
+            try:
+                with patch('studio_mcp.find_studio_mcp', side_effect=[old, new]) as discover, \
+                     patch('studio_mcp.studio_is_running', return_value=True):
+                    self.assertEqual(client.start_if_needed()['state'], 'ready')
+                    client.close(); old.unlink()
+                    self.assertEqual(client.start_if_needed()['state'], 'ready')
+                    self.assertEqual(client.executable, new)
+                    self.assertEqual(discover.call_count, 2)
+            finally:
+                client.close()
+
+    def test_unknown_process_state_does_not_hide_available_tools(self):
+        client = StudioMCP()
+        client._list_all_tools = lambda: [{'name': 'ping'}]
+        with patch('studio_mcp.studio_is_running', return_value=None):
+            client._refresh_tools()
+        self.assertEqual(client.status()['state'], 'ready')
+        self.assertEqual(client.status()['tools_count'], 1)
+
+    def test_queue_timeout_prevents_late_dispatch(self):
+        client = StudioMCP(command=['fake'], timeout=.1)
+        client.proc = type('Process', (), {'poll': lambda self: None})()
+        client._state = 'ready'
+        entered, release, second_dispatched = threading.Event(), threading.Event(), threading.Event()
+        def fake_request(_method, params, timeout=None):
+            if params['name'] == 'first':
+                entered.set()
+                release.wait(2)
+            else:
+                second_dispatched.set()
+            return {}
+        client._request = fake_request
+        first = threading.Thread(target=lambda: client.call_tool('first', timeout=2))
+        first.start()
+        try:
+            self.assertTrue(entered.wait(1))
+            with self.assertRaisesRegex(StudioMCPError, 'tool was not sent'):
+                client.call_tool('second', timeout=.1)
+            self.assertFalse(second_dispatched.is_set())
+        finally:
+            release.set(); first.join(timeout=2)
+        self.assertFalse(first.is_alive())
+        self.assertFalse(second_dispatched.is_set())
 
 
 if __name__ == "__main__":

@@ -151,14 +151,14 @@ async function toolsList() {
   } catch(e) { return {ok:false,code:e.code||'TOOLS_FAILED',message:e.message,instance_id:e.instance_id}; }
 }
 async function callTool(message) {
-  if(typeof message.name!=='string'||!message.name||!message.arguments||typeof message.arguments!=='object'||Array.isArray(message.arguments)||typeof message.call_id!=='string'||!message.call_id)
-    return {ok:false,code:'INVALID_CALL',message:'A tool name, arguments object and call ID are required.'};
+  if(typeof message.name!=='string'||!message.name||!message.arguments||typeof message.arguments!=='object'||Array.isArray(message.arguments)||typeof message.call_id!=='string'||!message.call_id||typeof message.instance_id!=='string'||!message.instance_id)
+    return {ok:false,code:'INVALID_CALL',message:'A tool name, arguments object, call ID and bridge instance are required.'};
   try {
     if(message.instance_id) { const latest=await fetch((await bridgeConfig(true)).base+'/api/status',{cache:'no-store',signal:AbortSignal.timeout(5000)}); const state=await latest.json();
       if(state.instance_id&&state.instance_id!==message.instance_id) return {ok:false,code:'BRIDGE_RESTARTED',message:'The bridge instance changed. Start a new session before using tools.',instance_id:state.instance_id}; }
-    const data=await apiPost('/api/tools/call',{name:message.name,arguments:message.arguments,call_id:message.call_id});
+    const data=await apiPost('/api/tools/call',{name:message.name,arguments:message.arguments,call_id:message.call_id,instance_id:message.instance_id});
     if(data?.ok!==true) return {ok:false,code:data?.code||'TOOL_FAILED',message:data?.message||'Tool call failed.',instance_id:data?.instance_id};
     if(message.instance_id&&data.instance_id&&message.instance_id!==data.instance_id) return {ok:false,code:'BRIDGE_RESTARTED',message:'The bridge restarted during the call. The result is unconfirmed.',instance_id:data.instance_id};
     return {ok:true,result:data.result,instance_id:data.instance_id};
-  } catch(e) { return {ok:false,code:e.code||'TOOL_FAILED',message:e.message,instance_id:e.instance_id}; }
+  } catch(e) { return {ok:false,code:e.code==='instance_changed'?'BRIDGE_RESTARTED':e.code||'TOOL_FAILED',message:e.message,instance_id:e.instance_id}; }
 }

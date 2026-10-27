@@ -25,7 +25,7 @@ except ImportError:  # direct execution: python python/mcp_server.py
     from studio_mcp import StudioMCP, StudioMCPError
     from usage_stats import UsageStats
 
-VERSION = "2.9.2"
+VERSION = "2.9.3"
 INSTANCE_ID = secrets.token_hex(8)
 START = time.time()
 TOKEN = ""
@@ -41,7 +41,7 @@ BLOCKED = [
     (re.compile(r":\s*Kick\s*\("), "Player:Kick"),
     (re.compile(r"BanAsync"), "Players:BanAsync"),
     (re.compile(r"game\s*:\s*Shutdown"), "game:Shutdown"),
-    (re.compile(r"\brequire\s*\("), "require() (dynamic module load)"),
+    (re.compile(r"\brequire\b"), "require (dynamic module load)"),
     (re.compile(r"\bloadstring\b"), "loadstring (nested code load)"),
     (re.compile(r"\b(get|set)fenv\b"), "getfenv/setfenv"),
     (re.compile(r"\bos\s*\."), "os library"),
@@ -379,7 +379,8 @@ class H(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def do_OPTIONS(self):
-        if not _trusted_origin(self.headers.get("Origin"), self.server.server_port):
+        if (not _host_loopback(self.headers.get("Host", ""), self.server.server_port)
+                or not _trusted_origin(self.headers.get("Origin"), self.server.server_port)):
             self.send_response(403)
             self.end_headers()
             return
@@ -420,7 +421,10 @@ class H(BaseHTTPRequestHandler):
         return value, None
 
     def _authed(self, body) -> bool:
-        return bool(TOKEN) and isinstance(body, dict) and secrets.compare_digest(str(body.get("token", "")), TOKEN)
+        try:
+            return bool(TOKEN) and isinstance(body, dict) and secrets.compare_digest(str(body.get("token", "")), TOKEN)
+        except TypeError:
+            return False
 
     def _file(self, path, ctype):
         try:
@@ -450,7 +454,29 @@ class H(BaseHTTPRequestHandler):
             return
         self._file(full, ctype)
 
+    def _status(self, include_details=False):
+        with _STATE_LOCK:
+            oldest = max((time.time() - j["ts"] for j in QUEUE), default=0)
+            queue_count = len(QUEUE)
+            recent = RECENT[-15:][::-1]
+            results = RESULTS[-50:][::-1]
+        native = _status_native()
+        if not include_details:
+            native = {key: native.get(key) for key in ("bridge", "state", "ready", "studio_running", "tools_count")}
+        data = {"online": True, "service": "helium-mcp", "pid": os.getpid(), "version": VERSION, "instance_id": INSTANCE_ID,
+                "queue": queue_count, "oldest_pending_s": int(oldest), "stale": oldest > 120,
+                "studio_mode": "native_mcp", "studio_linked": native.get("state") == "ready",
+                "native_mcp": native, "uptime_s": int(time.time() - START), "port": self.server.server_port,
+                "auth": True, "safe": SAFE, "capabilities": ["agent_status", "graceful_shutdown", "single_instance"]}
+        if include_details:
+            data.update(results=results, recent=recent, allowlist=sorted(ALLOW_ASSETS, key=int),
+                        usage=USAGE.snapshot(), agent_sessions=agent_sessions())
+        self._json(data)
+
     def do_GET(self):
+        if not _host_loopback(self.headers.get("Host", ""), self.server.server_port):
+            self._json({"ok": False, "error": {"code": "untrusted_host", "message": "A loopback Host on this port is required"}}, 403)
+            return
         path = urllib.parse.urlparse(self.path).path
         if path in ("/", "/app", "/app/", "/ui", "/ui/", "/ui/index.html", "/ui/launcher.html",
                     "/ui/page.html", "/ui/miracles_true_apple_liquid_glass.html"):
@@ -460,45 +486,22 @@ class H(BaseHTTPRequestHandler):
         elif path.startswith("/ui/"):
             self._static(path[4:])
         elif path == "/api/status":
-            with _STATE_LOCK:
-                oldest = max((time.time() - j["ts"] for j in QUEUE), default=0)
-                queue_count = len(QUEUE)
-                recent = RECENT[-15:][::-1]
-                results = RESULTS[-50:][::-1]
-            native = _status_native()
-            self._json({"online": True, "service": "helium-mcp", "pid": os.getpid(), "version": VERSION, "instance_id": INSTANCE_ID,
-                        "queue": queue_count, "oldest_pending_s": int(oldest), "stale": oldest > 120,
-                        "studio_mode": "native_mcp", "studio_linked": native.get("state") == "ready",
-                        "native_mcp": native, "results": results, "recent": recent,
-                        "uptime_s": int(time.time() - START), "port": self.server.server_port,
-                        "auth": True, "safe": SAFE, "allowlist": sorted(ALLOW_ASSETS, key=int),
-                        "usage": USAGE.snapshot(), "agent_sessions": agent_sessions(),
-                        "capabilities": ["agent_status", "graceful_shutdown", "single_instance"]})
+            self._status()
         else:
             self._json({"error": "not found"}, 404)
 
     def do_POST(self):
+        if not _host_loopback(self.headers.get("Host", ""), self.server.server_port):
+            self._json({"ok": False, "error": {"code": "untrusted_host", "message": "A loopback Host on this port is required"}}, 403)
+            return
         path = urllib.parse.urlparse(self.path).path
         if path in {"/api/poll", "/api/result", "/api/chat"}:
             self._json({"ok": False, "error": {"code": "removed", "message": "This route is no longer supported"}}, 410)
             return
-        # Bootstrap is the only endpoint that returns the bridge token.
+        # Never return credentials over HTTP. An extension with network-header
+        # privileges can forge an otherwise trusted Origin.
         if path == "/api/bootstrap":
-            if self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower() != "application/json":
-                self._json({"ok": False, "error": {"code": "content_type", "message": "Content-Type must be application/json"}}, 415)
-                return
-            if not _host_loopback(self.headers.get("Host", ""), self.server.server_port):
-                self._json({"ok": False, "error": {"code": "untrusted_host", "message": "Bootstrap requires a loopback Host on this port"}}, 403)
-                return
-            if not _trusted_origin(self.headers.get("Origin"), self.server.server_port):
-                self._json({"ok": False, "error": {"code": "untrusted_origin", "message": "Bootstrap origin is not trusted"}}, 403)
-                return
-            _, body_error = self._body()
-            if body_error:
-                self._json({"ok": False, "error": body_error}, 400)
-                return
-            self._json({"ok": True, "host": f"127.0.0.1:{self.server.server_port}",
-                        "bridgeToken": TOKEN, "instance_id": INSTANCE_ID})
+            self._json({"ok": False, "error": {"code": "pairing_required", "message": "Copy the token from release/python/token.txt (or python/token.txt in a source checkout) into Connection settings."}}, 403)
             return
         if not _trusted_origin(self.headers.get("Origin"), self.server.server_port):
             self._json({"ok": False, "error": {"code": "untrusted_origin", "message": "Origin is not trusted"}}, 403)
@@ -513,9 +516,15 @@ class H(BaseHTTPRequestHandler):
                 return
             self._json({"ok": True, "instance_id": INSTANCE_ID})
             return
-        if path in {"/api/tools/list", "/api/tools/call", "/api/execute", "/api/usage/event",
+        if path in {"/api/status", "/api/tools/list", "/api/tools/call", "/api/execute", "/api/usage/event",
                     "/api/agent/state", "/api/bridge/shutdown", "/api/ui/claim"} and not self._authed(body):
             self._json({"ok": False, "error": {"code": "unauthorized", "message": "Bad or missing bridge token"}}, 401)
+            return
+        if path == "/api/status":
+            self._status(include_details=True)
+            return
+        if path in {"/api/tools/call", "/api/execute"} and body.get("instance_id") != INSTANCE_ID:
+            self._json({"ok": False, "error": {"code": "instance_changed", "message": "The bridge changed. Reconnect before running a tool."}}, 409)
             return
         if path == "/api/agent/state":
             try:
@@ -710,15 +719,24 @@ def _load_token(explicit: str = "") -> str:
     token_path = Path(__file__).with_name("token.txt")
     try:
         previous = token_path.read_text(encoding="utf-8").strip()
-        if previous:
-            return previous
-    except OSError:
-        pass
+    except FileNotFoundError:
+        previous = ""
+    except OSError as exc:
+        raise SystemExit(f"Could not read the local bridge token at {token_path}.") from exc
+    if previous:
+        if os.name != "nt":
+            try:
+                token_path.chmod(0o600)
+            except OSError as exc:
+                raise SystemExit(f"Could not protect the local bridge token at {token_path}.") from exc
+        return previous
     token = secrets.token_hex(32)
     try:
         token_path.write_text(token, encoding="utf-8")
-    except OSError:
-        pass
+        if os.name != "nt":
+            token_path.chmod(0o600)
+    except OSError as exc:
+        raise SystemExit(f"Could not save the local bridge token to {token_path}. Make the release folder writable and try again.") from exc
     return token
 
 

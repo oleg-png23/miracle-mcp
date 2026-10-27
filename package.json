@@ -1,6 +1,6 @@
 {
   "name": "helium-mcp",
-  "version": "2.9.2",
+  "version": "2.9.3",
   "private": true,
   "description": "Local AI chat bridge for Roblox Studio.",
   "license": "MIT",

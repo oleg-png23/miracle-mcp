@@ -98,6 +98,7 @@ class StudioMCP:
                  process_factory: Callable[..., Any] = subprocess.Popen):
         self.command = list(command) if command else None
         self.executable = Path(executable) if executable and not command else None
+        self._auto_discover = not executable and not command
         self.timeout = max(0.1, float(timeout))
         self._popen = process_factory
         self.proc = None
@@ -175,7 +176,9 @@ class StudioMCP:
                         self._state = "error"
                         self._message = self.last_error
                 self.close()
-            exe = self.executable or find_studio_mcp()
+            exe = self.executable
+            if self._auto_discover and (exe is None or not exe.is_file()):
+                exe = find_studio_mcp()
             if not self.command and (not exe or not Path(exe).is_file()):
                 self._state = "missing"
                 self.last_error = "Roblox Studio MCP executable not found (set HELIUM_STUDIO_MCP_PATH to its path)"
@@ -210,7 +213,7 @@ class StudioMCP:
             except (StudioMCPError, OSError, ValueError) as exc:
                 self.last_error = str(exc)
                 self._studio_running = studio_is_running()
-                self._state = "mcp_disabled" if self._studio_running else "studio_closed"
+                self._state = "studio_closed" if self._studio_running is False else "mcp_disabled"
                 self._message = self.last_error
                 self.close()
             return self.status()
@@ -221,15 +224,16 @@ class StudioMCP:
         self._studio_running = None if self.command else studio_is_running()
         if self.command:
             self._state = "ready" if self.tools else "mcp_disabled"
-        elif self.tools and self._studio_running:
+        elif self.tools and self._studio_running is not False:
             self._state = "ready"
         else:
-            self._state = "mcp_disabled" if self._studio_running else "studio_closed"
-            if not self._studio_running:
+            self._state = "studio_closed" if self._studio_running is False else "mcp_disabled"
+            if self._studio_running is False:
                 self.tools = []
-        self._message = ("Roblox Studio MCP is ready" if self.tools else
-                         "Roblox Studio is open, but MCP is disabled or no place is available" if self._studio_running else
-                         "Roblox Studio is not running")
+        self._message = ("Roblox Studio MCP is ready" if self._state == "ready" else
+                         "Roblox Studio is not running" if self._studio_running is False else
+                         "Studio MCP returned no tools; Studio process status is unavailable" if self._studio_running is None else
+                         "Roblox Studio is open, but MCP is disabled or no place is available")
 
     def _list_all_tools(self) -> list[dict]:
         """Fetch every page advertised by tools/list, preserving tool objects as-is."""
@@ -282,7 +286,12 @@ class StudioMCP:
             return list(self.tools)
 
     def call_tool(self, name: str, arguments: Optional[dict] = None, *, timeout: Optional[float] = None) -> dict:
-        with self._lock:
+        budget = max(0.1, timeout if timeout is not None else
+                     (60.0 if name.lower() in {"run_code", "run_luau", "run_lua"} else self.timeout))
+        deadline = time.monotonic() + budget
+        if not self._lock.acquire(timeout=budget):
+            raise StudioMCPError("Timed out waiting for the Studio MCP call queue; the tool was not sent")
+        try:
             if self._state == "error":
                 self.close()
             if self.proc is None or self.proc.poll() is not None:
@@ -294,13 +303,17 @@ class StudioMCP:
                     self.last_error = str(exc)
             if self._state != "ready":
                 raise StudioMCPError(self.last_error or f"Studio MCP is not ready ({self._state})")
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise StudioMCPError("Timed out waiting for the Studio MCP call queue; the tool was not sent")
             try:
-                budget = timeout if timeout is not None else (60.0 if name.lower() in {"run_code", "run_luau", "run_lua"} else self.timeout)
-                return self._request("tools/call", {"name": name, "arguments": arguments or {}}, timeout=budget)
+                return self._request("tools/call", {"name": name, "arguments": arguments or {}}, timeout=remaining)
             except StudioMCPError as exc:
                 self.last_error = str(exc)
                 self._state = "error"
                 raise
+        finally:
+            self._lock.release()
 
     def close(self) -> None:
         with self._lock:

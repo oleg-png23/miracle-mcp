@@ -45,12 +45,12 @@
       const diagnosis = client.diagnose(status);
       if (diagnosis.state !== 'linked') throw new Error(diagnosis.title + '. ' + diagnosis.message + ' Code was not sent.');
       if (settings.safeMode !== false) {
-        const blocked = /:\s*Kick\s*\(|BanAsync|game\s*:\s*Shutdown|\brequire\s*\(|\bloadstring\b|\b(?:get|set)fenv\b|\b(?:os|io)\s*\.|MarketplaceService\s*:\s*PromptPurchase/.exec(code);
+        const blocked = /:\s*Kick\s*\(|BanAsync|game\s*:\s*Shutdown|\brequire\b|\bloadstring\b|\b(?:get|set)fenv\b|\b(?:os|io)\s*\.|MarketplaceService\s*:\s*PromptPurchase/.exec(code);
         if (blocked) throw new Error('Code check: blocked operation ' + blocked[0] + '. Code was not sent. Server rules also apply.');
       }
       if (pending) clearPending();
       lock(true);
-      const response = await client.request(settings.host, '/api/execute', { token: settings.bridgeToken, luau: code });
+      const response = await client.request(settings.host, '/api/execute', { token: settings.bridgeToken, instance_id: status.instance_id, luau: code });
       if (!Number.isInteger(response.id)) throw new Error('The server did not return a task ID. Check events before retrying.');
       accepted = true;
       const job = { id: response.id, host: settings.host, instance: response.instance_id || status.instance_id, created: Date.now() };
