@@ -4,7 +4,7 @@
   'use strict';
   if (document.getElementById('helium-mcp-widget') || document.getElementById('miracles-mcp-widget')) return;
   const { marker: MARKER, intro: INTRO } = globalThis.MiraclesPrompt;
-  const CLIENT_VERSION = '2.9.2';
+  const CLIENT_VERSION = '2.9.3';
 
   const siteEditors = {
     'chatgpt.com': '#prompt-textarea,textarea[data-id="root"]',
@@ -232,7 +232,7 @@
   $('panel').append(resultDetails);
   let agentActive = false, observer = null, debounce = 0, seen = new Set(), historicalNodes = new WeakSet(), historicalUserNodes = new WeakSet(), busy = false, sessionInstance = null, sessionId = '', toolCount = 0, watchdog = 0;
   let startup = null, sessionController = null, readerTimer = 0, sample = null, pendingDelivery = null;
-  let conversation = '', phase = 'idle', phaseCode = '', activeTool = '', lastReport = 0;
+  let conversation = '', adoption = null, phase = 'idle', phaseCode = '', activeTool = '', lastReport = 0;
   const executions = new Map();
   const MAX_TOOL_CALLS = 30;
   async function recordUsage(kind, eventId, value) {
@@ -244,6 +244,25 @@
   const sent = new Set();
   function armAssistantWatchdog() { clearTimeout(watchdog); if(!agentActive) return; watchdog=setTimeout(()=>{ if(agentActive&&!busy) stop('No completed AI response after 120 seconds. Session paused. Check the site adapter.','ASSISTANT_TIMEOUT'); },120000); }
   function userTurnNodes() { return [...document.querySelectorAll('[data-message-author-role="user"],[data-message-author="user"],[data-role="user"],[data-role="human"],[data-testid*="user-message"],[data-testid*="human-message"],.user-message,.human-message,.qwen-chat-message-user,.chat-user,.segment-user,.user-query,.ds-message.d29f3d7d,ol.flex-col-reverse > li')].filter(el=>!host.contains(el)&&!el.closest('#helium-mcp-widget')); }
+  function currentConversation() { return location.href || location.hostname; }
+  function conversationReady() {
+    const current = currentConversation();
+    if (current === conversation) return true;
+    if (adoption) {
+      let candidate = false;
+      try {
+        const from = new URL(conversation), to = new URL(current);
+        candidate = from.origin === to.origin && from.pathname === '/' && /^\/c\/[^/]+\/?$/.test(to.pathname)
+          && ['chatgpt.com','chat.openai.com'].includes(from.hostname);
+      } catch { /* invalid URLs do not establish a conversation */ }
+      if (candidate && Date.now() < adoption.expires && userTurnNodes().some(turn => (turn.innerText || turn.textContent || '').includes(adoption.marker))) {
+        conversation = current; adoption = null; return true;
+      }
+      if (candidate && Date.now() < adoption.expires) return false;
+    }
+    stop('The conversation changed. Start or watch this chat again.', 'CHAT_CHANGED');
+    return false;
+  }
   const sendRuntime = (type, payload = {}, signal) => new Promise((resolve, reject) => {
     const timeout = type === 'MCP_CALL' ? 85000 : type === 'MCP_TOOLS' ? 25000 : 15000;
     let timer;
@@ -365,14 +384,15 @@
   async function deliverResult(signal) {
     const item=pendingDelivery;if(!item)return;
     signal?.throwIfAborted();
+    if(currentConversation()!==item.conversation)throw new Error('Return to the original conversation before sending this saved result.');
     const alreadySent=userTurnNodes().some(turn=>{
       const value=turn.innerText||turn.textContent||'';
       return value.includes('Helium tool result:')&&value.includes(item.encoded);
     });
     if(!alreadySent) {
       const pair=composerAndSend();
-      if(pair&&text(pair.composer).trim()===item.message.trim())await clickSend(pair,item.message,signal);
-      else await fillAndSend(item.message,signal);
+      if(pair&&text(pair.composer).trim()===item.message.trim())await clickSend(pair,item.message,signal,item.conversation);
+      else await fillAndSend(item.message,signal,item.conversation);
     }
     item.entry.delivered=true;pendingDelivery=null;retryResult.hidden=true;
     void recordUsage('output',item.eventId,item.message);
@@ -434,9 +454,10 @@
       if(!document.execCommand('insertText',false,value)) throw new Error('The site rejected text input.');
     }
   }
-  async function clickSend(pair,value,signal) {
+  async function clickSend(pair,value,signal,expectedConversation) {
     await new Promise(r=>setTimeout(r,300));
     signal?.throwIfAborted();
+    if(expectedConversation && currentConversation()!==expectedConversation) throw new Error('The conversation changed before the message could be sent.');
     const latest=composerAndSend();
     if(!latest||!latest.send||!text(latest.composer).includes(value)) throw new Error('The send button is unavailable. Your draft is preserved.');
     latest.send.click(); await new Promise(r=>setTimeout(r,600));
@@ -444,7 +465,8 @@
     const current=pair.composer.isConnected?pair.composer:findComposer();
     if(current&&text(current).includes(value)) throw new Error('The site did not confirm sending. Your draft is preserved.');
   }
-  async function fillAndSend(value,signal) {
+  async function fillAndSend(value,signal,expectedConversation) {
+    if(expectedConversation && currentConversation()!==expectedConversation) throw new Error('Return to the original conversation before sending this saved result.');
     const pair=composerAndSend(); if(!pair) throw new Error(siteAdapter()?.errorMessage||'Message editor not found. Session paused.');
     if(text(pair.composer).trim()) throw new Error('A draft is in the editor. The result was not sent. Clear or send the draft, then resume the session.');
     setComposerValue(pair.composer,value);
@@ -452,7 +474,7 @@
     signal?.throwIfAborted();
     const current=pair.composer.isConnected?pair.composer:findComposer();
     if(!current||!text(current).includes(value)) throw new Error('The site did not accept the message.');
-    await clickSend({composer:current},value,signal);
+    await clickSend({composer:current},value,signal,expectedConversation);
   }
   function generationInProgress(node) {
     const key=hostKey(), config=providerConfig();
@@ -468,8 +490,8 @@
     return stopButton||streaming||node?.getAttribute('data-is-streaming')==='true'||node?.closest('[data-is-streaming="true"]');
   }
   async function handleAssistant() {
-    if(!agentActive||busy)return;
-    if((location.href||location.hostname)!==conversation){stop('The conversation changed. Start or watch this chat again.','CHAT_CHANGED');return;}
+    if(!agentActive)return;
+    if(!conversationReady()||busy)return;
     const nodes=assistantNodes();
     const fresh=el=>!historicalNodes.has(el)&&!seen.has(el.innerText||el.textContent||'');
     const last=hostKey()==='arena.ai'?nodes.find(fresh):[...nodes].reverse().find(fresh);
@@ -484,6 +506,9 @@
       return;
     }
     clearTimeout(watchdog);
+    // Once a response is complete, any later URL change is navigation, not
+    // the initial assignment of a conversation URL.
+    adoption=null;
     if(!parsed.calls.length){remember(content);status('Reply received without a tool call. Still watching this chat.');reportAgent('watching','NO_TOOL_CALL');return;}
     busy=true;remember(content);
     const runId=sessionId;
@@ -509,8 +534,9 @@
       const toolError=response?.ok===true&&response.result?.isError===true;
       const payload=response?.ok===true?{ok:!toolError,call_id:call.id,result:response.result}:{ok:false,call_id:call.id,code:response?.code||'TOOL_FAILED',message:response?.message||'The tool returned an error.'};
       const encoded=JSON.stringify(payload);
-      exposeResult({entry,encoded,message:'Helium tool result:\n```json\n'+encoded+'\n```',eventId:sessionId+':'+call.id+':out',instance:sessionInstance,toolError,requestError:response?.ok!==true,code:payload.code});
+      exposeResult({entry,encoded,message:'Helium tool result:\n```json\n'+encoded+'\n```',eventId:sessionId+':'+call.id+':out',instance:sessionInstance,conversation,toolError,requestError:response?.ok!==true,code:payload.code});
       if(!agentActive)return;
+      if(!conversationReady())return;
       reportAgent('sending_result','',call.name);
       await deliverResult(sessionController?.signal);
     }} catch(error) {
@@ -521,7 +547,7 @@
   async function beginAgent(signal,watchOnly=false) {
     if(pendingDelivery)throw new Error('A tool result is waiting. Retry sending it, copy it or dismiss it before starting another session.');
     if(busy)throw new Error('The previous tool is still finishing. Wait for its result before starting again.');
-    sessionId=crypto.randomUUID();toolCount=0;conversation=location.href||location.hostname;sample=null;
+    sessionId=crypto.randomUUID();toolCount=0;conversation=currentConversation();adoption=null;sample=null;
     reportAgent('starting');
     status('Checking the bridge and Studio tools…');
     const health=await sendRuntime('MCP_HEALTH',{},signal);
@@ -533,6 +559,7 @@
     if(listed?.ok!==true||!Array.isArray(listed.tools)) throw new Error(listed?.message||'Could not load Studio tools.');
     if(health.instance_id&&listed.instance_id&&health.instance_id!==listed.instance_id) throw new Error('The bridge restarted during setup. Start a new session.');
     sessionInstance=listed.instance_id||health.instance_id||null;
+    if(!sessionInstance)throw new Error('The bridge did not provide an instance ID. Reconnect before starting a session.');
     const tools=listed.tools;
     if(!tools.length) throw new Error('No tools available. Session was not started.');
     const priorNodes=assistantNodes();
@@ -547,8 +574,17 @@
     sent.clear();
     if(watchOnly){activateReader();status('Watching this chat. The latest JSON tool reply can run once; your draft is preserved.','success');return;}
     const pair=composerAndSend(); if(!pair) throw new Error(siteAdapter()?.errorMessage||'Message editor not found.');
+    if(currentConversation()!==conversation)throw new Error('The conversation changed during setup. Start again in the desired chat.');
     const draft=text(pair.composer).trim();
-    const instructions=globalThis.MiraclesPrompt.build(tools,draft||'Ask the user what to do in Roblox Studio.');
+    let instructions=globalThis.MiraclesPrompt.build(tools,draft||'Ask the user what to do in Roblox Studio.');
+    try {
+      const initial = new URL(conversation);
+      if(initial.pathname==='/' && ['chatgpt.com','chat.openai.com'].includes(initial.hostname)) {
+        const marker='[Helium session '+sessionId+']';
+        instructions=marker+'\n'+instructions;
+        adoption={marker,expires:Date.now()+10000};
+      }
+    } catch { /* leave unfamiliar chat URLs bound exactly as before */ }
     status('Preparing the chat instructions…');
     setComposerValue(pair.composer,instructions);
     await new Promise(r=>setTimeout(r,250));
@@ -557,7 +593,7 @@
     if(!current||!text(current).includes(MARKER)||(draft&&!text(current).includes(draft))) throw new Error('The site did not accept the instructions. Your draft is preserved.');
     const readyPair=composerAndSend(); if(!readyPair||readyPair.composer!==current) throw new Error('Send button not found. Your draft is preserved.');
     status('Sending the session instructions…');
-    await clickSend({composer:current},instructions,signal);
+    await clickSend({composer:current},instructions,signal,conversation);
     activateReader();
     status('Session active. Tools: '+tools.length+'.','success');
     void recordUsage('activation',sessionId+':start',instructions);

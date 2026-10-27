@@ -27,6 +27,7 @@ function worker(initialSettings = {}, options = {}) {
       if (url.endsWith('/api/bootstrap')) {
         assert.equal(method, 'POST');
         assert.deepEqual(body, {});
+        if (options.bootstrapDenied) return makeResponse(403, {ok:false,code:'pairing_required',message:'Copy the token from the local workspace.'});
         token = options.bootstrapToken || 'fresh-token';
         instance = options.bootstrapInstance || instance;
         return makeResponse(200, { host, bridgeToken: token, instance_id: instance });
@@ -36,7 +37,9 @@ function worker(initialSettings = {}, options = {}) {
         return body.token === token ? makeResponse(200, { ok: true }) : makeResponse(401, { ok: false, code: 'TOKEN_REJECTED' });
       }
       if (url.endsWith('/api/status')) {
-        return makeResponse(200, { online: true, version:options.bridgeVersion, studio_linked: nativeState === 'ready', native_mcp: { state: nativeState, message: 'Studio state' }, instance_id: instance });
+        const result = makeResponse(200, { online: true, version:options.bridgeVersion, studio_linked: nativeState === 'ready', native_mcp: { state: nativeState, message: 'Studio state' }, instance_id: instance });
+        if (options.restartAfterStatus) instance = 'instance-b';
+        return result;
       }
       if (url.endsWith('/api/agent/state')) return makeResponse(200, {ok:true});
       if (url.endsWith('/api/usage/event')) return makeResponse(200, {ok:true});
@@ -47,6 +50,7 @@ function worker(initialSettings = {}, options = {}) {
       }
       if (url.endsWith('/api/tools/call')) {
         if (body.token !== token) return makeResponse(401, { ok: false, code: 'TOKEN_REJECTED', message: 'expired' });
+        if (body.instance_id !== instance) return makeResponse(409, {ok:false,code:'instance_changed',message:'The bridge changed.',instance_id:instance});
         if (options.callStatus) return makeResponse(options.callStatus, { ok: false, code: 'CALL_DENIED', message: 'call denied' });
         calls.push({ toolBody: body });
         return makeResponse(200, { ok: true, instance_id: instance, result: options.toolResult || { content: [{ type: 'text', text: 'ok' }] } });
@@ -70,18 +74,19 @@ function worker(initialSettings = {}, options = {}) {
   return { context, calls, listeners, settings, origin };
 }
 
-test('health bootstraps missing tokens and verifies stale tokens before readiness', async () => {
-  const absent = worker();
+test('health requires pairing for a missing or stale token and verifies a saved token', async () => {
+  const absent = worker({}, {bootstrapDenied:true});
   const first = await absent.context.checkBridgeHealth();
-  assert.equal(first.code, 'READY');
-  assert.equal(absent.settings.bridgeToken, 'fresh-token');
+  assert.equal(first.code, 'pairing_required');
+  assert.equal(absent.settings.bridgeToken, undefined);
   assert.equal(absent.calls[0].url, absent.origin + '/api/bootstrap');
 
-  const stale = worker({ bridgeToken: 'old-token' }, { authFailures: 1 });
+  const stale = worker({ bridgeToken: 'old-token' }, { authFailures: 1, bootstrapDenied:true });
   const second = await stale.context.checkBridgeHealth();
-  assert.equal(second.code, 'READY');
-  assert.equal(stale.settings.bridgeToken, 'fresh-token');
+  assert.equal(second.code, 'pairing_required');
+  assert.equal(stale.settings.bridgeToken, 'old-token');
   assert.equal(stale.calls.filter(c => c.url.endsWith('/api/bootstrap')).length, 1);
+  assert.equal((await worker({bridgeToken:'fresh-token'}).context.checkBridgeHealth()).code, 'READY');
 });
 
 test('launch welcome has a persistent five-hour cooldown and startup stays quiet during it', async () => {
@@ -152,6 +157,7 @@ test('tool calls forward arguments and session-namespaced call IDs', async () =>
   assert.equal(toolRequest.toolBody.name, 'studio.inspect');
   assert.deepEqual(JSON.parse(JSON.stringify(toolRequest.toolBody.arguments)), { target: 'Workspace' });
   assert.equal(toolRequest.toolBody.call_id, 'session-7:call-1');
+  assert.equal(toolRequest.toolBody.instance_id, 'instance-a');
   assert.equal(toolRequest.toolBody.token, 'fresh-token');
 });
 
@@ -176,6 +182,13 @@ test('a changed bridge instance prevents a tool call', async () => {
   assert.equal(result.ok, false);
   assert.equal(result.code, 'BRIDGE_RESTARTED');
   assert.equal(w.calls.some(c => c.url.endsWith('/api/tools/call')), false);
+});
+
+test('the server rejects a restart between the status check and tool dispatch', async () => {
+  const w = worker({bridgeToken:'fresh-token'}, {instance:'instance-a',restartAfterStatus:true});
+  const result = await w.context.callTool({name:'studio.inspect',arguments:{},call_id:'s:c',instance_id:'instance-a'});
+  assert.equal(result.code,'BRIDGE_RESTARTED');
+  assert.equal(w.calls.some(call => call.toolBody),false);
 });
 
 test('invalid hosts never make network requests', async () => {

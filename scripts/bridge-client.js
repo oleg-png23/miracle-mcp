@@ -72,7 +72,7 @@
         runtime.sendMessage({ type: "MCP_HEALTH" }, response => {
           const error = runtime.lastError;
           if (error) reject(new Error(error.message));
-          else if (response?.ok === false) reject(new Error(response.message || "Could not connect the extension."));
+          else if (response?.authenticated !== true) reject(new Error(response?.message || "Pair the extension with the local workspace first."));
           else resolve(response);
         });
       });
@@ -82,17 +82,13 @@
     }
     if (location.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(location.hostname))
       throw new Error("Automatic setup requires the local Helium page.");
-    const response = await fetch(new URL("/api/bootstrap", location.origin), {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", cache: "no-store",
-      signal: AbortSignal.timeout(5000)
-    });
-    const data = await response.json().catch(() => { throw new Error("The local server returned an invalid setup response."); });
-    if (!response.ok) throw new Error(data.message || data.error?.message || `Could not connect (HTTP ${response.status}).`);
-    if (typeof data.host !== "string" || typeof data.bridgeToken !== "string" || !data.bridgeToken.trim())
-      throw new Error("The setup response is missing an address or token.");
-    const values = { host: data.host, bridgeToken: data.bridgeToken.trim() };
-    base(values.host);
-    await storage.set(values);
+    const values = await storage.read();
+    if (!values.bridgeToken?.trim()) throw new Error("Copy the token from release/python/token.txt (or python/token.txt in a source checkout) into Connection settings.");
+    try { await request(values.host, '/api/auth', {token:values.bridgeToken}); }
+    catch (error) {
+      if (/connection expired/i.test(error.message)) throw new Error("The token changed. Copy the current token from release/python/token.txt into Connection settings.");
+      throw error;
+    }
     return values;
   }
   function diagnose(status) {

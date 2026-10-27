@@ -50,7 +50,7 @@ function chat({rich=false,hold='',paste=true,toolCount=1}={}) {
   class Event {constructor(type,options={}){this.type=type;Object.assign(this,options);}preventDefault(){this.defaultPrevented=true;}}
   const context={document,Element,HTMLTextAreaElement:Element,HTMLInputElement:Element,InputEvent:Event,ClipboardEvent:Event,
     DataTransfer:class{setData(k,v){this[k]=v;}getData(k){return this[k];}},
-    chrome:{runtime},console:{warn(){}},DOMException,AbortController,crypto:{randomUUID:()=> 'session'},location:{hostname:'chatgpt.com',href:'https://chatgpt.com/c/test'},Date:{now:()=>now},navigator:{clipboard:{writeText:async()=>{}}},
+    chrome:{runtime},console:{warn(){}},DOMException,AbortController,URL,crypto:{randomUUID:()=> 'session'},location:{hostname:'chatgpt.com',href:'https://chatgpt.com/c/test'},Date:{now:()=>now},navigator:{clipboard:{writeText:async()=>{}}},
     window:{getSelection:()=>selection},getComputedStyle:()=>({visibility:'visible',display:'block'}),innerHeight:900,
     matchMedia:()=>({matches:true}),setTimeout:(fn,ms)=>{const id=++nextTimer;timers.set(id,{fn,at:now+ms});return id;},clearTimeout:id=>timers.delete(id),
     MutationObserver:class{constructor(fn){observer=fn;}observe(){}disconnect(){}}};
@@ -63,8 +63,8 @@ function chat({rich=false,hold='',paste=true,toolCount=1}={}) {
     if(code){const child=new Element('code');child.textContent=content;node.codes=[child];}
     assistants.push(node);return node;
   }
-  return {elements,composer,sent,pending,requests,messages,timers,advance,flush,reply,
-    setStreaming:value=>{streaming=value;},blockResults:value=>{blockResultSend=value;},
+  return {location:context.location,elements,composer,sent,pending,requests,messages,timers,advance,flush,reply,
+    setStreaming:value=>{streaming=value;},blockResults:value=>{blockResultSend=value;},clearUsers:()=>{users.length=0;},
     watch:()=>elements.get('agent-watch').onclick(),retry:()=>elements.get('retry-result').onclick(),start:()=>elements.get('agent-start').onclick(),stop:()=>elements.get('agent-stop').onclick(),mutate:()=>observer([{target:document.body}]),
     stats:()=>({readerScans,fullScans,execCalls,pastes,inputs})};
 }
@@ -194,4 +194,57 @@ test('malformed envelopes show a diagnostic and a corrected reply can still run'
   await c.advance(1800);assert.equal(calls(c).length,0);assert.match(c.elements.get('status').textContent,/unique id/);
   reply.innerText=reply.textContent=command('fixed-id');await c.advance(4000);
   assert.equal(calls(c).length,1);c.stop();
+});
+
+test('a new ChatGPT conversation is adopted only when it contains this session prompt',async()=>{
+  const c=chat();c.location.href='https://chatgpt.com/';
+  const start=c.start();await c.advance(1200);await start;
+  c.location.href='https://chatgpt.com/c/new';c.reply(command('new-chat'));
+  await c.advance(4000);assert.equal(calls(c).length,1,c.elements.get('status').textContent);
+  assert.match(c.sent[0],/\[Helium session session\]/);c.stop();
+});
+
+test('a new conversation without the session prompt is not adopted',async()=>{
+  const c=chat();c.location.href='https://chatgpt.com/';
+  const start=c.start();await c.advance(1200);await start;
+  c.clearUsers();c.location.href='https://chatgpt.com/c/unrelated';c.reply(command('other-chat'));
+  await c.advance(32000);assert.equal(calls(c).length,0);
+  assert.match(c.elements.get('status').textContent,/conversation changed/);
+});
+
+test('switching chats during a tool call saves the result for the original conversation',async()=>{
+  const c=chat({hold:'MCP_CALL'});await started(c);c.reply(command('late-switch'));
+  await c.advance(1600);assert.equal(calls(c).length,1);
+  c.location.href='https://chatgpt.com/c/other';c.mutate();await c.advance(500);
+  c.pending.MCP_CALL();await c.advance(1600);
+  assert.equal(c.sent.length,1);assert.equal(c.elements.get('last-result').hidden,false);
+  const wrong=c.retry();await c.advance(1000);await wrong;
+  assert.equal(c.sent.length,1);assert.match(c.elements.get('status').textContent,/original conversation/);
+  c.location.href='https://chatgpt.com/c/test';const retry=c.retry();await c.advance(2500);await retry;
+  assert.equal(c.sent.length,2);assert.equal(calls(c).length,1);c.stop();
+});
+
+test('a root chat cannot adopt a different conversation after its tool has started',async()=>{
+  const c=chat({hold:'MCP_CALL'});c.location.href='https://chatgpt.com/';
+  await started(c);c.reply(command('root-pending'));await c.advance(1600);
+  assert.equal(calls(c).length,1);c.location.href='https://chatgpt.com/c/other';
+  c.mutate();await c.advance(500);c.pending.MCP_CALL();await c.advance(1600);
+  assert.equal(c.sent.length,1);assert.equal(c.elements.get('last-result').hidden,false);
+  assert.match(c.elements.get('status').textContent,/conversation changed/);
+});
+
+test('switching chats after the result is filled still prevents sending',async()=>{
+  const c=chat({hold:'MCP_CALL'});await started(c);c.reply(command('switch-before-send'));
+  await c.advance(1600);c.pending.MCP_CALL();await c.flush();
+  assert.match(c.composer.value,/Helium tool result/);
+  c.location.href='https://chatgpt.com/c/other';await c.advance(3000);
+  assert.equal(c.sent.length,1);assert.equal(c.elements.get('last-result').hidden,false);
+  assert.match(c.elements.get('status').textContent,/result is saved/);
+});
+
+test('switching chats while setup is pending cannot send instructions into the new chat',async()=>{
+  const c=chat({hold:'MCP_TOOLS'});c.composer.value='Existing draft';const start=c.start();await c.flush();
+  c.location.href='https://chatgpt.com/c/other';c.pending.MCP_TOOLS();await c.advance(1200);await start;
+  assert.equal(c.sent.length,0);assert.equal(c.composer.value,'Existing draft');
+  assert.match(c.elements.get('status').textContent,/conversation changed/);
 });

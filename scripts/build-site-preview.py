@@ -26,7 +26,7 @@ def build():
     for name in names:
         source = (ROOT / 'scripts' / f'{name}.js').read_text(encoding='utf-8')
         if name == 'dashboard':
-            old = "await fetch(`http://${currentHost}/api/status`, {cache:'no-store', signal:controller.signal})"
+            old = "await fetch(`http://${currentHost}/api/status`, {cache:'no-store', signal:controller.signal,\n        ...(settings.bridgeToken ? {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:settings.bridgeToken})} : {})})"
             assert old in source, 'Dashboard transport changed; review preview isolation.'
             source = source.replace(old, "({ok:true, json:() => client.request(currentHost, '/api/status')})")
             source = source.replace("return isSameOriginLocal() || Boolean(globalThis.chrome?.runtime?.id);", 'return false;')

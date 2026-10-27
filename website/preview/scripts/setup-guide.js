@@ -5,8 +5,9 @@
     <div class="guide-status" role="status" aria-live="polite"><strong data-guide-state-title>Checking Studio</strong><p data-guide-state-message>Waiting for connection status.</p></div>
     <ol class="setup-steps">
       <li><b>Enable Studio MCP.</b> Open your place, then choose <code>Assistant → … → Manage MCP Servers → Enable Studio as MCP Server</code>.</li>
-      <li><b>Start the bridge.</b> Run <code>release/run.bat</code> from an extracted download, or <code>run.bat</code> from a source checkout. Keep the <code>plugin</code> and <code>release</code> folders together. The connection token is set automatically.</li>
+      <li><b>Start the bridge.</b> Run <code>release/run.bat</code> from an extracted download, or <code>run.bat</code> from a source checkout. Keep the <code>plugin</code> and <code>release</code> folders together.</li>
       <li><b>Load the extension.</b> Open <code>edge://extensions</code> or <code>chrome://extensions</code>, enable Developer mode and select Load unpacked. Choose the <code>plugin</code> folder from the download, containing <code>manifest.json</code> (or the source repository root). After updating the files, reload the extension and your chat tab.</li>
+      <li><b>Pair the workspaces.</b> Open <code>release/python/token.txt</code> (or <code>python/token.txt</code> in a source checkout) and copy the token. Paste it into Connection → Advanced connection settings in the local workspace and save. Open the extension workspace from the Helium toolbar icon and do the same there. Never put the token in a chat or Studio.</li>
       <li><b>Start a chat session.</b> Open your AI chat, select <b>Helium → Start session</b>, then describe what you want to change in Studio.</li>
     </ol><div class="row"><button class="button button-primary button-small" type="button" data-guide-check>Check connection</button><a class="button button-small" href="welcome.html">Welcome</a></div>
     <details class="guide-details"><summary>Troubleshooting</summary><dl class="troubleshooting">

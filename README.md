@@ -17,9 +17,9 @@ Python uses the standard library. Node.js is needed only for development and bro
 
 ## Install a release
 
-Download `helium-mcp-2.9.2.zip` and extract both folders together. Load **plugin/** as the unpacked Chrome/Edge extension, enable Studio MCP, then run **release/run.bat**. The local bridge serves the interface from the sibling plugin folder. See [the installation guide](INSTALL.md) for the full Russian instructions.
+Download `helium-mcp-2.9.3.zip` and extract both folders together. Load **plugin/** as the unpacked Chrome/Edge extension, enable Studio MCP, then run **release/run.bat**. The local bridge serves the interface from the sibling plugin folder. See [the installation guide](INSTALL.md) for the full Russian instructions.
 
-## Upgrading from Miracle (2.9.2)
+## Upgrading from Miracle
 
 Helium is the new project name. The dashboard, welcome page, chat widget, icons and downloads use Helium. Repository and website URLs stay the same, so existing links still work.
 
@@ -32,9 +32,10 @@ The new `HELIUM_PYTHON_PATH` and `HELIUM_STUDIO_MCP_PATH` overrides take precede
 1. Open a place in Roblox Studio. In Assistant, select **… → Manage MCP Servers → Enable Studio as MCP Server**.
 2. Run `run.bat` from this folder. The launcher starts the bridge and opens the workspace at `http://127.0.0.1:19731/app`.
 3. Open `edge://extensions` or `chrome://extensions`, enable Developer mode and choose **Load unpacked**. Select this repository's root folder.
-4. Open a supported AI chat and select **Helium → Start session**. Then describe the change you want to make in Studio.
+4. Copy the access token from `python/token.txt` (or `release/python/token.txt` in a release). Paste it into **Connection → Advanced connection settings** in both the local workspace and the extension's workspace, and save each. Open the extension workspace from the Helium toolbar icon. Repeat this if an upgrade changes the bridge token.
+5. Open a supported AI chat and select **Helium → Start session**. Then describe the change you want to make in Studio.
 
-The bridge creates its access token locally. It does not belong in Studio, an AI chat, or source control. Keep the bridge running while using the extension. After an update, run the new launcher, reload the extension and refresh open chat tabs. The dashboard reports version mismatches.
+The bridge creates its access token locally. It does not belong in Studio, an AI chat, or source control. It is sent in authenticated local requests, so browser extensions that can inspect or inject into the local workspace may obtain it; grant that access only to extensions you trust. Keep the bridge running while using the extension. After an update, run the new launcher, reload the extension and refresh open chat tabs. The dashboard reports version mismatches.
 
 The h✦ logo in the navigation rail opens `/ui/welcome.html`. Installation and the first extension launch open the welcome page. Browser startup or a later launch can show it again after five hours. During the cooldown, toolbar clicks open the workspace and browser startup stays quiet. Existing welcome/workspace tabs are reused.
 
@@ -88,8 +89,9 @@ For Notion, open **Notion AI chat** first. For ClickUp, open **Brain Chat**. Hel
 
 ## Local API
 
-- `POST /api/bootstrap`: prepare the local connection.
-- `GET /api/status`: bridge, Studio, results and usage status.
+- `POST /api/bootstrap`: reports that manual pairing is required; the token is never returned over HTTP.
+- `GET /api/status`: public bridge and Studio health without results or usage details.
+- `POST /api/status`: authenticated results, events, usage and agent status.
 - `POST /api/tools/list`: current Studio tool catalog.
 - `POST /api/tools/call`: call an advertised tool.
 - `POST /api/execute`: optional manual Luau execution.
@@ -98,7 +100,7 @@ For Notion, open **Notion AI chat** first. For ClickUp, open **Brain Chat**. Hel
 - `POST /api/bridge/shutdown`: authenticated, instance-matched graceful shutdown while idle.
 - `POST /api/ui/claim`: coalesce duplicate launcher requests to open the workspace.
 
-Mutation requests require the local token. The server validates loopback hosts, origins, request sizes and call IDs. Code checks apply on the server as well as in the editor. A successful transport response does not imply a successful Studio tool result; tool errors remain visible to the chat agent.
+Mutation requests require the local token. Tool calls and manual execution also require the current `instance_id` returned by status or the tool catalog. The server validates loopback hosts, origins, request sizes and call IDs. Code checks on the server and in the editor are best-effort pattern checks, not a sandbox or a guarantee against unsafe Luau or tool behavior. Review the AI's actions and only connect a Studio project you are comfortable allowing it to modify. A successful transport response does not imply a successful Studio tool result; tool errors remain visible to the chat agent.
 
 The default port is `19731`. Optional environment variables:
 

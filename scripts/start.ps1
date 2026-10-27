@@ -12,12 +12,37 @@ function Get-BridgeStatus {
     catch { return $null }
 }
 
+function Get-BridgeToken($taskStatus) {
+    # Read credentials from the verified listener's own installation, never
+    # from HTTP. This also supports releases extracted into a new directory.
+    if (-not $taskStatus -or -not $taskStatus.pid) { throw 'The bridge identity is unavailable.' }
+    $taskOwners = @(Get-NetTCPConnection -LocalPort $taskPort -State Listen -ErrorAction Stop | Select-Object -ExpandProperty OwningProcess -Unique)
+    if ($taskOwners.Count -ne 1 -or $taskOwners[0] -ne $taskStatus.pid) { throw 'The bridge listener could not be verified.' }
+    $taskInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $($taskStatus.pid)" -ErrorAction Stop
+    if (-not $taskInfo -or $taskInfo.Name -notmatch '^python(?:w|3(?:\.\d+)?)?\.exe$') { throw 'The bridge process could not be verified.' }
+    $taskMatch = [regex]::Match($taskInfo.CommandLine, '(?i)(?:^|\s)(?:"(?<path>[^"]*\\mcp_server\.py)"|(?<path>[^\s"]*\\mcp_server\.py))(?=\s|$)')
+    if (-not $taskMatch.Success) { throw 'The bridge script could not be verified.' }
+    $taskRunningServer = $taskMatch.Groups['path'].Value
+    if (-not [System.IO.Path]::IsPathRooted($taskRunningServer) -or -not (Test-Path -LiteralPath $taskRunningServer -PathType Leaf)) { throw 'The bridge script could not be verified.' }
+    $taskRunningRoot = Split-Path -Parent (Split-Path -Parent $taskRunningServer)
+    $taskRunningUI = $taskRunningRoot
+    if (-not (Test-Path -LiteralPath (Join-Path $taskRunningUI 'manifest.json'))) { $taskRunningUI = Join-Path (Split-Path -Parent $taskRunningRoot) 'plugin' }
+    $taskManifest = Get-Content -LiteralPath (Join-Path $taskRunningUI 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $taskSource = Get-Content -LiteralPath $taskRunningServer -Raw -Encoding UTF8
+    if ($taskManifest.name -notin @('Helium — Local Bridge for Roblox Studio', 'Miracle — Local Bridge for Roblox Studio') -or $taskManifest.version -ne $taskStatus.version -or -not ($taskSource.Contains('HeliumMCP/') -or $taskSource.Contains('MiraclesMCP/')) -or -not $taskSource.Contains('class BridgeServer(')) { throw 'The bridge installation could not be verified.' }
+    $taskTokenPath = Join-Path (Split-Path -Parent $taskRunningServer) 'token.txt'
+    $taskToken = (Get-Content -LiteralPath $taskTokenPath -Raw -Encoding UTF8).Trim()
+    if (-not $taskToken) { throw 'The bridge token file is empty.' }
+    return $taskToken
+}
+
 function Open-Workspace {
     if ($NoOpen) { return }
     # The bridge coalesces double-clicks, including launches from another copy.
     try {
-        $taskBoot = Invoke-RestMethod -Uri "$taskBase/api/bootstrap" -Method Post -ContentType 'application/json' -Body '{}' -TimeoutSec 3
-        $taskClaimBody = @{ token = $taskBoot.bridgeToken; instance_id = $taskBoot.instance_id } | ConvertTo-Json -Compress
+        $taskStatus = Get-BridgeStatus
+        $taskToken = Get-BridgeToken $taskStatus
+        $taskClaimBody = @{ token = $taskToken; instance_id = $taskStatus.instance_id } | ConvertTo-Json -Compress
         $taskClaim = Invoke-RestMethod -Uri "$taskBase/api/ui/claim" -Method Post -ContentType 'application/json' -Body $taskClaimBody -TimeoutSec 3
         if ($taskClaim.ok -and -not $taskClaim.open_ui) { return }
     } catch { }
@@ -30,8 +55,8 @@ function Stop-HeliumBridge($taskStatus) {
     }
     if ($taskStatus -and $taskStatus.queue -gt 0) { throw 'A Studio task is still running. Wait for its result, then launch again.' }
     if ($taskStatus -and $taskStatus.capabilities -contains 'graceful_shutdown') {
-        $taskBoot = Invoke-RestMethod -Uri "$taskBase/api/bootstrap" -Method Post -ContentType 'application/json' -Body '{}' -TimeoutSec 3
-        $taskStopBody = @{ token = $taskBoot.bridgeToken; instance_id = $taskStatus.instance_id } | ConvertTo-Json -Compress
+        $taskToken = Get-BridgeToken $taskStatus
+        $taskStopBody = @{ token = $taskToken; instance_id = $taskStatus.instance_id } | ConvertTo-Json -Compress
         # A changed instance or a running tool rejects shutdown. Do not force it.
         Invoke-RestMethod -Uri "$taskBase/api/bridge/shutdown" -Method Post -ContentType 'application/json' -Body $taskStopBody -TimeoutSec 5 | Out-Null
     } else {

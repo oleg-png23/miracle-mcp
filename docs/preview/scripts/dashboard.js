@@ -89,7 +89,7 @@
     setText('queueNote',data.queue?'Waiting for Studio':'All clear. Ready for your next idea.');
     setText('stUptime',formatUptime(data.uptime_s));
     setText('stSafety',data.safe?'On':'Off');
-    setText('safetyNote',data.safe?'Server code checks enabled':'Server code checks disabled');
+    setText('safetyNote',data.safe?'Best-effort checks; not a sandbox':'Server code checks disabled');
     setText('stStudio', linked ? 'Connected' : 'Waiting');
     setText('studioNote', linked ? (nativeMcp ? `Available tools: ${Number(data.native_mcp?.tools_count) || 0}` : `Response ${Number(data.studio_seen_s) || 0} seconds ago`) : diagnosis.title);
     setText('studioVisualStatus', linked ? 'MCP connected' : 'Waiting for connection');
@@ -145,12 +145,14 @@
     try {
       const started = performance.now();
       const response = ({ok:true, json:() => client.request(currentHost, '/api/status')});
+      if (response.status === 401) throw Object.assign(new Error('The token expired. Copy the current token from release/python/token.txt (or python/token.txt in a source checkout) into Connection settings.'), {code:'TOKEN_REJECTED'});
       if (!response.ok) throw new Error('Bridge request failed');
       const data = await response.json();
       if (data.online !== true || !Number.isFinite(data.queue) || data.queue < 0 || !Number.isFinite(data.uptime_s)) throw new Error('Unexpected bridge response');
       if (id === requestId) { renderOnline(data, Math.max(1, Math.round(performance.now() - started))); return data; }
     } catch (error) {
-      const message = error.name === 'AbortError' ? 'The bridge timed out after 5 seconds. Check run.bat and the server address.'
+      const message = error.code === 'TOKEN_REJECTED' ? error.message
+        : error.name === 'AbortError' ? 'The bridge timed out after 5 seconds. Check run.bat and the server address.'
         : error instanceof TypeError ? 'The bridge is offline. Start run.bat, keep it open and check the connection.'
         : 'Invalid bridge response. Check the address and restart the server.';
       if (id === requestId) renderOffline(new Error(message));
@@ -247,6 +249,12 @@
     $('#setToken').type = show ? 'text' : 'password';
     $('#toggleToken').setAttribute('aria-pressed', String(show));
     $('#toggleToken').setAttribute('aria-label', show ? 'Hide token' : 'Show token');
+  });
+  $('#copyToken').addEventListener('click', async () => {
+    const token = $('#setToken').value.trim();
+    if (!token) { toast('No connection token is available. Start the local bridge first.', true); return; }
+    try { await client.copy(token); toast('Token copied. Paste it only into the extension Connection settings.'); }
+    catch (error) { toast(error.message || 'Could not copy the token.', true); }
   });
   $('#refreshStatus').addEventListener('click', checkConnection);
   $$('.wallpaper-option[data-wallpaper]').forEach(button => button.addEventListener('click', async () => { if(await applyWallpaper(button.dataset.wallpaper)) { window.MiracleAppearance.setMode('manual');persist({dashboardWallpaper:button.dataset.wallpaper,dashboardWallpaperMode:'manual'}); } }));

@@ -33,12 +33,17 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
       assert.deepEqual(graphics,['lime-gradient.svg','lime-soda.svg']);
       for(const name of graphics){const metadata=await sharp(path.join(root,'assets/bg',name)).metadata();assert.equal(metadata.format,'svg');assert.equal(metadata.width,2560);}
     });
-    await check('dashboard bootstraps automatically without Studio script or token entry', async () => {
+    await check('dashboard accepts the local token without a Studio script', async () => {
       const missing = []; page.on('response', r => { if (r.status() >= 400 && !r.url().includes('/api/')) missing.push(r.url()); });
       await page.goto(base + '/app');
       await page.waitForSelector('body[data-connection="online"]');
+      await openSection(page, 'connection');
+      await page.locator('#advancedSettings summary').click();
+      await page.locator('#setToken').fill('ui-test-token');
+      await page.locator('#saveSettings').click();
       await page.waitForFunction(() => !!JSON.parse(localStorage.getItem('miracles.settings') || '{}').bridgeToken);
-      assert(page.url().endsWith('/ui/dashboard.html'));
+      assert.equal(new URL(page.url()).pathname, '/ui/dashboard.html');
+      await openSection(page, 'overview');
       assert.equal(await page.locator('#guideCopyStudio').count(), 0);
       assert(!/LoadStringEnabled|ServerScriptService|Play Solo/.test(await page.locator('#setupGuide').innerText()));
       assert.deepEqual(missing, []);
@@ -229,6 +234,31 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
   try {
     const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
     await worker.evaluate(async host => { await chrome.storage.local.clear(); await chrome.storage.local.set({ host }); }, new URL(base).host);
+    await check('the extension pairs using the local workspace token', async () => {
+      const unpaired = await worker.evaluate(() => checkBridgeHealth());
+      assert.equal(unpaired.code, 'pairing_required');
+      const local = await context.newPage();
+      const extensionPage = await context.newPage();
+      try {
+        await local.goto(base + '/app');
+        await local.waitForSelector('body[data-connection="online"]');
+        await openSection(local, 'connection');
+        await local.locator('#advancedSettings summary').click();
+        await local.locator('#setToken').fill('ui-test-token');
+        await local.locator('#saveSettings').click();
+        await local.waitForFunction(() => Boolean(JSON.parse(localStorage.getItem('miracles.settings') || '{}').bridgeToken));
+        const token = await local.locator('#setToken').inputValue();
+        assert.equal(token, 'ui-test-token');
+        await extensionPage.goto(new URL('/dashboard.html#connection', worker.url()).href);
+        await extensionPage.waitForFunction(host => document.getElementById('setHost')?.value === host, new URL(base).host);
+        await extensionPage.locator('#advancedSettings summary').click();
+        await extensionPage.locator('#setToken').fill(token);
+        await extensionPage.locator('#saveSettings').click();
+        await extensionPage.waitForFunction(async () => (await chrome.storage.local.get('bridgeToken')).bridgeToken === 'ui-test-token');
+        await extensionPage.waitForFunction(() => document.body.dataset.studio === 'linked');
+        assert.equal(await worker.evaluate(async () => (await chrome.storage.local.get('bridgeToken')).bridgeToken), token);
+      } finally { await local.close(); await extensionPage.close(); }
+    });
     await context.route('https://**/*', route => route.fulfill({ status: 200, contentType: 'text/html', headers: {
       'Content-Security-Policy': "default-src 'none'; style-src 'none'; script-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'"
     }, body: '<!doctype html><title>Native agent chat fixture</title><h1>Chat fixture</h1><main id="messages"></main><form><textarea aria-label="Message" rows="4" cols="60"></textarea><button aria-label="Send message" type="submit" disabled>Send</button></form>' }));
@@ -285,7 +315,7 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
       while (Date.now() < deadline) { if ((await calls()).length >= n) return; await new Promise(resolve => setTimeout(resolve, 150)); }
       throw new Error('Expected ' + n + ' native calls; status=' + await page.locator('#helium-mcp-widget #status').innerText());
     }
-    await check('Start bootstraps token and completes a multi-tool chat loop', async () => {
+    await check('Start uses the paired token and completes a multi-tool chat loop', async () => {
       await seed([tool('inspect', 'get_scene_info'), tool('change', 'run_code', { code: 'return "agent test"' }), { text: 'Done' }], 'Inspect and edit my place');
       await start(); await waitCalls(2);
       await page.waitForFunction(() => window.sentMessages.length >= 3);
@@ -296,6 +326,22 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
       assert.equal((await calls()).length, 2);
       assert.equal(await worker.evaluate(async () => (await chrome.storage.local.get('bridgeToken')).bridgeToken), 'ui-test-token');
       await page.locator('#helium-mcp-widget #agent-stop').click();
+    });
+    await check('a new ChatGPT URL is bound to its sent session', async () => {
+      await seed([tool('new-chat', 'get_scene_info'), {text:'Done'}]);
+      await page.evaluate(() => document.querySelector('form').addEventListener('submit', () => history.pushState(null, '', '/c/created-chat'), {once:true}));
+      await start(); await waitCalls(1);
+      await page.waitForFunction(() => window.sentMessages.length >= 2);
+      assert.match((await page.evaluate(() => window.sentMessages))[1], /Native fixture result/);
+      await page.locator('#helium-mcp-widget #agent-stop').click();
+    });
+    await check('a result cannot follow navigation to a different chat', async () => {
+      await seed([tool('switch-chat', 'get_scene_info')]); await post('/__fixture/reset', {delay:1.5});
+      await start(); await waitCalls(1);
+      await page.evaluate(() => history.pushState(null, '', '/c/different-chat'));
+      await page.waitForTimeout(2200);
+      assert.equal(await page.evaluate(() => window.sentMessages.length), 1);
+      assert.equal(await page.locator('#helium-mcp-widget #last-result').isVisible(), true);
     });
     await check('old history, user JSON and repeated DOM updates cannot execute tools', async () => {
       await seed([{ text: 'Waiting for a task' }]); await start();
@@ -376,7 +422,7 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
       assert.equal(await page.evaluate(() => window.sentMessages.length), 1);
     });
     await check('usage tracks successful sessions by site without provider quota claims', async () => {
-      const usage = await fetch(base + '/api/status').then(r => r.json()).then(data => data.usage);
+      const usage = (await post('/api/status', {token:'ui-test-token'})).usage;
       assert(usage.estimated);
       assert.equal(usage.tokens_total, usage.tokens_in + usage.tokens_out);
       assert(usage.tokens_in > 0 && usage.tokens_out > 0);
