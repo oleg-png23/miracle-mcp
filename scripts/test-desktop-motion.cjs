@@ -13,7 +13,7 @@ function desktopHarness({desktop=true,reduced=false,paused=false,dashboard=false
       matches(selector){
         if(selector==='.glass,.welcome-connect')return this.optical;
         if(selector.includes('[data-no-motion]'))return this.excluded;
-        if(selector.includes('#stUptime'))return this.kind==='value';
+        if(selector.includes('#stUptime'))return this.kind==='value'||(selector.includes('#agentState')&&this.kind==='agent');
         if(selector==='.switch')return this.kind==='switch';
         if(selector.includes('.segmented-control'))return this.kind==='selection';
         return false;
@@ -31,11 +31,11 @@ function desktopHarness({desktop=true,reduced=false,paused=false,dashboard=false
     return el;
   }
   const content=node(),offscreen=node({top:1200}),glass=node({optical:true}),ancestor=node({hasOptical:true});
-  const value=node({kind:'value',textContent:'12'}),ambient=node(),photo=node();
+  const value=node({kind:'value',textContent:'12'}),agent=node({id:'agentState',kind:'agent',textContent:'No chat session detected'}),ambient=node(),photo=node();
   const body=node();
   const document={documentElement:root,body,hidden:false,activeElement:null,
     querySelector:()=>dashboard?{}:null,
-    querySelectorAll:selector=>selector==='#bgPhoto,#heroWallpaper'?[photo]:selector.includes('#stUptime')?[value]:selector==='.live-dot,.demo-line,.scroll-cue'?[ambient]:[content,offscreen,glass,ancestor],
+    querySelectorAll:selector=>selector==='#bgPhoto,#heroWallpaper'?[photo]:selector.includes('#stUptime')?[value,...(selector.includes('#agentState')?[agent]:[])]:selector==='.live-dot,.demo-line,.scroll-cue'?[ambient]:[content,offscreen,glass,ancestor],
     createElement:()=>node(),addEventListener:(name,fn)=>{events[name]=fn;}};
   const desktopMedia={matches:desktop,addEventListener:(_name,fn)=>{events.desktop=fn;}};
   const reducedMedia={matches:reduced,addEventListener:(_name,fn)=>{events.reduced=fn;}};
@@ -45,7 +45,7 @@ function desktopHarness({desktop=true,reduced=false,paused=false,dashboard=false
     IntersectionObserver:class{constructor(callback){this.callback=callback;this.observed=new Set();intersections.push(this);}observe(el){this.observed.add(el);}unobserve(el){this.observed.delete(el);}disconnect(){this.observed.clear();}}};
   vm.runInNewContext(fs.readFileSync('scripts/desktop-motion.js','utf8'),context);
   const pointer=(el,options={})=>events.pointerdown({target:el,button:0,pointerType:'mouse',...options});
-  return {events,observers,intersections,animations,node,document,root,value,photo,content,offscreen,glass,ancestor,ambient,pointer,desktopMedia,reducedMedia};
+  return {events,observers,intersections,animations,node,document,root,value,agent,photo,content,offscreen,glass,ancestor,ambient,pointer,desktopMedia,reducedMedia};
 }
 
 test('desktop page reveals leave optical surfaces and their ancestors stationary',()=>{
@@ -85,6 +85,33 @@ test('selection and value feedback ignores unchanged polling updates and hidden 
   h.observers[0].callback([{type:'childList',target:h.value}]);assert.equal(h.animations.length,count);
   h.value.textContent='123';h.observers[0].callback([{type:'childList',target:h.value}]);assert.equal(h.animations.length,count+1);assert.equal(h.value.textContent,'123');
   h.animations.at(-1).onfinish();h.observers[0].callback([{type:'childList',target:h.value}]);assert.equal(h.animations.length,count+1);
+});
+
+test('agent state changes get feedback once while visible and settle for motion preferences',()=>{
+  const h=desktopHarness({dashboard:true});
+  const update=text=>{h.agent.textContent=text;h.observers[0].callback([{type:'childList',target:h.agent}]);};
+  update('Chat reader active');assert.equal(h.animations.length,1);assert.equal(h.animations[0].el,h.agent);
+  update('Chat reader active');assert.equal(h.animations.length,1);h.animations[0].onfinish();
+  h.agent.top=1200;update('Running a Studio tool');assert.equal(h.animations.length,1,'Offscreen polling stays still');
+  h.agent.top=100;h.agent.visible=false;update('Sending the result to chat');assert.equal(h.animations.length,1);
+  h.agent.visible=true;update('Chat session paused');assert.equal(h.animations.length,2);
+  h.events['miracle:motion']({detail:{paused:true}});assert(h.animations.every(animation=>animation.canceled));
+  update('Chat session stopped');assert.equal(h.animations.length,2);
+  h.events['miracle:motion']({detail:{paused:false}});update('Starting the chat session');assert.equal(h.animations.length,3);
+  h.document.hidden=true;h.events.visibilitychange();assert(h.animations.every(animation=>animation.canceled));
+  update('Waiting for complete tool JSON');assert.equal(h.animations.length,3);
+  h.document.hidden=false;h.events.visibilitychange();h.reducedMedia.matches=true;h.events.reduced();
+  update('Chat reader active');assert.equal(h.animations.length,3);
+  assert(h.animations.every(animation=>animation.el!==h.glass&&animation.el!==h.ancestor));
+});
+
+test('an early agent update does not double its parent reveal or replay after it settles',()=>{
+  const h=desktopHarness({dashboard:true});h.agent.parentElement=h.content;
+  const entrance=h.content.animate([{opacity:0},{opacity:1}],{duration:360});
+  const update=text=>{h.agent.textContent=text;h.observers[0].callback([{type:'childList',target:h.agent}]);};
+  update('Starting the chat session');assert.equal(h.animations.length,1);
+  entrance.cancel();update('Starting the chat session');assert.equal(h.animations.length,1);
+  update('Chat reader active');assert.equal(h.animations.length,2);assert.equal(h.animations.at(-1).el,h.agent);
 });
 
 test('pause, hidden tabs, reduced motion and desktop changes cancel feedback without leaving extra layers',()=>{

@@ -7,6 +7,7 @@ const os = require('node:os');
 const { chromium } = require('playwright');
 const sharp = require('sharp');
 const {openSection,selectMaterial}=require('./ui-navigation.cjs');
+const homeMotionQA=require('./home-motion-qa.cjs');
 const base = (process.env.HELIUM_UI_URL || process.env.MIRACLES_UI_URL) || 'http://127.0.0.1:19737';
 const root = path.resolve(__dirname, '..');
 const out = path.join(root, '.mcp_cache/qa');
@@ -209,6 +210,9 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
       assert(await page.locator('#setupGuide').isVisible());
       await openSection(page, 'overview');
       assert.deepEqual(errors, []);
+    });
+    await check('Home actions and live agent feedback animate while glass and motion preferences stay stable', async () => {
+      await homeMotionQA(browser, await page.context().storageState(), base, out);
     });
     await check('welcome has a separate responsive layout and real bridge status', async () => {
       await page.setViewportSize({ width: 1440, height: 1000 });
