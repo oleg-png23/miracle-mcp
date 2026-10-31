@@ -105,10 +105,13 @@ module.exports = async function homeMotionQA(browser, storageState, base, out) {
     await page.locator('[data-motion-toggle]').click();
     await page.locator('#chatAgent').evaluate(el => el.scrollIntoView({block: 'center', behavior: 'instant'}));
     await state('starting'); await stateMoving();
-    await page.emulateMedia({reducedMotion: 'reduce'}); await settled();
+    await page.emulateMedia({reducedMotion: 'reduce'});
+    await page.waitForFunction(() => document.documentElement.dataset.motion === 'paused' && document.documentElement.dataset.desktopMotion === 'off');
+    await settled();
     const reduced = await count(); await state('waiting_json');
     assert.equal(await count(), reduced, 'Reduced motion cancels and suppresses feedback');
     await page.emulateMedia({reducedMotion: 'no-preference'});
+    await page.waitForFunction(() => document.documentElement.dataset.motion === 'running' && document.documentElement.dataset.desktopMotion === 'on');
 
     await state('watching'); await stateMoving();
     await page.evaluate(() => {
