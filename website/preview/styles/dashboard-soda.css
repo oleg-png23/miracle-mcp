@@ -60,10 +60,11 @@ body.dashboard-page .section-view-heading p { color: #465e56; }
 body.dashboard-page .page-heading p { max-width: none; font-size: 13px; }
 body.dashboard-page [data-type-effect="reveal"] [data-type-line]::after { display: none; }
 body.dashboard-page .motion-toggle {
+  min-height: 36px;
   border-color: #264d3e30;
   background: #ffffff60;
   color: #3e5b50;
-  font-size: 9px;
+  font-size: 11px;
   opacity: 1;
 }
 body.dashboard-page .motion-toggle::before {
@@ -74,7 +75,7 @@ body.dashboard-page .motion-toggle::before {
   background: #168365;
 }
 body.dashboard-page .motion-toggle[aria-pressed="true"]::before { background: #6d7973; }
-body.dashboard-page .refresh-button { color: var(--ink); --glass-wash-top: .85; }
+body.dashboard-page .refresh-button { width: 40px; height: 40px; color: var(--ink); --glass-wash-top: .85; }
 body.dashboard-page .glass {
   border-color: #ffffffdb;
   box-shadow: 0 16px 40px -28px #163f3952, 0 3px 10px -6px #163f3926,
@@ -98,7 +99,7 @@ body.dashboard-page .hero-top, body.dashboard-page .hero-content, body.dashboard
   position: relative;
   z-index: 1;
 }
-body.dashboard-page .section-kicker { color: #476357; font-size: 9px; letter-spacing: .15em; }
+body.dashboard-page .section-kicker { color: #476357; font-size: 11px; line-height: 1.5; letter-spacing: .1em; }
 body.dashboard-page .hero-content {
   min-height: 282px;
   grid-template-columns: 1fr 1fr;
@@ -129,7 +130,7 @@ body.dashboard-page .button-primary {
 }
 body.dashboard-page .button-primary:hover { background: #245441; }
 body.dashboard-page .hero-copy .button-primary {
-  min-height: 43px;
+  min-height: 44px;
   color: #20391d;
   background: var(--soda-lime);
   border-color: #d7ff82;
@@ -142,7 +143,7 @@ body.dashboard-page :is(button, a, input, textarea, summary):focus-visible {
   outline-offset: 4px;
 }
 body.dashboard-page ::selection { background: #c6ff3d; color: #142b2c; }
-body.dashboard-page .status-pill { padding: 7px 11px; font-size: 10px; }
+body.dashboard-page .status-pill { min-height: 36px; padding: 8px 12px; font-size: 11px; }
 body.dashboard-page[data-connection="online"] .status-pill {
   color: #23543e;
   background: #f0ffe3d9;
@@ -212,11 +213,11 @@ body.dashboard-page[data-studio="linked"] .connection-flow {
 body.dashboard-page .metrics { gap: 14px; margin-block: 20px; }
 body.dashboard-page .metric { --radius: 24px; padding: 20px; }
 body.dashboard-page .metric::before { background-image: linear-gradient(145deg, #fbfff6e0, #f5fff2c2); }
-body.dashboard-page .metric-top { color: #496255; font-size: 11px; }
+body.dashboard-page .metric-top { color: #496255; font-size: 12px; line-height: 1.5; }
 body.dashboard-page .metric-top .icon { color: #267554; opacity: 1; }
 body.dashboard-page .metric > strong { font-size: 33px; font-weight: 500; margin-block: 13px 9px; letter-spacing: -.05em; }
 body.dashboard-page .metric > strong.metric-word { font-size: 23px; }
-body.dashboard-page .metric-description { color: #536b5c; font-size: 10px; min-height: 30px; }
+body.dashboard-page .metric-description { color: #536b5c; font-size: 12px; min-height: 36px; }
 body.dashboard-page .workspace-shortcuts { gap: 14px; margin-top: 25px; }
 body.dashboard-page .workspace-shortcuts a {
   position: relative;
@@ -239,7 +240,7 @@ body.dashboard-page .workspace-shortcuts a > .icon {
 body.dashboard-page .workspace-shortcuts a:nth-child(2) > .icon { background: #d6f8e8; color: #286347; }
 body.dashboard-page .workspace-shortcuts a:nth-child(3) > .icon { background: #e8f9be; color: #4c652d; }
 body.dashboard-page .workspace-shortcuts strong { font-size: 13px; letter-spacing: -.025em; font-weight: 600; }
-body.dashboard-page .workspace-shortcuts a > span { color: #4b6858; font-size: 10px; }
+body.dashboard-page .workspace-shortcuts a > span { color: #4b6858; font-size: 12px; line-height: 1.6; }
 body.dashboard-page .panel { --glass-wash-top: .87; --glass-wash-bottom: .76; }
 body.dashboard-page .panel-heading h2 { font-size: 16px; letter-spacing: -.03em; }
 body.dashboard-page .section-view-heading h1 { font-weight: 600; letter-spacing: -.045em; }
@@ -273,21 +274,25 @@ body.dashboard-page .desktop-foot { padding-top: 28px; opacity: .7; }
   body.dashboard-page .metric > strong.metric-word { font-size: 20px; }
   body.dashboard-page .workspace-shortcuts a { padding: 19px 16px; }
 }
+@media (max-width: 900px) {
+  body.dashboard-page .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 650px) {
   body.dashboard-page .desktop-bar { height: 78px; }
   body.dashboard-page .desktop-caption { display: none; }
   body.dashboard-page .page-heading { padding-bottom: 24px; gap: 4px; }
   body.dashboard-page .page-heading h1 { font-size: clamp(26px, 7.6vw, 36px); letter-spacing: -.055em; }
   body.dashboard-page .page-heading p { font-size: 12px; max-width: 270px; }
-  body.dashboard-page .breadcrumb { font-size: 9px; letter-spacing: .025em; }
-  body.dashboard-page .refresh-button { width: 32px; height: 32px; }
+  body.dashboard-page .breadcrumb { font-size: 11px; letter-spacing: .025em; flex-wrap: wrap; gap: 4px 8px; }
+  body.dashboard-page .refresh-button { width: 44px; height: 44px; }
+  body.dashboard-page .motion-toggle { min-height: 44px; }
   body.dashboard-page .hero-card { --radius: 30px; padding: 20px 22px 0; }
   body.dashboard-page .hero-content { grid-template-columns: 1fr; min-height: 0; padding-block: 27px 25px; }
   body.dashboard-page .hero-copy h2 { font-size: 39px; }
   body.dashboard-page .hero-copy h2 br { display: initial; }
   body.dashboard-page .hero-copy p { max-width: 270px; margin-bottom: 20px; min-height: 0; }
-  body.dashboard-page .section-kicker { max-width: 135px; font-size: 8px; line-height: 1.6; letter-spacing: .09em; }
-  body.dashboard-page .status-pill { font-size: 9px; padding: 6px 9px; }
+  body.dashboard-page .section-kicker { font-size: 11px; letter-spacing: .06em; }
+  body.dashboard-page .status-pill { min-height: 44px; padding: 10px 12px; }
   body.dashboard-page .soda-light { width: 110%; height: 110%; right: -48%; top: -5%; opacity: .58; }
   body.dashboard-page .soda-ribs { left: 30%; }
   body.dashboard-page .hero-footer { font-size: 9px; flex-wrap: wrap; gap: 8px; }
@@ -295,12 +300,11 @@ body.dashboard-page .desktop-foot { padding-top: 28px; opacity: .7; }
   body.dashboard-page .metrics { gap: 10px; margin-block: 14px; }
   body.dashboard-page .metric { --radius: 23px; padding: 17px; }
   body.dashboard-page .metric > strong { font-size: 29px; margin-block: 9px 6px; }
-  body.dashboard-page .metric-description { min-height: 30px; }
+  body.dashboard-page .metric-description { min-height: 36px; }
   body.dashboard-page .workspace-shortcuts { gap: 10px; margin-top: 20px; }
   body.dashboard-page .workspace-shortcuts a { grid-template-columns: 40px minmax(0, 1fr); border-radius: 23px; padding: 17px 20px; gap: 4px 15px; }
   body.dashboard-page .workspace-shortcuts a > .icon { grid-row: 1 / 3; padding: 10px; }
   body.dashboard-page .workspace-shortcuts strong { font-size: 12px; }
-  body.dashboard-page .workspace-shortcuts a > span { font-size: 10px; }
   body.dashboard-page .section-swipe-hint { background: #f8fff1b8; color: #4b6656; }
 }
 @media (prefers-reduced-transparency: reduce) {
@@ -327,8 +331,8 @@ body.dashboard-page .desktop-foot { padding-top: 28px; opacity: .7; }
 body.dashboard-page .agent-status { --radius: 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 24px; margin-top: 16px; --glass-wash-top: .88; --glass-wash-bottom: .76; }
 body.dashboard-page .agent-status > div { min-width: 0; }
 body.dashboard-page .agent-status strong { display: block; font-size: 13px; margin: 7px 0; letter-spacing: -.02em; }
-body.dashboard-page .agent-status p { color: #496353; font-size: 11px; line-height: 1.7; max-width: 650px; margin: 0; }
+body.dashboard-page .agent-status p { color: #496353; font-size: 12px; line-height: 1.7; max-width: 650px; margin: 0; }
 body.dashboard-page .agent-status .button { flex: none; background: #f7ffe9; border-color: #cde0ba; color: #34533b; }
 body.dashboard-page .agent-status[data-state="active"] .section-kicker { color: #1c7856; }
-@media (max-width: 650px) { body.dashboard-page .agent-status { display: block; padding: 19px 21px; } body.dashboard-page .agent-status .button { margin-top: 13px; min-height: 40px; } }
+@media (max-width: 650px) { body.dashboard-page .agent-status { display: block; padding: 19px 21px; } body.dashboard-page .agent-status .button { margin-top: 13px; min-height: 44px; } }
 @media (forced-colors: active) { body.dashboard-page .agent-status p, body.dashboard-page .agent-status .button { background: Canvas; color: CanvasText; border-color: CanvasText; } }
