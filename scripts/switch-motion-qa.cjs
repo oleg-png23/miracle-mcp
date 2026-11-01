@@ -71,16 +71,16 @@ module.exports = async function switchMotionQA(browser, storageState, base, out)
       assert.equal(await safety.getAttribute('aria-checked'), 'false');
       await activate('#safeMode'); await settle();
 
-      if (await page.locator('[data-wallpaper="lime"]').getAttribute('aria-pressed') !== 'true') {
-        await activate('[data-wallpaper="lime"]'); await page.waitForSelector('body[data-wallpaper="lime"]'); await settle();
+      if (await page.locator('.wallpaper-option[data-wallpaper="lime"]').getAttribute('aria-pressed') !== 'true') {
+        await activate('.wallpaper-option[data-wallpaper="lime"]'); await page.waitForSelector('body[data-wallpaper="lime"]'); await settle();
       }
-      const unselected = await page.locator('[data-wallpaper="gradient"] > .icon').evaluate(el => {
+      const unselected = await page.locator('.wallpaper-option[data-wallpaper="gradient"] > .icon').evaluate(el => {
         const style = getComputedStyle(el); return {opacity: Number(style.opacity), scale: new DOMMatrix(style.transform).a};
       });
       assert.equal(unselected.opacity, 0); assert(Math.abs(unselected.scale - .6) < .01);
-      await activate('[data-wallpaper="gradient"]');
+      await activate('.wallpaper-option[data-wallpaper="gradient"]');
       await page.waitForFunction(() => {
-        const style = getComputedStyle(document.querySelector('[data-wallpaper="gradient"] > .icon'));
+        const style = getComputedStyle(document.querySelector('.wallpaper-option[data-wallpaper="gradient"] > .icon'));
         return Number(style.opacity) > 0 && Number(style.opacity) < 1;
       }, null, {timeout: 3000});
       await settle();
