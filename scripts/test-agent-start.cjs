@@ -18,12 +18,13 @@ function chat({rich=false,hold='',paste=true,toolCount=1}={}) {
     getElementById(id){return elements.get(id);}
     querySelector(q){return q==='small'?small:q==='.glyph'?glyph:q==='.actions'?actions:null;}
     querySelectorAll(q){return q==='pre code, code'?(this.codes||[]):[];}
-    addEventListener(){} contains(el){return el===this;}
+    addEventListener(type,fn){this.listeners??={};(this.listeners[type]??=[]).push(fn);} contains(el){return el===this;}
     closest(q){if(q==='form'&&this===composer)return form;if(q==='[data-is-streaming="true"]'&&this.attrs['data-is-streaming']==='true')return this;return null;}
     getRootNode(){return document;}
     getBoundingClientRect(){return {width:600,height:80,top:200};}
     matches(q){return this===composer&&(rich?q.includes('contenteditable'):q.includes('textarea'));}
-    focus(){}
+    focus(){this.focused=true;}
+    animate(){assert.fail('Repeated widget access must not animate');}
     dispatchEvent(event){
       if(event.type==='input') inputs++;
       if(event.type==='paste') {pastes++;if(paste){event.preventDefault();this.innerText=event.clipboardData.getData('text/plain');}}
@@ -247,4 +248,16 @@ test('switching chats while setup is pending cannot send instructions into the n
   c.location.href='https://chatgpt.com/c/other';c.pending.MCP_TOOLS();await c.advance(1200);await start;
   assert.equal(c.sent.length,0);assert.equal(c.composer.value,'Existing draft');
   assert.match(c.elements.get('status').textContent,/conversation changed/);
+});
+
+
+test('widget access, close and Escape update visibility and focus synchronously',()=>{
+  const c=chat(),toggle=c.elements.get('toggle'),panel=c.elements.get('panel');
+  const shadow=c.elements.get('helium-mcp-widget').shadowRoot;
+  assert(panel.hidden);
+  toggle.onclick();assert(!panel.hidden);assert.equal(toggle.getAttribute('aria-expanded'),'true');
+  assert(c.elements.get('agent-start').focused);
+  shadow.listeners.keydown[0]({key:'Escape'});
+  assert(panel.hidden);assert.equal(toggle.getAttribute('aria-expanded'),'false');assert(toggle.focused);
+  for(let i=0;i<5;i++){toggle.onclick();c.elements.get('close').onclick();assert(panel.hidden);}
 });
