@@ -9,8 +9,8 @@
   html[data-desktop-motion="on"] :is(.button,.nav-download,.welcome-enter,.text-link,.welcome-help,.welcome-top-link,.welcome-card-link,.setup-source,.inline-link):hover :is(svg,span[aria-hidden="true"]) { translate: 2px 0; }
   html[data-desktop-motion="on"] :is(.nav-links a,.footer a,.welcome-footer a,.text-button) { background-image: linear-gradient(currentColor,currentColor); background-size: 0 1px; background-position: 0 100%; background-repeat: no-repeat; transition: background-size .22s,color .2s; }
   html[data-desktop-motion="on"] :is(.nav-links a,.footer a,.welcome-footer a,.text-button):hover { background-size: 100% 1px; }
-  html[data-desktop-motion="on"] :is(.metric,.panel,.hero-card) { transition: box-shadow .25s,border-color .25s; }
-  html[data-desktop-motion="on"] :is(.metric,.panel,.hero-card):hover { border-color: #fffffff0; }
+  html[data-desktop-motion="on"] :is(.metric,.panel,.hero-card,.agent-status) { transition: box-shadow .25s,border-color .25s; }
+  html[data-desktop-motion="on"] :is(.metric,.panel,.hero-card,.agent-status):hover { border-color: #fffffff0; }
   html[data-desktop-motion="on"] :is(.tool-card,.log-entry,.usage-table-wrap tr) { transition: background .2s; }
   html[data-desktop-motion="on"] :is(.tool-card,.log-entry,.usage-table-wrap tbody tr):hover { background: #ffffff30; }
   html[data-desktop-motion="on"] :is(.input-wrap,.section-search,.code-editor) { transition: box-shadow .22s,border-color .22s; }

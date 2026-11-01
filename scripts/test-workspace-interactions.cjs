@@ -91,7 +91,7 @@ function motion({paused=false,reduced=false,desktop=false}={}){
       animate(keyframes,options){const animation={el:this,keyframes,options,canceled:false,cancel(){this.canceled=true;}};animations.push(animation);return animation;},...options};
     return el;
   }
-  const screens=keys.map((key,index)=>{const el={dataset:{workspaceScreen:key},hidden:index!==0,nodes:[]};el.nodes=[node({screen:el}),node({screen:el})];el.querySelectorAll=()=>el.nodes;return el;});
+  const screens=keys.map((key,index)=>{const el={dataset:{workspaceScreen:key},hidden:index!==0,nodes:[]};el.nodes=[node({screen:el}),node({screen:el})];el.querySelectorAll=selector=>el.nodes.filter(item=>!item.group||selector.split(',').some(part=>part.trim()===item.group));return el;});
   const heading={hidden:true,children:[node(),node()]},menu={open:false,children:[node(),node()]};
   const document={hidden:false,activeElement:null,body:{dataset:{workspaceSection:'overview'}},querySelectorAll:()=>screens,
     getElementById:id=>id==='sectionHeading'?heading:menu,addEventListener:(k,fn)=>{events[k]=fn;}};
@@ -128,6 +128,30 @@ test('new cards reveal once; ordinary status refreshes do not replay entrances',
   h.observers[0].callback([{type:'childList',addedNodes:[{nodeType:1}]}]);h.flush();
   assert.equal(h.animations.length,before+1);assert.equal(h.animations.at(-1).el,card);
   h.observers[0].callback([{type:'attributes',addedNodes:[]}]);h.flush();assert.equal(h.animations.length,before+1);
+});
+
+test('Home connection actions and agent contents reveal on desktop and mobile without moving their glass',()=>{
+  for(const desktop of [false,true]){
+    const h=motion({desktop}),home=h.screens[0];
+    const actions=Array.from({length:3},()=>h.node({screen:home,group:'.connection-actions > *'}));
+    const contents=[h.node({screen:home,group:'.agent-status > *'}),h.node({screen:home,group:'.agent-status > *'})];
+    const glass=h.node({screen:home,group:'.agent-status > *',glass:true});
+    const ancestor=h.node({screen:home,group:'.agent-status > *',hasGlass:true});
+    home.nodes.push(...actions,...contents,glass,ancestor);
+    const before=h.animations.length;
+    h.observers[0].callback([{type:'childList',addedNodes:[{nodeType:1}]}]);h.flush();
+    assert.deepEqual(h.animations.slice(before).map(animation=>animation.el),[...actions,...contents]);
+    h.observers[0].callback([{type:'childList',addedNodes:[{nodeType:3}]}]);h.flush();
+    assert.equal(h.animations.length,before+5,'Polling text must not replay entrances');
+    const late=h.node({screen:home,group:'.connection-actions > *',top:1000,bottom:1040});home.nodes.push(late);
+    h.observers[0].callback([{type:'childList',addedNodes:[{nodeType:1}]}]);h.flush();
+    assert(h.intersections[0].observed.has(late));
+    h.intersections[0].callback([{target:late,isIntersecting:true}]);
+    assert.equal(h.animations.at(-1).el,late);
+    h.events['miracle:motion']({detail:{paused:true}});
+    assert(h.animations.every(animation=>animation.canceled));
+    assert(h.animations.every(animation=>animation.el!==glass&&animation.el!==ancestor));
+  }
 });
 
 test('offscreen content reveals on entry and motion preferences settle all active effects',()=>{

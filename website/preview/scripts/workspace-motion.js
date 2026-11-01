@@ -7,8 +7,8 @@
   const desktop=matchMedia('(min-width:651px) and (hover:hover) and (pointer:fine)');
   const heading=document.getElementById('sectionHeading');
   const menu=document.getElementById('sectionMenu');
-  const selector='.page-heading > *, .hero-card > *, .metric > *, .panel > :not(.chat-services):not(.tool-catalog), .workspace-shortcuts > a, .chat-services > a, .tool-catalog > details';
-  const desktopSelector='.page-heading > :not(div), .page-heading > div > *, .hero-card > *, .metric > *, .panel > :not(.chat-services):not(.tool-catalog):not(form):not(.usage-metrics):not(.usage-directions):not(.usage-table-wrap):not(.log-entries):not(.setup-steps), .panel form > *, .workspace-shortcuts > a, .chat-services > a, .tool-catalog > details, .usage-metrics > *, .usage-directions > *, .usage-table-wrap tbody > tr, .log-entries > .log-entry, .setup-guide .setup-steps > li';
+  const selector='.page-heading > *, .hero-card > *, .metric > *, .connection-actions > *, .agent-status > *, .panel > :not(.chat-services):not(.tool-catalog), .workspace-shortcuts > a, .chat-services > a, .tool-catalog > details';
+  const desktopSelector='.page-heading > :not(div), .page-heading > div > *, .hero-card > *, .metric > *, .connection-actions > *, .agent-status > *, .panel > :not(.chat-services):not(.tool-catalog):not(form):not(.usage-metrics):not(.usage-directions):not(.usage-table-wrap):not(.log-entries):not(.setup-steps), .panel form > *, .workspace-shortcuts > a, .chat-services > a, .tool-catalog > details, .usage-metrics > *, .usage-directions > *, .usage-table-wrap tbody > tr, .log-entries > .log-entry, .setup-guide .setup-steps > li';
   const active=new Map(),waiting=new Map();
   let screen=null,seen=new WeakSet(),direction=0,frame=0,paused=false;
   try{paused=(localStorage.getItem('miracle.motionPaused')??localStorage.getItem('miracle.welcome.motionPaused'))==='true';}catch{/* optional */}

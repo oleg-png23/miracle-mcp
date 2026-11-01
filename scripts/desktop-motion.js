@@ -6,7 +6,7 @@
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const controls='button, a, summary';
   const excluded='.nav-link,.rail-brand,.brand,.desktop-brand,.welcome-wordmark,.skip,.skip-link,[data-no-motion]';
-  const values='.metric > strong:not(#stUptime),.usage-metrics strong,.usage-directions b';
+  const values='.metric > strong:not(#stUptime),.usage-metrics strong,.usage-directions b,#agentState';
   const effects=new Set(),channels=new WeakMap(),seen=new WeakSet(),previous=new WeakMap();
   const ambient=[...document.querySelectorAll('.live-dot,.demo-line,.scroll-cue')];
   let paused=root.dataset.motion==='paused';
@@ -52,6 +52,9 @@
     }else if(el.matches?.(values)){
       const text=el.textContent,old=previous.get(el);previous.set(el,text);
       if(old===text||old===undefined||!el.getClientRects().length||el.getAnimations?.().some(a=>a.playState==='running'))return;
+      if(el.id==='agentState'&&el.parentElement?.getAnimations?.().some(a=>a.playState==='running'))return;
+      const rect=el.getBoundingClientRect();
+      if(rect.bottom<=0||rect.top>=window.innerHeight)return;
       animate(el,[{opacity:.55,translate:'0px 5px'},{opacity:1,translate:'0px 0px'}],{duration:300},'value');
     }
   }
