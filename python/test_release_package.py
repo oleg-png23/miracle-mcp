@@ -1,4 +1,7 @@
 import importlib.util
+import contextlib
+import hashlib
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -9,6 +12,7 @@ import unittest
 import urllib.error
 import urllib.request
 import zipfile
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'python'))
@@ -44,6 +48,10 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertEqual({Path(name).parts[0] for name in names}, {'plugin', 'release'})
             manifest = json.loads(bundle.read('plugin/manifest.json'))
             self.assertEqual(manifest['version'], bridge.VERSION)
+            self.assertEqual(manifest['name'], 'Argon — Local Bridge for Roblox Studio')
+            self.assertEqual(manifest['short_name'], 'Argon')
+            self.assertIn('Argon', bundle.read('plugin/welcome.html').decode('utf-8'))
+            self.assertIn('"argon_tool"', bundle.read('plugin/scripts/chat-prompt.js').decode('utf-8'))
             resources = [manifest['background']['service_worker'], *manifest['icons'].values()]
             for script in manifest['content_scripts']:
                 resources.extend(script['js'])
@@ -66,6 +74,22 @@ class ReleasePackageTests(unittest.TestCase):
                                 cwd=self.extracted / 'release', capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('--port', result.stdout)
+        self.assertIn('Argon MCP', result.stdout)
+
+    def test_argon_builds_and_legacy_publication_aliases_have_separate_valid_checksums(self):
+        with patch.object(pack, 'OUT', self.folder), contextlib.redirect_stdout(io.StringIO()):
+            pack.build()
+        for name in ['mcp', 'website', 'wallpapers']:
+            canonical = self.folder / f'argon-{name}-{bridge.VERSION}.zip'
+            legacy = self.folder / f'helium-{name}-{bridge.VERSION}.zip'
+            self.assertEqual(canonical.read_bytes(), legacy.read_bytes())
+        for filename, prefix in [('argon-SHA256SUMS.txt', 'argon'), ('SHA256SUMS.txt', 'helium')]:
+            lines = (self.folder / filename).read_text().splitlines()
+            expected = {f'{prefix}-{name}-{bridge.VERSION}.zip' for name in ['mcp', 'website', 'wallpapers']}
+            self.assertEqual({line.split()[1] for line in lines}, expected)
+            for line in lines:
+                digest, name = line.split()
+                self.assertEqual(hashlib.sha256((self.folder / name).read_bytes()).hexdigest(), digest)
 
     def test_packaged_http_ui_and_path_boundary(self):
         class Handler(bridge.H):

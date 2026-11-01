@@ -87,6 +87,27 @@ test('selection and value feedback ignores unchanged polling updates and hidden 
   h.animations.at(-1).onfinish();h.observers[0].callback([{type:'childList',target:h.value}]);assert.equal(h.animations.length,count+1);
 });
 
+test('touch selection controls get feedback without enabling motion on unrelated mobile buttons',()=>{
+  const h=desktopHarness({desktop:false,dashboard:true});
+  const selected=h.node({kind:'selection',attrs:{'aria-pressed':'true'}});
+  const record={type:'attributes',target:selected,attributeName:'aria-pressed',oldValue:'false'};
+  h.observers[0].callback([record]);assert.equal(h.animations.length,1);
+  h.pointer(selected,{pointerType:'touch'});assert.equal(h.animations.length,2);
+  h.pointer(h.node(),{pointerType:'touch'});assert.equal(h.animations.length,2);
+  const thumb=h.node(),toggle=h.node({kind:'switch',inner:thumb,attrs:{'aria-checked':'true'}});
+  h.observers[0].callback([{type:'attributes',target:toggle,attributeName:'aria-checked',oldValue:'false'}]);
+  assert.equal(h.animations.at(-1).el,thumb);
+  const count=h.animations.length;selected.top=1200;
+  h.observers[0].callback([record]);assert.equal(h.animations.length,count);
+  selected.top=100;h.events['miracle:motion']({detail:{paused:true}});assert(h.animations.every(a=>a.canceled));
+  h.observers[0].callback([record]);assert.equal(h.animations.length,count);
+  h.events['miracle:motion']({detail:{paused:false}});h.observers[0].callback([record]);assert.equal(h.animations.length,count+1);
+  h.document.hidden=true;h.events.visibilitychange();assert(h.animations.every(a=>a.canceled));
+  h.observers[0].callback([record]);assert.equal(h.animations.length,count+1);
+  h.document.hidden=false;h.events.visibilitychange();h.reducedMedia.matches=true;h.events.reduced();
+  h.observers[0].callback([record]);assert.equal(h.animations.length,count+1);
+});
+
 test('agent state changes get feedback once while visible and settle for motion preferences',()=>{
   const h=desktopHarness({dashboard:true});
   const update=text=>{h.agent.textContent=text;h.observers[0].callback([{type:'childList',target:h.agent}]);};

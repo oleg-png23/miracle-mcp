@@ -32,7 +32,7 @@ function chat({rich=false,hold='',paste=true,toolCount=1}={}) {
   }
   Object.defineProperty(Element.prototype,'value',{get(){return this._value||'';},set(v){this._value=v;},configurable:true});
   const small=new Element(),glyph=new Element(),actions=new Element(),composer=new Element(rich?'div':'textarea'),form=new Element('form'),send=new Element('button');
-  send.setAttribute('aria-label','Send message');send.click=()=>{const value=rich?composer.innerText:composer.value;if(blockResultSend&&value.startsWith('Helium tool result:'))return;sent.push(value);const turn=new Element();turn.innerText=value;users.push(turn);composer.value='';composer.innerText='';};
+  send.setAttribute('aria-label','Send message');send.click=()=>{const value=rich?composer.innerText:composer.value;if(blockResultSend&&value.startsWith('Argon tool result:'))return;sent.push(value);const turn=new Element();turn.innerText=value;users.push(turn);composer.value='';composer.innerText='';};
   form.querySelectorAll=()=>[send];composer.parentElement=form;
   const selection={removeAllRanges(){},addRange(){}};
   const document={body:new Element(),documentElement:new Element(),getElementById:()=>null,addEventListener(){},getSelection:()=>selection,
@@ -147,7 +147,7 @@ test('reader catches completion without a final observed DOM mutation',async()=>
   c.reply('I will use this tool: '+command('unfenced')+' Then inspect the result.');
   await c.advance(2200);assert.equal(calls(c).length,0);
   c.setStreaming(false);await c.advance(4000);
-  assert.equal(calls(c).length,1);assert(c.sent.at(-1).startsWith('Helium tool result:'));
+  assert.equal(calls(c).length,1);assert(c.sent.at(-1).startsWith('Argon tool result:'));
   c.stop();
 });
 
@@ -169,7 +169,7 @@ test('Watch attaches to the latest reply, preserves a draft and retries only res
 test('a failed send preserves the result and retry uses the existing result draft',async()=>{
   const c=chat();await started(c);c.blockResults(true);c.reply(command('send-fails'));
   await c.advance(4000);assert.equal(calls(c).length,1);
-  assert.match(c.composer.value,/Helium tool result:/);assert.equal(c.sent.length,1);
+  assert.match(c.composer.value,/Argon tool result:/);assert.equal(c.sent.length,1);
   assert.match(c.elements.get('status').textContent,/result is saved/);
   c.blockResults(false);const retry=c.retry();await c.advance(2200);await retry;
   assert.equal(calls(c).length,1);assert.equal(c.sent.length,2);c.stop();
@@ -201,7 +201,7 @@ test('a new ChatGPT conversation is adopted only when it contains this session p
   const start=c.start();await c.advance(1200);await start;
   c.location.href='https://chatgpt.com/c/new';c.reply(command('new-chat'));
   await c.advance(4000);assert.equal(calls(c).length,1,c.elements.get('status').textContent);
-  assert.match(c.sent[0],/\[Helium session session\]/);c.stop();
+  assert.match(c.sent[0],/\[Argon session session\]/);c.stop();
 });
 
 test('a new conversation without the session prompt is not adopted',async()=>{
@@ -236,7 +236,7 @@ test('a root chat cannot adopt a different conversation after its tool has start
 test('switching chats after the result is filled still prevents sending',async()=>{
   const c=chat({hold:'MCP_CALL'});await started(c);c.reply(command('switch-before-send'));
   await c.advance(1600);c.pending.MCP_CALL();await c.flush();
-  assert.match(c.composer.value,/Helium tool result/);
+  assert.match(c.composer.value,/Argon tool result/);
   c.location.href='https://chatgpt.com/c/other';await c.advance(3000);
   assert.equal(c.sent.length,1);assert.equal(c.elements.get('last-result').hidden,false);
   assert.match(c.elements.get('status').textContent,/result is saved/);

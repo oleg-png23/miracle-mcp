@@ -8,7 +8,8 @@ const { chromium } = require('playwright');
 const sharp = require('sharp');
 const {openSection,selectMaterial}=require('./ui-navigation.cjs');
 const homeMotionQA=require('./home-motion-qa.cjs');
-const base = (process.env.HELIUM_UI_URL || process.env.MIRACLES_UI_URL) || 'http://127.0.0.1:19737';
+const switchMotionQA=require('./switch-motion-qa.cjs');
+const base = (process.env.ARGON_UI_URL || process.env.HELIUM_UI_URL || process.env.MIRACLES_UI_URL) || 'http://127.0.0.1:19737';
 const root = path.resolve(__dirname, '..');
 const out = path.join(root, '.mcp_cache/qa');
 fs.mkdirSync(out, { recursive: true });
@@ -20,11 +21,11 @@ async function post(api, body = {}) {
 }
 async function calls() { return (await fetch(base + '/__fixture/calls').then(r => r.json())).calls; }
 async function check(name, fn) { await fn(); process.stdout.write('PASS ' + name + '\n'); }
-const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: args } });
+const tool = (id, name, args = {}) => ({ argon_tool: { id, name, arguments: args } });
 
 (async () => {
   await post('/__fixture/reset');
-  if (!(process.env.HELIUM_AGENT_ONLY || process.env.MIRACLES_AGENT_ONLY)) {
+  if (!(process.env.ARGON_AGENT_ONLY || process.env.HELIUM_AGENT_ONLY || process.env.MIRACLES_AGENT_ONLY)) {
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -214,11 +215,14 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
     await check('Home actions and live agent feedback animate while glass and motion preferences stay stable', async () => {
       await homeMotionQA(browser, await page.context().storageState(), base, out);
     });
+    await check('Argon selection cues, safety, wallpaper, token and depth feedback animate on desktop and touch', async () => {
+      await switchMotionQA(browser, await page.context().storageState(), base, out);
+    });
     await check('welcome has a separate responsive layout and real bridge status', async () => {
       await page.setViewportSize({ width: 1440, height: 1000 });
       await page.goto(base + '/ui/welcome.html');
       await page.waitForSelector('body[data-wallpaper][data-studio-ready="true"]');
-      assert.equal(await page.locator('#welcomeTitle').getAttribute('aria-label'), 'Welcome to Helium.');
+      assert.equal(await page.locator('#welcomeTitle').getAttribute('aria-label'), 'Welcome to Argon.');
       const copy = await page.locator('.welcome-copy').boundingBox();
       const connection = await page.locator('.welcome-connect').boundingBox();
       assert(copy.x + copy.width < connection.x);
@@ -228,7 +232,7 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
     });
   } catch(error) { await browser.contexts()[0]?.pages()[0]?.screenshot({path:path.join(out,'dashboard-failure.png'),fullPage:true}).catch(()=>{}); throw error; } finally { await browser.close(); }
   }
-  if ((process.env.HELIUM_DASHBOARD_ONLY || process.env.MIRACLES_DASHBOARD_ONLY)) return;
+  if ((process.env.ARGON_DASHBOARD_ONLY || process.env.HELIUM_DASHBOARD_ONLY || process.env.MIRACLES_DASHBOARD_ONLY)) return;
 
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'miracles-native-qa-'));
   const context = await chromium.launchPersistentContext(profile, {
@@ -272,7 +276,7 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
       const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
       for (const match of manifest.content_scripts[0].matches) {
         if (match.includes('copilot.microsoft.com')) continue; // Edge's protected domain.
-        if((process.env.HELIUM_QUICK_QA || process.env.MIRACLES_QUICK_QA) && !/chatgpt|notion|clickup/.test(match)) continue;
+        if((process.env.ARGON_QUICK_QA || process.env.HELIUM_QUICK_QA || process.env.MIRACLES_QUICK_QA) && !/chatgpt|notion|clickup/.test(match)) continue;
         await page.goto(match.replace('/*', '/'));
         try { await page.locator('#helium-mcp-widget #toggle').waitFor({ timeout: 10000 }); }
         catch (error) { throw new Error('Extension failed on ' + match + ': ' + errors.join('; ') + '\n' + error.message); }
@@ -300,7 +304,7 @@ const tool = (id, name, args = {}) => ({ helium_tool: { id, name, arguments: arg
           const plan = window.plans.shift();
           if (plan) setTimeout(() => {
             const assistant = document.createElement('div'); assistant.setAttribute('data-message-author-role', 'assistant'); assistant.setAttribute('data-is-streaming', 'true');
-            if (plan.helium_tool || plan.miracles_tool || plan.miracle_tool) { const pre = document.createElement('pre'), code = document.createElement('code'); code.textContent = JSON.stringify(plan); pre.append(code); assistant.append(pre); }
+            if (plan.argon_tool || plan.helium_tool || plan.miracles_tool || plan.miracle_tool) { const pre = document.createElement('pre'), code = document.createElement('code'); code.textContent = JSON.stringify(plan); pre.append(code); assistant.append(pre); }
             else assistant.textContent = plan.text || 'Done';
             const stop = document.createElement('button'); stop.setAttribute('aria-label', 'Stop generating'); stop.textContent = 'Stop generating'; document.body.append(stop);
             document.querySelector('#messages').append(assistant);

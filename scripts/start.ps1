@@ -29,7 +29,7 @@ function Get-BridgeToken($taskStatus) {
     if (-not (Test-Path -LiteralPath (Join-Path $taskRunningUI 'manifest.json'))) { $taskRunningUI = Join-Path (Split-Path -Parent $taskRunningRoot) 'plugin' }
     $taskManifest = Get-Content -LiteralPath (Join-Path $taskRunningUI 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     $taskSource = Get-Content -LiteralPath $taskRunningServer -Raw -Encoding UTF8
-    if ($taskManifest.name -notin @('Helium — Local Bridge for Roblox Studio', 'Miracle — Local Bridge for Roblox Studio') -or $taskManifest.version -ne $taskStatus.version -or -not ($taskSource.Contains('HeliumMCP/') -or $taskSource.Contains('MiraclesMCP/')) -or -not $taskSource.Contains('class BridgeServer(')) { throw 'The bridge installation could not be verified.' }
+    if ($taskManifest.name -notin @('Argon — Local Bridge for Roblox Studio', 'Helium — Local Bridge for Roblox Studio', 'Miracle — Local Bridge for Roblox Studio') -or $taskManifest.version -ne $taskStatus.version -or -not ($taskSource.Contains('ArgonMCP/') -or $taskSource.Contains('HeliumMCP/') -or $taskSource.Contains('MiraclesMCP/')) -or -not $taskSource.Contains('class BridgeServer(')) { throw 'The bridge installation could not be verified.' }
     $taskTokenPath = Join-Path (Split-Path -Parent $taskRunningServer) 'token.txt'
     $taskToken = (Get-Content -LiteralPath $taskTokenPath -Raw -Encoding UTF8).Trim()
     if (-not $taskToken) { throw 'The bridge token file is empty.' }
@@ -61,7 +61,7 @@ function Stop-HeliumBridge($taskStatus) {
         Invoke-RestMethod -Uri "$taskBase/api/bridge/shutdown" -Method Post -ContentType 'application/json' -Body $taskStopBody -TimeoutSec 5 | Out-Null
     } else {
         # Migration from older versions without a shutdown route. Verify the
-        # listener PID, Python command and installed Helium package first.
+        # listener PID, Python command and installed Argon/Helium package first.
         $taskListeners = @(Get-NetTCPConnection -LocalPort $taskPort -State Listen -ErrorAction SilentlyContinue)
         $taskOwners = @($taskListeners | Select-Object -ExpandProperty OwningProcess -Unique)
         if (-not $taskOwners.Count) { return }
@@ -81,13 +81,13 @@ function Stop-HeliumBridge($taskStatus) {
                         try {
                             $taskOlderManifest = Get-Content -LiteralPath (Join-Path $taskOlderUI 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
                             $taskOlderSource = Get-Content -LiteralPath $taskOlderServer -Raw -Encoding UTF8
-                            $taskVerified = ($taskOlderManifest.name -in @('Helium — Local Bridge for Roblox Studio', 'Miracle — Local Bridge for Roblox Studio')) -and $taskOlderManifest.version -eq $taskStatus.version -and ($taskOlderSource.Contains('HeliumMCP/') -or $taskOlderSource.Contains('MiraclesMCP/')) -and $taskOlderSource.Contains('class BridgeServer(')
+                            $taskVerified = ($taskOlderManifest.name -in @('Argon — Local Bridge for Roblox Studio', 'Helium — Local Bridge for Roblox Studio', 'Miracle — Local Bridge for Roblox Studio')) -and $taskOlderManifest.version -eq $taskStatus.version -and ($taskOlderSource.Contains('ArgonMCP/') -or $taskOlderSource.Contains('HeliumMCP/') -or $taskOlderSource.Contains('MiraclesMCP/')) -and $taskOlderSource.Contains('class BridgeServer(')
                         } catch { $taskVerified = $false }
                     }
                 }
             }
             if (-not $taskVerified) {
-                throw 'An older or unrelated process owns the selected port. Its identity could not be verified, so it was not stopped. Close the previous Helium release and try again.'
+                throw 'An older or unrelated process owns the selected port. Its identity could not be verified, so it was not stopped. Close the previous Argon or Helium release and try again.'
             }
         }
         foreach ($taskOwner in $taskOwners) { Stop-Process -Id $taskOwner -Force -ErrorAction Stop }
@@ -104,7 +104,7 @@ try {
     $taskMutex = [System.Threading.Mutex]::new($false, "Local\MiracleMCP-Bridge-$taskPort")
     try { $taskMutexHeld = $taskMutex.WaitOne([TimeSpan]::FromSeconds(20)) }
     catch [System.Threading.AbandonedMutexException] { $taskMutexHeld = $true }
-    if (-not $taskMutexHeld) { throw 'Another Helium launch is still in progress. Wait a moment and try again.' }
+    if (-not $taskMutexHeld) { throw 'Another Argon launch is still in progress. Wait a moment and try again.' }
     $taskUIRoot = $taskRoot
     if (-not (Test-Path -LiteralPath (Join-Path $taskUIRoot 'manifest.json'))) {
         $taskUIRoot = Join-Path (Split-Path -Parent $taskRoot) 'plugin'
@@ -116,11 +116,11 @@ try {
     $taskExisting = Get-BridgeStatus
     if ($StopBridge) {
         Stop-HeliumBridge $taskExisting
-        Write-Host '[Helium MCP] Bridge stopped.'
+        Write-Host '[Argon MCP] Bridge stopped.'
         exit 0
     }
-    if ($taskExisting -and $taskExisting.online -and $taskExisting.studio_mode -eq 'native_mcp' -and $taskExisting.version -eq $taskVersion) {
-        Write-Host '[Helium MCP] Reusing the running bridge.'
+    if ($taskExisting -and $taskExisting.online -and $taskExisting.studio_mode -eq 'native_mcp' -and $taskExisting.version -eq $taskVersion -and $taskExisting.service -eq 'argon-mcp') {
+        Write-Host '[Argon MCP] Reusing the running bridge.'
         Open-Workspace
         exit 0
     }
@@ -129,6 +129,7 @@ try {
     }
 
     $taskCandidates = [System.Collections.Generic.List[string]]::new()
+    if ($env:ARGON_PYTHON_PATH) { $taskCandidates.Add($env:ARGON_PYTHON_PATH) }
     if ($env:HELIUM_PYTHON_PATH) { $taskCandidates.Add($env:HELIUM_PYTHON_PATH) }
     if ($env:MIRACLES_PYTHON_PATH) { $taskCandidates.Add($env:MIRACLES_PYTHON_PATH) }
     foreach ($taskCommand in @(Get-Command python.exe, python3.exe -CommandType Application -All -ErrorAction SilentlyContinue)) {
@@ -215,7 +216,7 @@ try {
     if (-not $taskReady) { throw "Не удалось запустить мост. Подробности: $taskLogs\bridge.stderr.log" }
     Open-Workspace
 } catch {
-    Write-Host ('[Helium MCP] ' + $_.Exception.Message) -ForegroundColor Red
+    Write-Host ('[Argon MCP] ' + $_.Exception.Message) -ForegroundColor Red
     exit 1
 } finally {
     if ($taskMutexHeld) { $taskMutex.ReleaseMutex() }

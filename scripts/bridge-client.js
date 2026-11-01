@@ -81,7 +81,7 @@
       return values;
     }
     if (location.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(location.hostname))
-      throw new Error("Automatic setup requires the local Helium page.");
+      throw new Error("Automatic setup requires the local Argon page.");
     const values = await storage.read();
     if (!values.bridgeToken?.trim()) throw new Error("Copy the token from release/python/token.txt (or python/token.txt in a source checkout) into Connection settings.");
     try { await request(values.host, '/api/auth', {token:values.bridgeToken}); }

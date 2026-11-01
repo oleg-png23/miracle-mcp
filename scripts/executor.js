@@ -73,7 +73,7 @@
     result(title + (Number.isFinite(found.elapsed_ms) ? ` · ${found.elapsed_ms} ms` : ''), found.output || (found.ok ? 'The script finished without output.' : 'No details received. Open Output in Studio.'), found.ok ? 'success' : 'error');
     clearPending();
   });
-  $('aiPromptText').value = (window.MiraclesPrompt.intro || window.MiraclesPrompt.text) + '\nSelect Start session in Helium to load the available tools.';
+  $('aiPromptText').value = (window.MiraclesPrompt.intro || window.MiraclesPrompt.text) + '\nSelect Start session in Argon to load the available tools.';
   $('copyAiPrompt').addEventListener('click', async () => {
     const details = $('aiPromptDetails'); details.open = true;
     try {
@@ -83,7 +83,7 @@
       if (!listed.ok || !Array.isArray(listed.tools) || !listed.tools.length) throw new Error(listed.message || 'Studio tools are not available yet.');
       $('aiPromptText').value = window.MiraclesPrompt.build(listed.tools, 'Wait for the user task and complete it using the available Studio tools.');
       await client.copy($('aiPromptText').value);
-      client.report('Instructions copied. Paste them into your chat, then choose Helium → Watch this chat to execute tool replies.', false);
+      client.report('Instructions copied. Paste them into your chat, then choose Argon → Watch this chat to execute tool replies.', false);
     } catch (error) {
       $('aiPromptText').focus(); $('aiPromptText').select();
       client.report(error.message + ' Select the text to copy it manually, or use Start session in the extension.', true);
@@ -99,7 +99,7 @@
     draftTimer = setTimeout(() => { try { localStorage.setItem('miracles.code', editor.value); } catch { result('Draft not saved', 'Browser storage is unavailable. Copy the code before closing this page.', 'error'); } }, 400);
   }
   editor.addEventListener('input', changed);
-  $('sampleCode').onclick = () => { editor.value += (editor.value.trim() ? '\n\n' : '') + '--!strict\nreturn "Helium is connected"'; changed(); editor.focus(); client.report('Sample appended. Select Run in Studio.', false); };
+  $('sampleCode').onclick = () => { editor.value += (editor.value.trim() ? '\n\n' : '') + '--!strict\nreturn "Argon is connected"'; changed(); editor.focus(); client.report('Sample appended. Select Run in Studio.', false); };
   $('clearCode').onclick = () => { editor.value = ''; changed(); editor.focus(); client.report('Editor cleared.', false); };
   async function copy(text, message) {
     try { if (!text.trim()) throw new Error('Nothing to copy.'); await client.copy(text); client.report(message, false); }

@@ -1,3 +1,9 @@
+# Argon source update (not yet released)
+
+Helium MCP is now Argon MCP. New source builds use `argon-mcp`, `argon-website` and `argon-wallpapers` archive names, while the previous published v2.9.3 assets remain available under their Helium names. Canonical checksums are in `argon-SHA256SUMS.txt`. The unchanged release-publication automation retains legacy Helium labels/asset paths, supported by byte-identical compatibility archives and a separate legacy checksum file. New prompts use `argon_tool`; Helium/Miracle envelopes, saved settings, tokens and environment overrides remain compatible. Selection and switch feedback now follows the same motion preferences on desktop and touch.
+
+## Previous published Helium 2.9.3 release
+
 # Helium 2.9.3 — Safer sessions
 
 - Pair each workspace by copying the access token from the local `release/python/token.txt` file into Connection settings. A previously saved token continues to work if the bridge token is unchanged. The bridge no longer returns its token over HTTP.

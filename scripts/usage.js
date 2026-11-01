@@ -25,7 +25,7 @@
       list.replaceChildren(fragment);
     }
     document.getElementById('usageEmpty').hidden=sites.length>0;
-    show('usageEmpty','No sessions recorded yet. Start Helium in an AI chat.');
+    show('usageEmpty','No sessions recorded yet. Start Argon in an AI chat.');
     document.getElementById('usageTable').hidden=!sites.length;
   });
 })();

@@ -44,7 +44,7 @@
       const [label,description]=labels[target];
       title.textContent=label;document.getElementById('sectionBreadcrumb').textContent=label;
       document.getElementById('sectionViewDescription').textContent=description;
-      heading.hidden=target==='overview';document.title=preview+label+' · Helium';
+      heading.hidden=target==='overview';document.title=preview+label+' · Argon';
       if(position)position.textContent=(order.indexOf(target)+1)+' / '+order.length;
       document.querySelectorAll('a[href^="#"]').forEach(link=>{
         const href=link.getAttribute('href');

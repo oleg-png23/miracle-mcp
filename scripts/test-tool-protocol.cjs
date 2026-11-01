@@ -14,12 +14,23 @@ test('streamed fragments stay incomplete and cannot execute',()=>{
   assert.equal(parse(text).calls.length,1);
 });
 test('legacy brand spelling aliases work but ordinary JSON and tool results never become commands',()=>{
-  for(const key of ['miracles_tool','miracle_tool']) {
+  for(const key of ['helium_tool','miracles_tool','miracle_tool']) {
     for(const value of [JSON.stringify({[key]:call}),'Legacy reply: '+JSON.stringify({[key]:call})]) assert.equal(parse(value).calls.length,1);
   }
   const mixed=parse(JSON.stringify({helium_tool:call,miracles_tool:{...call,id:'other'}}));
   assert.equal(mixed.calls.length,0);assert.match(mixed.error,/exactly one/);
   for(const text of [JSON.stringify(call),'{"tool":"run_code","arguments":{}}','{"ok":true,"call_id":"step-1","result":{}}'])assert.equal(parse(text).calls.length,0);
+});
+test('Argon prompts emit the canonical envelope and roundtrip through the reader with legacy aliases intact',()=>{
+  vm.runInNewContext(fs.readFileSync('scripts/chat-prompt.js','utf8'),context);
+  const prompt=context.MiraclesPrompt.build([{name:call.name,inputSchema:{type:'object'}}],'Inspect Studio');
+  assert.match(prompt,/Argon MCP/);
+  const example=JSON.parse(prompt.match(/```json\n([^\n]+)\n```/)[1]);
+  assert.deepEqual(Object.keys(example),['argon_tool']);
+  example.argon_tool=call;
+  assert.deepEqual(JSON.parse(JSON.stringify(parse(JSON.stringify(example)).calls)),[call]);
+  for(const key of ['helium_tool','miracles_tool','miracle_tool'])assert.equal(parse(JSON.stringify({[key]:call})).calls[0].id,call.id);
+  assert.match(parse(JSON.stringify({argon_tool:call,helium_tool:call})).error,/exactly one/);
 });
 test('duplicate ids, malformed arguments and oversized messages are diagnosed',()=>{
   const duplicated=envelope(call)+'\n'+envelope(call);assert.equal(parse(duplicated).calls.length,1);
