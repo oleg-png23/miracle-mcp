@@ -8,4 +8,4 @@ The dashboard, welcome page, chat widget, and website use upstream icon geometry
 
 `interface.svg` packages those icons as named SVG symbols; only the SVG container changes. Paths and shape coordinates remain unchanged. The isolated chat widget creates the same Lucide close/check/loading geometry through DOM APIs for compatibility with strict host CSPs.
 
-The existing Helium H-with-star mark is the intentional custom brand exception and remains unchanged.
+The existing Argon H-with-star mark is the intentional custom brand exception and remains unchanged.

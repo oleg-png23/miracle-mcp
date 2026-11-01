@@ -38,7 +38,7 @@ def build():
         html = (ROOT / f'{page}.html').read_text(encoding='utf-8')
         html = html.replace('<script src="config.js" defer></script>', '')
         html = html.replace('</head>', '<link rel="stylesheet" href="../preview.css"></head>')
-        html = re.sub(r'(<body[^>]*>)', r'\1\n' + '''<nav class="demo-banner" aria-label="Preview navigation"><a href="../index.html">← Helium MCP</a><span>INTERACTIVE PREVIEW · Sample data · No Studio connection</span><div><a href="welcome.html">Start page</a><a href="dashboard.html">Dashboard</a><a href="https://github.com/oleg-png23/miracle-mcp/releases/latest">Download ↗</a></div></nav><noscript><p class="demo-noscript">Enable JavaScript to explore the interactive demo. All connection values below are placeholders.</p></noscript>''', html, count=1)
+        html = re.sub(r'(<body[^>]*>)', r'\1\n' + '''<nav class="demo-banner" aria-label="Preview navigation"><a href="../index.html">← Argon MCP</a><span>INTERACTIVE PREVIEW · Sample data · No Studio connection</span><div><a href="welcome.html">Start page</a><a href="dashboard.html">Dashboard</a><a href="https://github.com/oleg-png23/miracle-mcp/releases/latest">Download ↗</a></div></nav><noscript><p class="demo-noscript">Enable JavaScript to explore the interactive demo. All connection values below are placeholders.</p></noscript>''', html, count=1)
         html = html.replace('<title>', '<title>Preview · ')
         if page == 'dashboard':
             html = html.replace('Run in Studio ', 'Preview only ')

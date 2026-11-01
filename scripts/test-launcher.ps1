@@ -4,8 +4,9 @@ $testVersion = (Get-Content (Join-Path $testRoot 'manifest.json') -Raw -Encoding
 $testFolder = Join-Path $testRoot ('.mcp_cache\launcher with spaces ' + [guid]::NewGuid().ToString('N'))
 $testNew = Join-Path $testFolder 'new'
 $testOld = Join-Path $testFolder 'old'
-$testArchive = Join-Path $testRoot ".mcp_cache\release\helium-mcp-$testVersion.zip"
+$testArchive = Join-Path $testRoot ".mcp_cache\release\argon-mcp-$testVersion.zip"
 $testPython = (Get-Command python.exe).Source
+$env:ARGON_PYTHON_PATH = $testPython
 $env:HELIUM_PYTHON_PATH = $testPython
 $testReservation = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
 $testReservation.Start()
@@ -62,13 +63,47 @@ try {
     Write-Host 'PASS simultaneous and repeated launches reuse one bridge'
     Launch -Stop
 
+    # Same version, previous brand: do not silently reuse the old UI/root.
+    $oldServer = Join-Path $testOld 'release\python\mcp_server.py'
+    $oldManifest = Join-Path $testOld 'plugin\manifest.json'
+    $canonicalSource = [System.IO.File]::ReadAllText($oldServer)
+    $canonicalManifest = [System.IO.File]::ReadAllText($oldManifest)
+    $heliumSource = $canonicalSource.Replace('ArgonMCP/', 'HeliumMCP/').Replace('"argon-mcp"', '"helium-mcp"').Replace('"queue": queue_count', '"queue": int((Path(__file__).parent / "busy.fixture").exists())')
+    [System.IO.File]::WriteAllText($oldServer, $heliumSource)
+    $heliumManifest = $canonicalManifest | ConvertFrom-Json
+    $heliumManifest.name = 'Helium — Local Bridge for Roblox Studio'
+    [System.IO.File]::WriteAllText($oldManifest, ($heliumManifest | ConvertTo-Json -Depth 20))
+    $writtenHeliumManifest = Get-Content -LiteralPath $oldManifest -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($writtenHeliumManifest.name -ne 'Helium — Local Bridge for Roblox Studio' -or $writtenHeliumManifest.version -ne $testVersion) { throw 'Helium fixture manifest identity/version was not written correctly.' }
+    $busyFlag = Join-Path $testOld 'release\python\busy.fixture'
+    [System.IO.File]::WriteAllText($busyFlag, 'fixture')
+    $sameVersion = Start-Process $testPython -ArgumentList @('-u',('"' + $oldServer + '"'),'--port',"$testPort") -PassThru -RedirectStandardOutput (Join-Path $testFolder 'same-version.out') -RedirectStandardError (Join-Path $testFolder 'same-version.err')
+    $testOwned.Add($sameVersion)
+    $previous = Wait-Version $testVersion
+    if ($previous.service -ne 'helium-mcp') { throw 'Expected the same-version Helium fixture.' }
+    Launch -ExpectFailure
+    if ($sameVersion.HasExited -or (Status).pid -ne $previous.pid) { throw 'Busy legacy bridge must not be replaced.' }
+    Remove-Item -LiteralPath $busyFlag
+    Launch
+    $upgraded = Wait-Version $testVersion
+    if ($upgraded.service -ne 'argon-mcp' -or $upgraded.pid -eq $previous.pid -or -not $sameVersion.WaitForExit(5000)) { throw 'Same-version Helium was reused instead of safely replaced.' }
+    Write-Host 'PASS same-version Helium upgrades to Argon and active tools block replacement'
+    Launch -Stop
+    [System.IO.File]::WriteAllText($oldServer, $canonicalSource)
+    [System.IO.File]::WriteAllText($oldManifest, $canonicalManifest)
+
     # Reproduce a pre-rename Miracle release in a different extracted directory. Its disk
     # manifest and served version identify it before the new launcher replaces it.
     $oldServer = Join-Path $testOld 'release\python\mcp_server.py'
-    $source = [System.IO.File]::ReadAllText($oldServer).Replace(('VERSION = "' + $testVersion + '"'),'VERSION = "2.8.0"').Replace('"graceful_shutdown",','').Replace('HeliumMCP/', 'MiraclesMCP/').Replace('"helium-mcp"', '"miracle-mcp"')
+    $source = [System.IO.File]::ReadAllText($oldServer).Replace(('VERSION = "' + $testVersion + '"'),'VERSION = "2.8.0"').Replace('"graceful_shutdown",','').Replace('ArgonMCP/', 'MiraclesMCP/').Replace('"argon-mcp"', '"miracle-mcp"')
     [System.IO.File]::WriteAllText($oldServer, $source)
     $oldManifest = Join-Path $testOld 'plugin\manifest.json'
-    [System.IO.File]::WriteAllText($oldManifest, [System.IO.File]::ReadAllText($oldManifest).Replace(('"' + $testVersion + '"'),'"2.8.0"').Replace('Helium — Local Bridge for Roblox Studio', 'Miracle — Local Bridge for Roblox Studio'))
+    $miracleManifest = $canonicalManifest | ConvertFrom-Json
+    $miracleManifest.name = 'Miracle — Local Bridge for Roblox Studio'
+    $miracleManifest.version = '2.8.0'
+    [System.IO.File]::WriteAllText($oldManifest, ($miracleManifest | ConvertTo-Json -Depth 20))
+    $writtenMiracleManifest = Get-Content -LiteralPath $oldManifest -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($writtenMiracleManifest.name -ne 'Miracle — Local Bridge for Roblox Studio' -or $writtenMiracleManifest.version -ne '2.8.0') { throw 'Miracle fixture manifest identity/version was not written correctly.' }
     $legacy = Start-Process $testPython -ArgumentList @('-u',('"' + $oldServer + '"'),'--port',"$testPort") -PassThru -RedirectStandardOutput (Join-Path $testFolder 'legacy.out') -RedirectStandardError (Join-Path $testFolder 'legacy.err')
     $testOwned.Add($legacy)
     Wait-Version '2.8.0' | Out-Null

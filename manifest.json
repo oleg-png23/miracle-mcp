@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Helium \u2014 Local Bridge for Roblox Studio",
-  "short_name": "Helium",
+  "name": "Argon \u2014 Local Bridge for Roblox Studio",
+  "short_name": "Argon",
   "version": "2.9.3",
   "description": "Connect AI chats to Roblox Studio through a local MCP bridge.",
   "author": "Miracles Lab",
   "minimum_chrome_version": "114",
   "action": {
-    "default_title": "Open Helium",
+    "default_title": "Open Argon",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

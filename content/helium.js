@@ -74,7 +74,7 @@
     for (const [key, value] of Object.entries(attrs || {})) element.setAttribute(key, value);
     element.append(...children); return element;
   }
-  function mark() { return node('span', {class:'monogram','aria-hidden':'true'}, 'h', node('span',{},'✦')); }
+  function mark() { return node('span', {class:'monogram','aria-hidden':'true'}, 'a', node('span',{},'✦')); }
   // Unmodified Lucide geometry at c29c276f16590cf017126671535ad8c792be64d8; assets/icons/LICENSE-Lucide.txt.
   const interfaceIcons = {"x":[["path",{"d":"M18 6 6 18"}],["path",{"d":"m6 6 12 12"}]],"check":[["path",{"d":"M20 6 9 17l-5-5"}]],"loader-circle":[["path",{"d":"M21 12a9 9 0 1 1-6.219-8.56"}]]};
   function interfaceIcon(name) {
@@ -89,17 +89,17 @@
   }
 
   const button = (id, label, className = 'action') => node('button', { id, type: 'button', class: className }, label);
-  const close = button('close', '', 'close'); close.append(interfaceIcon('x')); close.setAttribute('aria-label', 'Close Helium');
+  const close = button('close', '', 'close'); close.append(interfaceIcon('x')); close.setAttribute('aria-label', 'Close Argon');
   shadow.append(node('div', { class: 'widget' },
-    node('section', { class: 'panel', id: 'panel', 'aria-label': 'Helium for Roblox Studio', hidden: '' },
-      node('header', { class: 'panel-head' }, node('div', { class: 'brand' }, node('span', { class: 'brand-mark' }, mark('')), node('div', {}, node('h2', {}, 'Helium'), node('span', { class: 'eyebrow' }, 'Studio MCP'))), close),
+    node('section', { class: 'panel', id: 'panel', 'aria-label': 'Argon for Roblox Studio', hidden: '' },
+      node('header', { class: 'panel-head' }, node('div', { class: 'brand' }, node('span', { class: 'brand-mark' }, mark('')), node('div', {}, node('h2', {}, 'Argon'), node('span', { class: 'eyebrow' }, 'Studio MCP'))), close),
       node('p', { class: 'intro' }, 'Connect this chat to Roblox Studio.'),
       node('div', { class: 'actions' },
         button('copy', 'Copy instructions'),
         node('div', { class: 'secondary' }, button('check', 'Check connection'), button('dashboard', 'Open workspace'))),
       node('div', { class: 'status', id: 'status', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true', 'data-kind': 'info' }, 'Start a session to connect this chat to Studio tools.'),
-      node('details', { id: 'manual' }, node('summary', {}, 'AI instructions'), node('textarea', { id: 'prompt', readonly: '', 'aria-label': 'Helium AI instructions', spellcheck: 'false' }))),
-    node('button', { class: 'toggle', id: 'toggle', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'panel', title: 'Open Helium for Roblox Studio' }, node('span', { class: 'glyph' }, mark('')), node('span', { class: 'toggle-copy' }, 'Helium', node('small', {}, 'Connect Studio')))));
+      node('details', { id: 'manual' }, node('summary', {}, 'AI instructions'), node('textarea', { id: 'prompt', readonly: '', 'aria-label': 'Argon AI instructions', spellcheck: 'false' }))),
+    node('button', { class: 'toggle', id: 'toggle', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'panel', title: 'Open Argon for Roblox Studio' }, node('span', { class: 'glyph' }, mark('')), node('span', { class: 'toggle-copy' }, 'Argon', node('small', {}, 'Connect Studio')))));
   document.documentElement.append(host);
   const $ = id => shadow.getElementById(id);
   const stateIcon=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -123,8 +123,8 @@
     const label = kind === 'error' ? 'Check needed' : agentActive ? 'Session active' : checking ? 'Checking' : 'Open workspace';
     $('toggle').querySelector('small').textContent = 'Studio MCP · ' + label;
     $('toggle').dataset.state = kind==='error'?'error':checking?'waiting':agentActive?'active':kind;
-    $('toggle').setAttribute('aria-label','Helium · '+label);
-    $('toggle').title='Helium · '+label;
+    $('toggle').setAttribute('aria-label','Argon · '+label);
+    $('toggle').title='Argon · '+label;
     if (checking) $('status').dataset.kind = 'waiting';
   }
   let closingPanel = null;
@@ -238,8 +238,8 @@
   async function recordUsage(kind, eventId, value) {
     try {
       const response=await sendRuntime('MCP_USAGE',{kind,event_id:eventId,characters:[...value].length});
-      if(!response?.ok) console.warn('[Helium] Usage could not be saved:',response?.message||'no response');
-    } catch(error) { console.warn('[Helium] Usage could not be saved:',error.message); }
+      if(!response?.ok) console.warn('[Argon] Usage could not be saved:',response?.message||'no response');
+    } catch(error) { console.warn('[Argon] Usage could not be saved:',error.message); }
   }
   const sent = new Set();
   function armAssistantWatchdog() { clearTimeout(watchdog); if(!agentActive) return; watchdog=setTimeout(()=>{ if(agentActive&&!busy) stop('No completed AI response after 120 seconds. Session paused. Check the site adapter.','ASSISTANT_TIMEOUT'); },120000); }
@@ -387,7 +387,7 @@
     if(currentConversation()!==item.conversation)throw new Error('Return to the original conversation before sending this saved result.');
     const alreadySent=userTurnNodes().some(turn=>{
       const value=turn.innerText||turn.textContent||'';
-      return value.includes('Helium tool result:')&&value.includes(item.encoded);
+      return /(?:Argon|Helium) tool result:/.test(value)&&value.includes(item.encoded);
     });
     if(!alreadySent) {
       const pair=composerAndSend();
@@ -534,7 +534,7 @@
       const toolError=response?.ok===true&&response.result?.isError===true;
       const payload=response?.ok===true?{ok:!toolError,call_id:call.id,result:response.result}:{ok:false,call_id:call.id,code:response?.code||'TOOL_FAILED',message:response?.message||'The tool returned an error.'};
       const encoded=JSON.stringify(payload);
-      exposeResult({entry,encoded,message:'Helium tool result:\n```json\n'+encoded+'\n```',eventId:sessionId+':'+call.id+':out',instance:sessionInstance,conversation,toolError,requestError:response?.ok!==true,code:payload.code});
+      exposeResult({entry,encoded,message:'Argon tool result:\n```json\n'+encoded+'\n```',eventId:sessionId+':'+call.id+':out',instance:sessionInstance,conversation,toolError,requestError:response?.ok!==true,code:payload.code});
       if(!agentActive)return;
       if(!conversationReady())return;
       reportAgent('sending_result','',call.name);
@@ -580,7 +580,7 @@
     try {
       const initial = new URL(conversation);
       if(initial.pathname==='/' && ['chatgpt.com','chat.openai.com'].includes(initial.hostname)) {
-        const marker='[Helium session '+sessionId+']';
+        const marker='[Argon session '+sessionId+']';
         instructions=marker+'\n'+instructions;
         adoption={marker,expires:Date.now()+10000};
       }

@@ -19,18 +19,18 @@
       set(hint,`Dashboard ${document.body.dataset.appVersion}; bridge ${data.version}. Run the new release/run.bat, reload the extension and refresh the chat tab.`);
     } else if (!agent) {
       set(label,'No chat session detected');
-      set(hint,'Studio can be connected while the chat reader is stopped. In your AI tab, choose Helium → Start session, or Watch this chat after pasting instructions.');
+      set(hint,'Studio can be connected while the chat reader is stopped. In your AI tab, choose Argon → Start session, or Watch this chat after pasting instructions.');
     } else if ((agent.client_version && agent.client_version !== data.version) || (agent.extension_version && agent.extension_version !== data.version)) {
       set(label,'Reload the extension and your chat tab');
       set(hint,`Bridge ${data.version}; extension ${agent.extension_version || 'unknown'}; chat script ${agent.client_version || 'unknown'}. Finish updating all three before starting a new session.`);
     } else if (agent.age_s > 45 && !['paused','stopped'].includes(agent.state)) {
       set(label,'Chat heartbeat is out of date');
-      set(hint,`${agent.site} last checked in ${agent.age_s}s ago. Return to that tab and check the Helium session status.`);
+      set(hint,`${agent.site} last checked in ${agent.age_s}s ago. Return to that tab and check the Argon session status.`);
     } else {
       set(label,(labels[agent.state] || 'Chat session') + (agent.tool_name && agent.state === 'running' ? ` · ${agent.tool_name}` : ''));
       const advice = agent.code === 'RESULT_NOT_SENT' ? 'The result is saved in the chat widget. Use Retry sending result; it does not run the tool again.'
-        : agent.state === 'waiting_json' ? 'The AI reply needs a complete Helium tool envelope. The reader is still watching for changes.'
-        : agent.state === 'paused' || agent.state === 'stopped' ? 'Open Helium in that chat to resume, retry a saved result or start a new session.'
+        : agent.state === 'waiting_json' ? 'The AI reply needs a complete Argon tool envelope. The reader is still watching for changes.'
+        : agent.state === 'paused' || agent.state === 'stopped' ? 'Open Argon in that chat to resume, retry a saved result or start a new session.'
         : 'Tool results return to the same conversation automatically.';
       set(hint,`${agent.site} · ${agent.calls} tool call${agent.calls === 1 ? '' : 's'}. ${advice}`);
     }
@@ -42,7 +42,7 @@
   copy.addEventListener('click', async () => {
     if (!latest) { window.MiraclesBridge.report('Connect the bridge before copying a report.'); return; }
     const {data,host} = latest;
-    const report = {product:'Helium MCP',dashboard_version:document.body.dataset.appVersion,bridge_version:data.version,
+    const report = {product:'Argon MCP',dashboard_version:document.body.dataset.appVersion,bridge_version:data.version,
       address:host,studio_state:data.native_mcp?.state,tools_count:data.native_mcp?.tools_count,
       studio_linked:data.studio_linked === true,uptime_s:data.uptime_s,
       agents:(data.agent_sessions || []).map(agent => ({site:agent.site,state:agent.state,code:agent.code,calls:agent.calls,

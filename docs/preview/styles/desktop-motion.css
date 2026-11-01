@@ -15,6 +15,24 @@
   html[data-desktop-motion="on"] :is(.tool-card,.log-entry,.usage-table-wrap tbody tr):hover { background: #ffffff30; }
   html[data-desktop-motion="on"] :is(.input-wrap,.section-search,.code-editor) { transition: box-shadow .22s,border-color .22s; }
 }
+/* Only the selection cue moves; the surrounding optical card stays fixed. */
+@supports selector(.segmented-control:has(button)) {
+  .main-content .segmented-control { isolation: isolate; }
+  .main-content .segmented-control::before {
+    content: ''; position: absolute; z-index: 0; inset: 6px auto 6px 6px;
+    width: calc((100% - 17px) / 2); border-radius: inherit; pointer-events: none;
+    background: linear-gradient(170deg,#ffffffce,#ffffff7a);
+    box-shadow: 0 2px 5px #284b5810,inset 0 1px #ffffffed;
+    transform: translateX(0); transition: transform .3s cubic-bezier(.2,1.15,.35,1);
+  }
+  .main-content .segmented-control:has(button:last-child[aria-pressed="true"])::before { transform: translateX(calc(100% + 5px)); }
+  .main-content .segmented-control button { position: relative; z-index: 1; }
+  .main-content .segmented-control button.selected { background: transparent; box-shadow: none; }
+  @media (forced-colors: active) {
+    .main-content .segmented-control::before { background: Highlight; box-shadow: none; }
+    .main-content .segmented-control button.selected { color: HighlightText; }
+  }
+}
 .fold-content { display: flow-root; min-height: 0; }
 .faq-list .fold-content>p { font-size: 11px; color: var(--muted); line-height: 1.9; padding: 0 22px 22px 0; max-width: 470px; }
 html[data-motion="paused"] { scroll-behavior: auto; }
@@ -23,7 +41,7 @@ html[data-motion="paused"] :is(.button,.welcome-enter,.landscape-card,.demo-card
 html[data-motion="paused"] .pointer-card { transform: none!important; translate: none!important; }
 html[data-motion="paused"] .sidebar { --rail-drift: 0px!important; }
 html[data-motion="paused"] .sidebar .nav-icon { transform: none!important; }
-html[data-page-hidden="true"] *,html[data-page-hidden="true"] *::before,html[data-page-hidden="true"] *::after { animation-play-state: paused!important; }
+html[data-page-hidden="true"] *,html[data-page-hidden="true"] *::before,html[data-page-hidden="true"] *::after { animation-play-state: paused!important; transition: none!important; }
 @media(prefers-reduced-motion:reduce) {
   *,*::before,*::after { animation: none!important; transition: none!important; scroll-behavior: auto!important; }
 }

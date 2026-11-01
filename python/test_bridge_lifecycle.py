@@ -1,5 +1,6 @@
 """Real loopback/process checks; no Roblox installation or real tools needed."""
 import importlib.util
+import errno
 import json
 from pathlib import Path
 import shutil
@@ -12,6 +13,7 @@ import time
 import unittest
 import urllib.error
 import urllib.request
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'python'))
@@ -93,6 +95,29 @@ class LifecycleTests(unittest.TestCase):
             self.assertIn('reusing v'+bridge.VERSION, result.stdout)
             self.assertEqual(token.stat().st_mtime_ns, before)
             self.assertEqual(token.read_text(), 'untouched-local-token')
+
+    def test_same_version_legacy_service_is_recognized_but_requires_verified_launcher_replacement(self):
+        for service in ['argon-mcp', 'helium-mcp', 'miracle-mcp', 'unrelated']:
+            with self.subTest(service=service):
+                class Identity(bridge.H):
+                    def _status(handler, include_details=False):
+                        handler._json({'online': True, 'service': service, 'studio_mode': 'native_mcp',
+                                       'version': bridge.VERSION, 'pid': 123, 'instance_id': 'identity-fixture'})
+                self.server.RequestHandlerClass = Identity
+                found = bridge.existing_bridge(self.server.server_port)
+                if service == 'unrelated':
+                    self.assertIsNone(found)
+                else:
+                    self.assertEqual(found['service'], service)
+                with patch.object(bridge, 'BridgeServer', side_effect=OSError(errno.EADDRINUSE, 'fixture port in use')), \
+                     patch.object(bridge, '_load_token') as token:
+                    if service == 'argon-mcp':
+                        self.assertEqual(bridge.main(['--port', str(self.server.server_port)]), 0)
+                    else:
+                        with self.assertRaisesRegex(SystemExit, 'Run run.bat to replace'):
+                            bridge.main(['--port', str(self.server.server_port)])
+                    token.assert_not_called()
+                self.assertTrue(self.worker.is_alive(), 'Direct startup must not stop the previous owner')
 
     def test_simultaneous_process_launches_leave_one_bridge_and_one_token(self):
         with tempfile.TemporaryDirectory() as directory:

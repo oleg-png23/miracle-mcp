@@ -224,7 +224,7 @@ class BridgeFlowTests(unittest.TestCase):
         with urllib.request.urlopen(self.url + "/api/status") as response:
             status = json.loads(response.read())
         self.assertEqual(status["studio_mode"], "native_mcp")
-        self.assertEqual(status["service"], "helium-mcp")
+        self.assertEqual(status["service"], "argon-mcp")
         self.assertTrue(status["studio_linked"])
         self.assertIn("native_mcp", status)
         self.assertEqual(status["instance_id"], bridge.INSTANCE_ID)

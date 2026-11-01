@@ -1,8 +1,8 @@
-# Helium MCP
+# Argon MCP
 
 A local bridge between AI chats and Roblox Studio's built-in MCP server.
 
-The workspace includes a compact glass navigation rail, a welcome page, two local color themes, an optional Luau editor and usage statistics. The rounded **Helium** glass button in supported AI chats opens a neutral graphite panel and starts or stops Studio tool sessions. Its button and panel refract the live backdrop in supported Chromium browsers, with frosted fallback, bright rims and animated opening/closing. The optical maps are cached per size and suspended while hidden; the widget makes no requests for visual assets.
+The workspace includes a compact glass navigation rail, a welcome page, two local color themes, an optional Luau editor and usage statistics. The rounded **Argon** glass button in supported AI chats opens a neutral graphite panel and starts or stops Studio tool sessions. Its button and panel refract the live backdrop in supported Chromium browsers, with frosted fallback, bright rims and animated opening/closing. The optical maps are cached per size and suspended while hidden; the widget makes no requests for visual assets.
 
 [Website](https://oleg-png23.github.io/miracle-mcp/) · [Dashboard preview](https://oleg-png23.github.io/miracle-mcp/preview/dashboard.html) · [Start page preview](https://oleg-png23.github.io/miracle-mcp/preview/welcome.html) · [Download the latest release](https://github.com/oleg-png23/miracle-mcp/releases/latest)
 
@@ -17,39 +17,39 @@ Python uses the standard library. Node.js is needed only for development and bro
 
 ## Install a release
 
-Download `helium-mcp-2.9.3.zip` and extract both folders together. Load **plugin/** as the unpacked Chrome/Edge extension, enable Studio MCP, then run **release/run.bat**. The local bridge serves the interface from the sibling plugin folder. See [the installation guide](INSTALL.md) for the full Russian instructions.
+Open the latest-release page and choose its MCP ZIP. The current published package is **Helium 2.9.3** (`helium-mcp-2.9.3.zip`). Argon is currently available from source. Source builds produce `argon-mcp-2.9.3.zip`. Extract both folders together. Load **plugin/** as the unpacked Chrome/Edge extension, enable Studio MCP, then run **release/run.bat**. The local bridge serves the interface from the sibling plugin folder. See [the installation guide](INSTALL.md) for the full Russian instructions.
 
-## Upgrading from Miracle
+## Upgrading from Helium or Miracle
 
-Helium is the new project name. The dashboard, welcome page, chat widget, icons and downloads use Helium. Repository and website URLs stay the same, so existing links still work.
+Argon is the new project name. The dashboard, welcome page, chat widget, icons and new source-build archives use Argon. Repository and website URLs stay the same, so existing links still work.
 
-To retain extension settings, replace the contents of your existing **plugin/** folder and reload that extension, then refresh open chat tabs. Existing local settings, editor drafts and motion preferences keep their storage keys. New AI instructions emit `helium_tool`; the reader also accepts the previous `miracles_tool` and `miracle_tool` envelopes, so existing conversations can continue. The launcher recognizes verified Miracle bridges during replacement and shares the same launch lock to prevent duplicates across both names.
+To retain extension settings, replace the contents of your existing **plugin/** folder and reload that extension, then refresh open chat tabs. Existing local settings, editor drafts and motion preferences keep their storage keys. New AI instructions emit `argon_tool`; the reader also accepts `helium_tool`, `miracles_tool` and `miracle_tool` envelopes, so existing conversations can continue. The launcher safely replaces verified Helium/Miracle bridges, including the same-version Helium 2.9.3 process, and keeps the shared launch lock. Running tools still block replacement; unrelated port owners are never stopped.
 
-The new `HELIUM_PYTHON_PATH` and `HELIUM_STUDIO_MCP_PATH` overrides take precedence; their `MIRACLES_` equivalents remain supported.
+The new `ARGON_PYTHON_PATH` and `ARGON_STUDIO_MCP_PATH` overrides take precedence; `HELIUM_` and `MIRACLES_` equivalents remain supported. Studio discovery also retains `ZS_STUDIO_MCP_PATH`. Token files, saved settings and drafts keep their existing locations and storage keys.
 
 ## Start from source
 
 1. Open a place in Roblox Studio. In Assistant, select **… → Manage MCP Servers → Enable Studio as MCP Server**.
 2. Run `run.bat` from this folder. The launcher starts the bridge and opens the workspace at `http://127.0.0.1:19731/app`.
 3. Open `edge://extensions` or `chrome://extensions`, enable Developer mode and choose **Load unpacked**. Select this repository's root folder.
-4. Copy the access token from `python/token.txt` (or `release/python/token.txt` in a release). Paste it into **Connection → Advanced connection settings** in both the local workspace and the extension's workspace, and save each. Open the extension workspace from the Helium toolbar icon. Repeat this if an upgrade changes the bridge token.
-5. Open a supported AI chat and select **Helium → Start session**. Then describe the change you want to make in Studio.
+4. Copy the access token from `python/token.txt` (or `release/python/token.txt` in a release). Paste it into **Connection → Advanced connection settings** in both the local workspace and the extension's workspace, and save each. Open the extension workspace from the Argon toolbar icon. Repeat this if an upgrade changes the bridge token.
+5. Open a supported AI chat and select **Argon → Start session**. Then describe the change you want to make in Studio.
 
 The bridge creates its access token locally. It does not belong in Studio, an AI chat, or source control. It is sent in authenticated local requests, so browser extensions that can inspect or inject into the local workspace may obtain it; grant that access only to extensions you trust. Keep the bridge running while using the extension. After an update, run the new launcher, reload the extension and refresh open chat tabs. The dashboard reports version mismatches.
 
-The h✦ logo in the navigation rail opens `/ui/welcome.html`. Installation and the first extension launch open the welcome page. Browser startup or a later launch can show it again after five hours. During the cooldown, toolbar clicks open the workspace and browser startup stays quiet. Existing welcome/workspace tabs are reused.
+The a✦ logo in the navigation rail opens `/ui/welcome.html`. Installation and the first extension launch open the welcome page. Browser startup or a later launch can show it again after five hours. During the cooldown, toolbar clicks open the workspace and browser startup stays quiet. Existing welcome/workspace tabs are reused.
 
 ## Chat relay and recovery (2.9.0)
 
 Choose **Start session** in the chat widget to load Studio tools and activate the reader. **Copy instructions** only copies text; after pasting it, choose **Watch this chat** to activate the reader without replacing your draft. Watch can process the latest assistant tool reply once; older history and user messages stay excluded.
 
-The reader waits for stable replies, supports fenced or prose-surrounded Helium JSON and retries reading when a site's final streaming update is missed. Incomplete JSON produces a visible diagnostic. Tool calls keep unique IDs and cannot replay from repeated DOM updates or repeated Watch clicks within the same page.
+The reader waits for stable replies, supports fenced or prose-surrounded Argon JSON and retries reading when a site's final streaming update is missed. Incomplete JSON produces a visible diagnostic. Tool calls keep unique IDs and cannot replay from repeated DOM updates or repeated Watch clicks within the same page.
 
 If sending a result fails, **Last tool result** keeps it available. **Retry sending result** retries delivery without executing the Studio tool again. You can also copy or dismiss it. Stop prevents automatic posting of a late result. Reloading the chat clears this in-page recovery state; check Studio before asking to repeat an action.
 
 Home shows chat-agent state separately from Studio connectivity, including outdated extension/chat versions and stale heartbeats. **Copy connection report** includes versions, hostname, agent state and tool counts; it excludes credentials, prompts, code, tool arguments and results.
 
-Repeated launches reuse the healthy bridge. A per-port Windows mutex and exclusive listener prevent simultaneous duplicate processes. A verified previous Helium release can be replaced automatically; active tools block graceful replacement. **release/stop.bat** stops the bridge and its owned MCP connection. Unrelated port owners are left running.
+Repeated launches reuse the healthy bridge. A per-port Windows mutex and exclusive listener prevent simultaneous duplicate processes. A verified previous Argon release can be replaced automatically; active tools block graceful replacement. **release/stop.bat** stops the bridge and its owned MCP connection. Unrelated port owners are left running.
 
 ## Workspace sections
 
@@ -83,9 +83,9 @@ Tracking starts when this version is enabled; earlier sessions cannot be reconst
 
 ## Supported chats
 
-Host permissions and content-script matches are listed in `manifest.json`. Edge blocks extensions on `copilot.microsoft.com`, so the Helium button may be unavailable there.
+Host permissions and content-script matches are listed in `manifest.json`. Edge blocks extensions on `copilot.microsoft.com`, so the Argon button may be unavailable there.
 
-For Notion, open **Notion AI chat** first. For ClickUp, open **Brain Chat**. Helium does not use ordinary documents, task descriptions or comment fields as chat composers. These adapters rely on semantic labels and can require updates when the services change their interfaces.
+For Notion, open **Notion AI chat** first. For ClickUp, open **Brain Chat**. Argon does not use ordinary documents, task descriptions or comment fields as chat composers. These adapters rely on semantic labels and can require updates when the services change their interfaces.
 
 ## Local API
 
@@ -104,8 +104,8 @@ Mutation requests require the local token. Tool calls and manual execution also 
 
 The default port is `19731`. Optional environment variables:
 
-- `HELIUM_PYTHON_PATH`: Python executable for the Windows launcher.
-- `HELIUM_STUDIO_MCP_PATH`: override automatic StudioMCP executable discovery.
+- `ARGON_PYTHON_PATH`: Python executable for the Windows launcher.
+- `ARGON_STUDIO_MCP_PATH`: override automatic StudioMCP executable discovery.
 
 ## Development
 
@@ -131,11 +131,11 @@ npm run test:glass
 npm run test:launch
 ```
 
-UI tests use local synthetic chats and a fake Studio transport. They do not send messages to real AI services or change a real Studio place. Edge must be installed. Set `HELIUM_QUICK_QA=1` for the smaller host-injection matrix, or `HELIUM_DASHBOARD_ONLY=1` to run only dashboard and welcome-page checks.
+UI tests use local synthetic chats and a fake Studio transport. They do not send messages to real AI services or change a real Studio place. Edge must be installed. Set `ARGON_QUICK_QA=1` for the smaller host-injection matrix, or `ARGON_DASHBOARD_ONLY=1` to run only dashboard and welcome-page checks.
 
 The glass check compares pixels with refraction enabled and zeroed against a checkerboard backdrop, verifies the stable lens interior, depth, material switches, responsive map sizes, offscreen suspension, system transparency, forced colors and the unsupported-engine fallback. Screenshots are saved in `.mcp_cache/qa/`.
 
-`python scripts/build-release.py` creates the extension, standalone website, wallpaper archives and SHA-256 checksums in `.mcp_cache/release/` from an explicit allowlist. The site source is in `website/`; `docs/` is its GitHub Pages publication copy. The main ZIP has exactly `plugin/` and `release/` at its root. The archives exclude local tokens, caches, user data, tests and unrelated workspace folders. A manifest version change merged into main triggers the release workflow: it tests the source, builds all archives, uploads them into a draft GitHub release and publishes the complete set. Published releases are preserved on retries.
+`python scripts/build-release.py` creates canonical `argon-mcp`, `argon-website` and `argon-wallpapers` archives plus `argon-SHA256SUMS.txt` in `.mcp_cache/release/` from an explicit allowlist. It also emits byte-identical `helium-*` compatibility archives and a separate legacy `SHA256SUMS.txt`. Existing release-publication automation is unchanged and retains its Helium release labels and asset paths; this source update does not publish or modify a release. The site source is in `website/`; `docs/` is its GitHub Pages publication copy. The main ZIP has exactly `plugin/` and `release/` at its root. The archives exclude local tokens, caches, user data, tests and unrelated workspace folders. A manifest version change merged into main triggers the release workflow: it tests the source, builds all archives, uploads them into a draft GitHub release and publishes the complete set. Published releases are preserved on retries.
 
 ## License
 

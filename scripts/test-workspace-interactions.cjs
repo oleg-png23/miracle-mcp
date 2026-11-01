@@ -17,7 +17,7 @@ function navigation(){
   const ids=Object.fromEntries(['main','sectionPosition','sectionViewTitle','sectionHeading','sectionBreadcrumb','sectionViewDescription','openSections','closeSections'].map(id=>[id,make()]));ids.sectionMenu=menu;
   const location={hash:'#overview'},media={matches:true};
   const history={scrollRestoration:'auto',pushState(_state,_title,url){location.hash=url;}};
-  const document={title:'Helium',body:make(),querySelectorAll:q=>q==='[data-workspace-screen]'?screens:links,querySelector:()=>nav,
+  const document={title:'Argon',body:make(),querySelectorAll:q=>q==='[data-workspace-screen]'?screens:links,querySelector:()=>nav,
     getElementById:id=>ids[id],addEventListener:(k,fn)=>{events[k]=fn;},dispatchEvent:event=>emitted.push(event)};
   const window={innerWidth:390,scrollY:0,getSelection:()=>({isCollapsed:true}),scrollTo({top}){this.scrollY=top;},addEventListener:(k,fn)=>{events[k]=fn;}};
   const context={document,window,location,history,matchMedia:()=>media,Date:{now:()=>now},getComputedStyle:el=>({overflowX:el.overflowX||'visible'}),

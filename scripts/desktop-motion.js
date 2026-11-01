@@ -1,19 +1,22 @@
-/* Desktop motion is event-driven. Optical surfaces and their ancestors stay put. */
+/* Motion feedback is event-driven. Optical surfaces and their ancestors stay put. */
 (() => {
   'use strict';
   const root=document.documentElement;
   const desktop=matchMedia('(min-width:651px) and (hover:hover) and (pointer:fine)');
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const controls='button, a, summary';
+  const touchControls='.switch,.segmented-control button,.wallpaper-option,.input-action,.motion-toggle,.welcome-motion-toggle';
   const excluded='.nav-link,.rail-brand,.brand,.desktop-brand,.welcome-wordmark,.skip,.skip-link,[data-no-motion]';
   const values='.metric > strong:not(#stUptime),.usage-metrics strong,.usage-directions b,#agentState';
   const effects=new Set(),channels=new WeakMap(),seen=new WeakSet(),previous=new WeakMap();
   const ambient=[...document.querySelectorAll('.live-dot,.demo-line,.scroll-cue')];
   let paused=root.dataset.motion==='paused';
-  const allowed=()=>desktop.matches&&!reduced.matches&&!paused&&!document.hidden;
+  const motionAllowed=()=>!reduced.matches&&!paused&&!document.hidden;
+  const allowed=()=>desktop.matches&&motionAllowed();
   const optical=el=>el.matches('.glass,.welcome-connect')||Boolean(el.querySelector('.glass,.welcome-connect'));
   function animate(el,frames,options,channel='feedback',cleanup=()=>{}){
-    if(!allowed()||!el?.animate||optical(el))return;
+    const interaction=channel==='selection'||channel==='press';
+    if(!(interaction?motionAllowed():allowed())||!el?.animate||optical(el))return;
     let own=channels.get(el);if(!own){own=new Map();channels.set(el,own);}
     own.get(channel)?.finish();
     const animation=el.animate(frames,{duration:360,easing:'cubic-bezier(.2,.8,.2,1)',fill:'backwards',...options});
@@ -26,12 +29,14 @@
     return el&&!el.matches(excluded)&&!el.disabled&&el.getAttribute('aria-disabled')!=='true'?el:null;
   }
   function press(el){
-    if(!allowed()||!el||typeof el.animate!=='function'||optical(el))return;
+    if(!el||!motionAllowed()||(!desktop.matches&&!el.matches(touchControls))||typeof el.animate!=='function'||optical(el))return;
     animate(el,[{scale:'1'},{scale:'.985',offset:.35},{scale:'1'}],{duration:240},'press');
   }
   document.addEventListener('pointerdown',event=>{
-    if(event.defaultPrevented||event.button!==0||event.pointerType==='touch')return;
-    press(control(event.target));
+    if(event.defaultPrevented||event.button!==0)return;
+    const el=control(event.target);
+    if(event.pointerType==='touch'&&!el?.matches(touchControls))return;
+    press(el);
   });
   document.addEventListener('keydown',event=>{
     if(event.defaultPrevented||event.repeat||!['Enter',' '].includes(event.key))return;
@@ -41,10 +46,12 @@
     const el=record.target;
     if(record.type==='attributes'){
       if(!el.getClientRects().length)return;
+      const rect=el.getBoundingClientRect();
+      if(rect.bottom<=0||rect.top>=window.innerHeight)return;
       const value=el.getAttribute(record.attributeName);if(record.oldValue===value)return;
       if(record.attributeName==='aria-checked'){
         const thumb=el.matches('.switch')?el.querySelector('span'):null;
-        if(thumb)animate(thumb,[{scale:'.96'},{scale:'1'}],{duration:220},'selection');
+        if(thumb)animate(thumb,[{scale:'.9'},{scale:'1'}],{duration:260},'selection');
       }else if(value==='true'&&el.matches('.segmented-control button,.wallpaper-option,.scene,.landscape-card')){
         const image=el.querySelector('img,.scene-swatch')||el;
         animate(image,[{opacity:.7},{opacity:1}],{duration:220},'selection');

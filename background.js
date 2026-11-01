@@ -39,7 +39,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
     callTool(message).then(reply, error => reply({ok:false,code:'TOOL_FAILED',message:error.message})); return true;
   }
   if (message.type === 'MCP_OPEN_PANEL') {
-    openDashboard().then(() => reply({ ok: true }), () => reply({ ok: false, code: 'OPEN_FAILED', message: 'Could not open the workspace. Use the Helium icon in the browser toolbar.' }));
+    openDashboard().then(() => reply({ ok: true }), () => reply({ ok: false, code: 'OPEN_FAILED', message: 'Could not open the workspace. Use the Argon icon in the browser toolbar.' }));
     return true;
   }
   if (['MCP_PING', 'MCP_HEALTH'].includes(message.type)) {

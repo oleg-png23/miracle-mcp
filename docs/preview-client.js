@@ -32,7 +32,7 @@
       {name:'get_scene_info',description:'Example: inspect the open place.',inputSchema:{type:'object',properties:{}},annotations:{readOnlyHint:true}},
       {name:'run_code',description:'Example: execute Luau in the local application. Execution is disabled in this preview.',inputSchema:{type:'object',properties:{code:{type:'string'}},required:['code']}}]};
     if(path === '/api/auth') return {ok:true};
-    throw new Error('Preview only. Download Helium and open the local workspace to use Studio tools. Nothing was sent.');
+    throw new Error('Preview only. Download Argon and open the local workspace to use Studio tools. Nothing was sent.');
   }
   function report(message,error=false) {
     const feedback = document.getElementById('actionFeedback');

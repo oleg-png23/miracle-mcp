@@ -1,4 +1,4 @@
-// Helium MCP — shared config (extension + Python bridge read the same values)
+// Argon MCP — shared config (extension + Python bridge read the same values)
 const MIRACLES_CONFIG = {
   MCP_HOST: "127.0.0.1",
   MCP_PORT: 19731,

@@ -55,6 +55,18 @@ for line in sys.stdin:
 
 
 class StudioMCPTests(unittest.TestCase):
+    def test_argon_override_precedes_helium_miracle_and_original_fallbacks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            keys = ['ARGON_STUDIO_MCP_PATH', 'HELIUM_STUDIO_MCP_PATH',
+                    'MIRACLES_STUDIO_MCP_PATH', 'ZS_STUDIO_MCP_PATH']
+            paths = [Path(directory) / (key + '.exe') for key in keys]
+            for path in paths:
+                path.touch()
+            with patch.dict(os.environ, dict(zip(keys, map(str, paths))), clear=True):
+                for key, path in zip(keys, paths):
+                    self.assertEqual(find_studio_mcp(), path)
+                    del os.environ[key]
+
     def test_helium_path_override_takes_precedence_and_legacy_override_still_works(self):
         with tempfile.TemporaryDirectory() as directory:
             current = Path(directory) / 'helium.exe'
@@ -69,6 +81,15 @@ class StudioMCPTests(unittest.TestCase):
 
     def client(self, **kwargs):
         return StudioMCP(command=[sys.executable, "-u", "-c", FAKE_SERVER], timeout=1, **kwargs)
+
+    def test_initialize_advertises_argon_identity_over_real_stdio(self):
+        strict = FAKE_SERVER.replace('method == "initialize":',
+            'method == "initialize":\n        assert req["params"]["clientInfo"]["name"] == "argon-mcp"')
+        client = StudioMCP(command=[sys.executable, '-u', '-c', strict], timeout=1)
+        try:
+            self.assertEqual(client.start_if_needed()['state'], 'ready')
+        finally:
+            client.close()
 
     @patch("studio_mcp.studio_is_running", return_value=True)
     def test_handshake_tools_and_call(self, _running):
@@ -108,7 +129,7 @@ class StudioMCPTests(unittest.TestCase):
     def test_missing_executable(self, _find):
         status = StudioMCP().start_if_needed()
         self.assertEqual(status["state"], "missing")
-        self.assertIn("HELIUM_STUDIO_MCP_PATH", status["message"])
+        self.assertIn("ARGON_STUDIO_MCP_PATH", status["message"])
 
     def test_call_when_unavailable_is_meaningful(self):
         client = StudioMCP()
