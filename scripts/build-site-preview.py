@@ -20,9 +20,10 @@ def build():
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / 'assets/bg' / name, destination)
     scripts = preview / 'scripts'
+    shutil.rmtree(scripts, ignore_errors=True)
     scripts.mkdir(exist_ok=True)
     names = ['setup-guide', 'appearance', 'dashboard', 'welcome', 'welcome-prompts', 'rail', 'usage',
-             'chat-prompt', 'tool-protocol', 'agent-status', 'executor', 'dashboard-glass', 'surfaces', 'welcome-motion', 'typewriter', 'workspace-sections', 'workspace-motion', 'desktop-motion', 'tool-catalog']
+             'chat-prompt', 'tool-protocol', 'agent-status', 'executor', 'dashboard-glass', 'surfaces', 'welcome-motion', 'typewriter', 'workspace-sections', 'desktop-motion', 'tool-catalog']
     for name in names:
         source = (ROOT / 'scripts' / f'{name}.js').read_text(encoding='utf-8')
         if name == 'dashboard':

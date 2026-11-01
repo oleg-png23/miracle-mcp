@@ -31,6 +31,7 @@
   function toast(message, error = false) {
     const item = document.createElement('div');
     item.className = 'toast';
+    item.dataset.instant = String(document.documentElement.dataset.motionInput !== 'pointer');
     const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     icon.classList.add('icon');
     icon.setAttribute('aria-hidden', 'true');

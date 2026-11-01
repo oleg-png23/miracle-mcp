@@ -87,11 +87,7 @@ module.exports = async function switchMotionQA(browser, storageState, base, out)
 
       const depth = page.locator('#glassDepth'), before = Number(await depth.inputValue());
       await depth.press('ArrowRight');
-      await page.waitForFunction(() => {
-        const shadow = getComputedStyle(document.querySelector('#glassDepth')).boxShadow;
-        const values = shadow.match(/[-\d.]+px/g) || [];
-        const spread = parseFloat(values.at(-1)); return spread > 0 && spread < 5;
-      }, null, {timeout: 3000});
+      assert.equal(await depth.evaluate(el=>el.getAnimations().filter(a=>a.playState==='running').length),0,'Keyboard adjustments are instant');
       assert.equal(Number(await depth.inputValue()), Math.min(100, before + 1));
       await settle(); await stationary();
       await page.screenshot({path: path.join(out, 'argon-switches-' + (touch ? 'touch' : 'desktop') + '.png'), fullPage: true});

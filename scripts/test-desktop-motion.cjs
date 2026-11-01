@@ -48,103 +48,52 @@ function desktopHarness({desktop=true,reduced=false,paused=false,dashboard=false
   return {events,observers,intersections,animations,node,document,root,value,agent,photo,content,offscreen,glass,ancestor,ambient,pointer,desktopMedia,reducedMedia};
 }
 
-test('desktop page reveals leave optical surfaces and their ancestors stationary',()=>{
-  const h=desktopHarness();assert.equal(h.root.dataset.desktopMotion,'on');
-  assert.equal(h.animations.length,1);assert.equal(h.animations[0].el,h.content);
-  assert(h.intersections[0].observed.has(h.offscreen));
-  h.intersections[0].callback([{target:h.offscreen,isIntersecting:true}]);assert.equal(h.animations.length,2);
-  h.intersections[0].callback([{target:h.offscreen,isIntersecting:true}]);assert.equal(h.animations.length,2);
+test('rare page reveals stay brief and leave optical surfaces stationary',()=>{
+  const h=desktopHarness();assert.equal(h.animations.length,1);
+  assert.equal(h.animations[0].options.duration,200);
+  assert.equal(h.animations[0].options.easing,'cubic-bezier(.23,1,.32,1)');
+  h.intersections[0].callback([{target:h.offscreen,isIntersecting:true}]);
   assert(h.animations.every(a=>a.el!==h.glass&&a.el!==h.ancestor&&a.options.fill==='backwards'));
   h.animations[0].onfinish();assert(h.animations[0].canceled);
 });
 
-test('mouse and keyboard feedback never activates controls and excludes touch and glass',()=>{
-  const h=desktopHarness({dashboard:true}),button=h.node();
-  h.pointer(button);assert.equal(h.animations.length,1);assert.equal(button.children.length,0);
-  assert(h.animations[0].frames.every(frame=>Number(frame.scale)<=1));
-  h.animations.at(-1).onfinish();assert.equal(button.children.length,0);
-  const before=h.animations.length;
-  h.pointer(h.glass);h.pointer(h.ancestor);h.pointer(h.node({disabled:true}));h.pointer(h.node({excluded:true}));
-  h.pointer(button,{pointerType:'touch'});h.pointer(button,{button:2});assert.equal(h.animations.length,before);
-  h.events.keydown({target:button,key:'Enter',preventDefault(){assert.fail('Motion must not change activation behavior');}});
-  assert.equal(h.animations.length,before+1);
-  h.events.keydown({target:h.node({tagName:'A'}),key:' '});assert.equal(h.animations.length,before+1);
-  h.events.keydown({target:button,key:'Enter',repeat:true});assert.equal(h.animations.length,before+1);
+test('keyboard activation cancels decorative arrivals and never bounces controls',()=>{
+  const h=desktopHarness(),before=h.animations.length;
+  h.events.keydown({target:h.node(),key:'Enter'});
+  assert.equal(h.root.dataset.motionInput,'keyboard');assert.equal(h.animations.length,before);
+  assert(h.animations.every(a=>a.canceled));assert.equal(h.intersections[0].observed.size,0);
+  for(const key of [' ','Tab','ArrowRight'])h.events.keydown({target:h.node(),key});
+  assert.equal(h.animations.length,before);
 });
 
-test('selection and value feedback ignores unchanged polling updates and hidden controls',()=>{
+test('pointer press/release belongs to CSS and never schedules a timed rebound',()=>{
+  for(const desktop of [true,false]){
+    const h=desktopHarness({desktop,dashboard:true}),button=h.node();
+    h.pointer(button,{pointerType:desktop?'mouse':'touch'});h.pointer(button);
+    assert.equal(h.root.dataset.motionInput,'pointer');assert.equal(h.animations.length,0);
+    h.events.keydown({target:button,key:'Enter'});assert.equal(h.root.dataset.motionInput,'keyboard');
+  }
+});
+
+test('dashboard data and selections have no delegated mutation animation observer',()=>{
   const h=desktopHarness({dashboard:true});
-  const selected=h.node({kind:'selection',attrs:{'aria-pressed':'true'}});
-  const record={type:'attributes',target:selected,attributeName:'aria-pressed',oldValue:'true'};
-  h.observers[0].callback([record]);assert.equal(h.animations.length,0);
-  h.observers[0].callback([{...record,oldValue:'false'}]);assert.equal(h.animations.length,1);
-  selected.visible=false;h.observers[0].callback([{...record,oldValue:'false'}]);assert.equal(h.animations.length,1);
-  const thumb=h.node(),toggle=h.node({kind:'switch',inner:thumb,attrs:{'aria-checked':'false'}});
-  h.observers[0].callback([{type:'attributes',target:toggle,attributeName:'aria-checked',oldValue:'true'}]);assert.equal(h.animations.at(-1).el,thumb);
-  const count=h.animations.length;
-  h.observers[0].callback([{type:'childList',target:h.value}]);assert.equal(h.animations.length,count);
-  h.value.textContent='123';h.observers[0].callback([{type:'childList',target:h.value}]);assert.equal(h.animations.length,count+1);assert.equal(h.value.textContent,'123');
-  h.animations.at(-1).onfinish();h.observers[0].callback([{type:'childList',target:h.value}]);assert.equal(h.animations.length,count+1);
+  assert.equal(h.observers.length,0);
+  h.value.textContent='123';h.agent.textContent='Chat reader active';
+  assert.equal(h.animations.length,0);
 });
 
-test('touch selection controls get feedback without enabling motion on unrelated mobile buttons',()=>{
-  const h=desktopHarness({desktop:false,dashboard:true});
-  const selected=h.node({kind:'selection',attrs:{'aria-pressed':'true'}});
-  const record={type:'attributes',target:selected,attributeName:'aria-pressed',oldValue:'false'};
-  h.observers[0].callback([record]);assert.equal(h.animations.length,1);
-  h.pointer(selected,{pointerType:'touch'});assert.equal(h.animations.length,2);
-  h.pointer(h.node(),{pointerType:'touch'});assert.equal(h.animations.length,2);
-  const thumb=h.node(),toggle=h.node({kind:'switch',inner:thumb,attrs:{'aria-checked':'true'}});
-  h.observers[0].callback([{type:'attributes',target:toggle,attributeName:'aria-checked',oldValue:'false'}]);
-  assert.equal(h.animations.at(-1).el,thumb);
-  const count=h.animations.length;selected.top=1200;
-  h.observers[0].callback([record]);assert.equal(h.animations.length,count);
-  selected.top=100;h.events['miracle:motion']({detail:{paused:true}});assert(h.animations.every(a=>a.canceled));
-  h.observers[0].callback([record]);assert.equal(h.animations.length,count);
-  h.events['miracle:motion']({detail:{paused:false}});h.observers[0].callback([record]);assert.equal(h.animations.length,count+1);
-  h.document.hidden=true;h.events.visibilitychange();assert(h.animations.every(a=>a.canceled));
-  h.observers[0].callback([record]);assert.equal(h.animations.length,count+1);
-  h.document.hidden=false;h.events.visibilitychange();h.reducedMedia.matches=true;h.events.reduced();
-  h.observers[0].callback([record]);assert.equal(h.animations.length,count+1);
-});
-
-test('agent state changes get feedback once while visible and settle for motion preferences',()=>{
-  const h=desktopHarness({dashboard:true});
-  const update=text=>{h.agent.textContent=text;h.observers[0].callback([{type:'childList',target:h.agent}]);};
-  update('Chat reader active');assert.equal(h.animations.length,1);assert.equal(h.animations[0].el,h.agent);
-  update('Chat reader active');assert.equal(h.animations.length,1);h.animations[0].onfinish();
-  h.agent.top=1200;update('Running a Studio tool');assert.equal(h.animations.length,1,'Offscreen polling stays still');
-  h.agent.top=100;h.agent.visible=false;update('Sending the result to chat');assert.equal(h.animations.length,1);
-  h.agent.visible=true;update('Chat session paused');assert.equal(h.animations.length,2);
-  h.events['miracle:motion']({detail:{paused:true}});assert(h.animations.every(animation=>animation.canceled));
-  update('Chat session stopped');assert.equal(h.animations.length,2);
-  h.events['miracle:motion']({detail:{paused:false}});update('Starting the chat session');assert.equal(h.animations.length,3);
-  h.document.hidden=true;h.events.visibilitychange();assert(h.animations.every(animation=>animation.canceled));
-  update('Waiting for complete tool JSON');assert.equal(h.animations.length,3);
-  h.document.hidden=false;h.events.visibilitychange();h.reducedMedia.matches=true;h.events.reduced();
-  update('Chat reader active');assert.equal(h.animations.length,3);
-  assert(h.animations.every(animation=>animation.el!==h.glass&&animation.el!==h.ancestor));
-});
-
-test('an early agent update does not double its parent reveal or replay after it settles',()=>{
-  const h=desktopHarness({dashboard:true});h.agent.parentElement=h.content;
-  const entrance=h.content.animate([{opacity:0},{opacity:1}],{duration:360});
-  const update=text=>{h.agent.textContent=text;h.observers[0].callback([{type:'childList',target:h.agent}]);};
-  update('Starting the chat session');assert.equal(h.animations.length,1);
-  entrance.cancel();update('Starting the chat session');assert.equal(h.animations.length,1);
-  update('Chat reader active');assert.equal(h.animations.length,2);assert.equal(h.animations.at(-1).el,h.agent);
-});
-
-test('pause, hidden tabs, reduced motion and desktop changes cancel feedback without leaving extra layers',()=>{
-  const h=desktopHarness({dashboard:true}),button=h.node();h.pointer(button);h.photo.animate([{opacity:.5},{opacity:1}],{duration:550});
-  h.events['miracle:motion']({detail:{paused:true}});assert(h.animations.every(a=>a.canceled));assert.equal(button.children.length,0);
-  const before=h.animations.length;h.pointer(button);assert.equal(h.animations.length,before);assert.equal(h.root.dataset.desktopMotion,'off');
-  h.events['miracle:motion']({detail:{paused:false}});h.pointer(button);assert.equal(h.animations.length,before+1);
-  h.document.hidden=true;h.events.visibilitychange();assert(h.animations.every(a=>a.canceled));assert.equal(h.root.dataset.pageHidden,'true');
-  h.document.hidden=false;h.events.visibilitychange();h.pointer(button);h.reducedMedia.matches=true;h.events.reduced();assert(h.animations.every(a=>a.canceled));
-  const touch=desktopHarness({desktop:false});assert.equal(touch.animations.length,0);touch.pointer(touch.node());assert.equal(touch.animations.length,0);
-  assert.equal(desktopHarness({reduced:true}).animations.length,0);assert.equal(desktopHarness({paused:true}).animations.length,0);
-  h.intersections[1].callback([{target:h.ambient,isIntersecting:false}]);assert.equal(h.ambient.dataset.desktopVisible,'false');
+test('pause, hidden tabs, reduced motion and desktop changes settle page reveals',()=>{
+  for(const event of ['pause','hidden','reduced','desktop','pagehide']){
+    const h=desktopHarness();assert(h.animations.length);
+    if(event==='pause')h.events['miracle:motion']({detail:{paused:true}});
+    if(event==='hidden'){h.document.hidden=true;h.events.visibilitychange();}
+    if(event==='reduced'){h.reducedMedia.matches=true;h.events.reduced();}
+    if(event==='desktop'){h.desktopMedia.matches=false;h.events.desktop();}
+    if(event==='pagehide')h.events.pagehide();
+    assert(h.animations.every(a=>a.canceled),event);
+  }
+  assert.equal(desktopHarness({reduced:true}).animations.length,0);
+  assert.equal(desktopHarness({paused:true}).animations.length,0);
 });
 
 function detailsHarness(){
@@ -169,23 +118,25 @@ function detailsHarness(){
   return {events,animations,observers,document,first,details,click,media};
 }
 
-test('existing and dynamically loaded details animate open and close without duplicate wrappers',()=>{
-  const h=detailsHarness();h.click(h.first);assert(h.first.open);assert.equal(h.animations.length,1);
-  h.first.listeners.toggle();assert.equal(h.animations.length,1);
-  h.animations[0].onfinish();h.click(h.first);assert(h.first.open,'Closing content stays rendered until the animation ends');
-  h.animations[1].onfinish();assert(!h.first.open);
+test('existing and dynamic disclosures retain native activation and one styling wrapper',()=>{
+  const h=detailsHarness();
+  assert.equal(h.first.summary.listeners.click,undefined);
+  assert.equal(h.first.listeners.toggle,undefined);
   const dynamic=h.details();h.observers[0].callback([{addedNodes:[dynamic]}]);h.observers[0].callback([{addedNodes:[dynamic]}]);
   assert.equal(dynamic.childNodes.filter(n=>n.className==='fold-content').length,1);
-  h.click(dynamic);assert(dynamic.open);assert.equal(h.animations.length,3);
+  assert.equal(dynamic.summary.listeners.click,undefined);
+  assert.equal(h.animations.length,0);
 });
 
-test('paused and reduced motion settle disclosures at the requested state',()=>{
-  const h=detailsHarness();h.click(h.first);h.document.documentElement.dataset.motion='paused';h.events['miracle:motion']();
-  assert(h.first.open);assert(h.animations[0].canceled);
-  const before=h.animations.length;h.click(h.first);assert(!h.first.open);assert.equal(h.animations.length,before);
-  h.document.documentElement.dataset.motion='running';h.click(h.first);h.animations.at(-1).onfinish();h.click(h.first);
-  h.media.matches=true;h.events.reduced();assert(!h.first.open);assert(h.animations.at(-1).canceled);
-  const body=h.first.childNodes.find(n=>n.className==='fold-content');assert.equal(body.style.height,undefined);assert.equal(body.style.overflow,undefined);
+test('programmatic disclosure state is never delayed or replaced with height animation',()=>{
+  const h=detailsHarness();
+  for(const value of [true,false,true,false]){
+    h.first.open=value;
+    h.observers[0].callback([{addedNodes:[h.first]}]);
+    assert.equal(h.first.open,value);assert.equal(h.animations.length,0);
+    const body=h.first.childNodes.find(n=>n.className==='fold-content');
+    assert.equal(body.style.height,undefined);assert.equal(body.style.overflow,undefined);
+  }
 });
 
 test('unchanged usage polling preserves table rows and does not rewrite metric text',()=>{
