@@ -5,6 +5,7 @@ import copy
 import json
 import re
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -15,26 +16,51 @@ class UsageStats:
 
     def __init__(self, path: Path | None = None):
         self.path = path
+        self.recovery_message = ""
         self.lock = threading.Lock()
         self.data = {"version": 1, "since": datetime.now(timezone.utc).isoformat(),
                      "activations": 0, "tokens_in": 0, "tokens_out": 0, "sites": {}, "events": []}
-        if path and path.exists():
+        if not path:
+            return
+        try:
+            if not path.exists():
+                return
+            if path.stat().st_size > 2_000_000:
+                raise ValueError("Usage statistics file is too large")
             saved = json.loads(path.read_text(encoding="utf-8"))
-            if (saved.get("version") != 1 or not isinstance(saved.get("sites"), dict)
+            if (not isinstance(saved, dict) or saved.get("version") != 1 or not isinstance(saved.get("sites"), dict)
                     or not isinstance(saved.get("events"), list)
                     or len(saved["sites"]) > self.MAX_SITES or len(saved["events"]) > self.MAX_EVENTS):
                 raise ValueError("Invalid usage statistics file")
+            if not isinstance(saved.get("since"), str) or not all(isinstance(event, str) for event in saved["events"]):
+                raise ValueError("Invalid usage metadata")
             for row in [saved, *saved["sites"].values()]:
+                if not isinstance(row, dict):
+                    raise ValueError("Invalid usage row")
                 for field in ("activations", "tokens_in", "tokens_out"):
                     if type(row.get(field)) is not int or row[field] < 0:
                         raise ValueError("Invalid usage counter")
+            if any(not isinstance(row.get("last_used"), str) for row in saved["sites"].values()):
+                raise ValueError("Invalid usage timestamp")
             self.data = saved
+        except (ValueError, UnicodeError, RecursionError):
+            self.recovery_message = "Damaged usage statistics were preserved; counters have been reset."
+            try:
+                path.rename(path.with_name(path.name + f".corrupt-{time.time_ns()}"))
+            except OSError:
+                # Preserve the original even if it cannot be moved. Optional
+                # statistics must never prevent the bridge from starting.
+                self.path = None
+                self.recovery_message = "Usage statistics could not be recovered; tracking is in memory only."
+        except OSError:
+            self.path = None
+            self.recovery_message = "Usage statistics could not be read; tracking is in memory only."
 
     def record(self, event: dict) -> dict:
         event_id, kind, site = event.get("event_id"), event.get("kind"), event.get("site")
         if not isinstance(event_id, str) or not re.fullmatch(r"[\w.:/-]{1,256}", event_id):
             raise ValueError("Invalid usage event ID")
-        if kind not in {"activation", "input", "output"}:
+        if not isinstance(kind, str) or kind not in {"activation", "input", "output"}:
             raise ValueError("Invalid usage event kind")
         if not isinstance(site, str) or not re.fullmatch(r"[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?", site):
             raise ValueError("Usage site must be a hostname")

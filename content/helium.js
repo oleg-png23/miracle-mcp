@@ -262,17 +262,18 @@
     return false;
   }
   const sendRuntime = (type, payload = {}, signal) => new Promise((resolve, reject) => {
-    const timeout = type === 'MCP_CALL' ? 85000 : type === 'MCP_TOOLS' ? 25000 : 15000;
+    const timeout = type === 'MCP_CALL' ? 85000 : ['MCP_TOOLS','MCP_RESULT'].includes(type) ? 25000 : 15000;
+    const unconfirmed=()=>({ok:false,code:'outcome_unknown',message:'The action may already have run. Check its original result before retrying.',outcome_unknown:true,pending:true,instance_id:payload.instance_id});
     let timer;
     const cleanup = () => { clearTimeout(timer); signal?.removeEventListener('abort', abort); };
     const abort = () => { cleanup(); reject(new DOMException('Session start cancelled.', 'AbortError')); };
     if(signal?.aborted) { abort(); return; }
     signal?.addEventListener('abort', abort, {once:true});
-    timer = setTimeout(() => { cleanup(); reject(new Error('Bridge response timed out.')); }, timeout);
+    timer = setTimeout(() => { cleanup(); type==='MCP_CALL'?resolve(unconfirmed()):reject(new Error('Bridge response timed out.')); }, timeout);
     try {
       chrome.runtime.sendMessage({ type, ...payload }, response => {
         cleanup();
-        if (chrome.runtime.lastError || !response) reject(new Error('No response from the extension. Reload this page and try again.'));
+        if (chrome.runtime.lastError || !response) { if(type==='MCP_CALL')resolve(unconfirmed());else reject(new Error('No response from the extension. Reload this page and try again.')); }
         else resolve(response);
       });
     } catch(error) { cleanup(); reject(error); }
@@ -378,9 +379,11 @@
   function exposeResult(item) {
     pendingDelivery=item;resultText.value=item.message;resultDetails.hidden=false;
     retryResult.hidden=false;
+    retryResult.textContent=item.uncertain?'Check tool result':'Retry sending result';
   }
   async function deliverResult(signal) {
     const item=pendingDelivery;if(!item)return;
+    if(item.uncertain)throw new Error('Check the original tool result before sending anything to the model.');
     signal?.throwIfAborted();
     if(currentConversation()!==item.conversation)throw new Error('Return to the original conversation before sending this saved result.');
     const alreadySent=userTurnNodes().some(turn=>{
@@ -530,9 +533,11 @@
       if(sessionId!==runId)return;
       if(response?.code==='BRIDGE_RESTARTED'||(response?.instance_id&&sessionInstance&&response.instance_id!==sessionInstance)){stop('The bridge restarted. Start a new session; the old result was discarded.','BRIDGE_RESTARTED');return;}
       const toolError=response?.ok===true&&response.result?.isError===true;
-      const payload=response?.ok===true?{ok:!toolError,call_id:call.id,result:response.result}:{ok:false,call_id:call.id,code:response?.code||'TOOL_FAILED',message:response?.message||'The tool returned an error.'};
+      const uncertain=response?.outcome_unknown===true||['outcome_unknown','result_expired'].includes(response?.code)||response?.pending===true;
+      const payload=response?.ok===true?{ok:!toolError,call_id:call.id,result:response.result}:{ok:false,call_id:call.id,code:response?.code||'TOOL_FAILED',message:response?.message||'The tool returned an error.',...(uncertain?{outcome_unknown:true}:{})};
       const encoded=JSON.stringify(payload);
-      exposeResult({entry,encoded,message:'Argon tool result:\n```json\n'+encoded+'\n```',eventId:sessionId+':'+call.id+':out',instance:sessionInstance,conversation,toolError,requestError:response?.ok!==true,code:payload.code});
+      exposeResult({entry,encoded,message:'Argon tool result:\n```json\n'+encoded+'\n```',eventId:sessionId+':'+call.id+':out',instance:sessionInstance,conversation,toolError,requestError:response?.ok!==true,code:payload.code,uncertain,callId:call.id,requestId:sessionId+':'+call.id});
+      if(uncertain){stop('The action may already have run. Use Check tool result before retrying; no error was sent to the model.','OUTCOME_UNKNOWN');return;}
       if(!agentActive)return;
       if(!conversationReady())return;
       reportAgent('sending_result','',call.name);
@@ -609,6 +614,16 @@
   retryResult.onclick=()=>run(retryResult,async()=>{
     if(busy)throw new Error('The current tool is still finishing.');
     if(!pendingDelivery)return;
+    if(pendingDelivery.uncertain){
+      const item=pendingDelivery;
+      const response=await sendRuntime('MCP_RESULT',{call_id:item.requestId,instance_id:item.instance});
+      if(pendingDelivery!==item)return;
+      if(response?.instance_id&&item.instance&&response.instance_id!==item.instance)throw new Error('The bridge restarted. Check Studio before starting a new session.');
+      if(response?.ok!==true)throw new Error(response?.message||'The original result is still unconfirmed. Check Studio before retrying.');
+      const toolError=response.result?.isError===true;
+      const encoded=JSON.stringify({ok:!toolError,call_id:item.callId,result:response.result});
+      exposeResult({...item,encoded,message:'Argon tool result:\n```json\n'+encoded+'\n```',uncertain:false,toolError,requestError:false,code:''});
+    }
     const health=await sendRuntime('MCP_HEALTH');
     if(health?.code!=='READY')throw new Error(health?.message||'The bridge is not ready.');
     if(health.instance_id&&pendingDelivery.instance&&health.instance_id!==pendingDelivery.instance)throw new Error('The bridge restarted. Copy or dismiss this old result, then start a new session.');

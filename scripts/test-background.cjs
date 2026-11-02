@@ -52,9 +52,12 @@ function worker(initialSettings = {}, options = {}) {
         if (body.token !== token) return makeResponse(401, { ok: false, code: 'TOKEN_REJECTED', message: 'expired' });
         if (body.instance_id !== instance) return makeResponse(409, {ok:false,code:'instance_changed',message:'The bridge changed.',instance_id:instance});
         if (options.callStatus) return makeResponse(options.callStatus, { ok: false, code: 'CALL_DENIED', message: 'call denied' });
+        if (options.lostCall) throw new TypeError('connection closed after dispatch');
+        if (options.uncertainCall) return makeResponse(504,{ok:false,code:'outcome_unknown',outcome_unknown:true,pending:true,message:'Check the original result.',instance_id:instance});
         calls.push({ toolBody: body });
         return makeResponse(200, { ok: true, instance_id: instance, result: options.toolResult || { content: [{ type: 'text', text: 'ok' }] } });
       }
+      if (url.endsWith('/api/tools/result')) return makeResponse(200,{ok:true,instance_id:instance,result:{content:[{type:'text',text:'late result'}]}});
       throw new Error('Unexpected request ' + url);
     },
     chrome: {
@@ -166,6 +169,22 @@ test('MCP tool result errors are forwarded without being converted to transport 
   const result = await worker({ bridgeToken: 'fresh-token' }, { toolResult: mcpError }).context.callTool({ name: 'studio.inspect', arguments: {}, call_id: 's:c', instance_id: 'instance-a' });
   assert.equal(result.ok, true);
   assert.deepEqual(JSON.parse(JSON.stringify(result.result)), mcpError);
+});
+
+test('timeouts and lost responses preserve uncertainty and result recovery never resends a call',async()=>{
+  for(const options of [{uncertainCall:true},{lostCall:true}]){
+    const w=worker({bridgeToken:'fresh-token'},options);
+    const call={name:'studio.inspect',arguments:{},call_id:'session:original',instance_id:'instance-a'};
+    const result=await w.context.callTool(call);
+    assert.equal(result.code,'outcome_unknown');assert.equal(result.outcome_unknown,true);
+    const recovered=await w.context.toolResult(call);
+    assert.equal(recovered.result.content[0].text,'late result');
+    assert.equal(w.calls.filter(c=>c.url?.endsWith('/api/tools/call')).length,1);
+    const request=w.calls.find(c=>c.url?.endsWith('/api/tools/result'));
+    const body=JSON.parse(request.init.body);
+    assert.equal(body.call_id,call.call_id);assert.equal(body.instance_id,call.instance_id);
+    assert.equal(body.token,'fresh-token');assert.equal(body.arguments,undefined);
+  }
 });
 
 test('a 403 tool response remains a protected-operation error and does not bootstrap', async () => {

@@ -1,7 +1,9 @@
 import concurrent.futures
+import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from usage_stats import UsageStats
 
@@ -52,6 +54,43 @@ class UsageTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 store.record(self.event())
             self.assertEqual(store.snapshot()["activations"], 0)
+
+    def test_invalid_optional_files_are_preserved_and_new_counters_can_be_saved(self):
+        cases = ['{', '[]', json.dumps({'version': 1, 'sites': {}, 'events': []}),
+                 json.dumps({'version': 1, 'since': 'now', 'activations': 0, 'tokens_in': 0,
+                             'tokens_out': 0, 'sites': {'chatgpt.com': {'activations': 0, 'tokens_in': 0, 'tokens_out': 0}}, 'events': []})]
+        for content in cases:
+            with self.subTest(content=content), tempfile.TemporaryDirectory() as folder:
+                path = Path(folder) / 'usage.json'
+                path.write_text(content)
+                store = UsageStats(path)
+                self.assertTrue(store.recovery_message)
+                self.assertEqual(store.snapshot()['tokens_total'], 0)
+                backups = list(Path(folder).glob('usage.json.corrupt-*'))
+                self.assertEqual(len(backups), 1)
+                self.assertEqual(backups[0].read_text(), content)
+                store.record(self.event())
+                self.assertEqual(UsageStats(path).snapshot()['activations'], 1)
+
+    def test_recovery_failure_uses_memory_and_never_overwrites_the_damaged_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'usage.json'
+            path.write_text('{')
+            with patch.object(Path, 'rename', side_effect=PermissionError('read only')):
+                store = UsageStats(path)
+            store.record(self.event())
+            self.assertEqual(path.read_text(), '{')
+            self.assertEqual(store.snapshot()['activations'], 1)
+            self.assertIn('memory', store.recovery_message)
+
+    def test_unreadable_optional_stats_do_not_block_startup(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'usage.json'
+            path.write_text('{}')
+            with patch.object(Path, 'read_text', side_effect=PermissionError('read only')):
+                store = UsageStats(path)
+            self.assertEqual(store.snapshot()['tokens_total'], 0)
+            self.assertIn('memory', store.recovery_message)
 
 
 if __name__ == "__main__":

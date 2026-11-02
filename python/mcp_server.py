@@ -14,15 +14,17 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from queue import Empty, Queue
 from typing import Any, Callable, Optional
 
 try:
-    from .studio_mcp import StudioMCP, StudioMCPError
+    from .studio_mcp import StudioMCP, StudioMCPError, StudioMCPOutcomeUnknown, StudioMCPTimeout
     from .usage_stats import UsageStats
 except ImportError:  # direct execution: python python/mcp_server.py
-    from studio_mcp import StudioMCP, StudioMCPError
+    from studio_mcp import StudioMCP, StudioMCPError, StudioMCPOutcomeUnknown, StudioMCPTimeout
     from usage_stats import UsageStats
 
 VERSION = "2.9.3"
@@ -37,6 +39,14 @@ QUEUE: list[dict] = []
 NEXT_ID = 1
 MAX_LUAU = 20000
 MAX_BODY = 1_048_576
+TOOL_TIMEOUT = 60.0
+MAX_TOOL_JOBS = 8
+MAX_CALL_HISTORY = 4096
+MAX_CACHED_RESULTS = 128
+MAX_CACHED_RESULT_BYTES = 2_000_000
+MAX_CACHED_BYTES = 8_000_000
+HTTP_TIMEOUT = 10.0
+MAX_HTTP_REQUESTS = 32
 BLOCKED = [
     (re.compile(r":\s*Kick\s*\("), "Player:Kick"),
     (re.compile(r"BanAsync"), "Players:BanAsync"),
@@ -59,6 +69,7 @@ _MONITOR_THREAD: Optional[threading.Thread] = None
 _MONITOR_STOP = threading.Event()
 _DEDUP_LOCK = threading.Lock()
 _CALLS: dict[str, dict] = {}
+_CACHED_CALLS: OrderedDict[str, int] = OrderedDict()
 USAGE = UsageStats()
 _AGENTS: dict[str, dict] = {}
 _LAST_UI_OPEN = 0.0
@@ -78,7 +89,7 @@ def record_agent(body: dict) -> None:
     if not isinstance(session_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", session_id):
         raise ValueError("A valid session id is required")
     state = body.get("state")
-    if state not in {"starting", "watching", "waiting_json", "running", "sending_result", "paused", "stopped"}:
+    if not isinstance(state, str) or state not in {"starting", "watching", "waiting_json", "running", "sending_result", "paused", "stopped"}:
         raise ValueError("Unknown agent state")
     site = body.get("site", "")
     if not isinstance(site, str) or not re.fullmatch(r"[a-zA-Z0-9.-]{1,253}", site):
@@ -243,7 +254,7 @@ def _native_call(name: str, arguments: dict, timeout: float = 60.0) -> dict:
     client = get_native_client()
     result = client.call_tool(name, arguments, timeout=timeout)
     if not isinstance(result, dict):
-        raise StudioMCPError("Studio MCP returned a malformed tool result")
+        raise StudioMCPOutcomeUnknown("Studio MCP returned a malformed tool result", client, None, pending=False)
     return result
 
 
@@ -253,53 +264,185 @@ def _call_fingerprint(name: str, arguments: dict) -> str:
 
 
 def _trim_call_cache(call_id: str, response: dict) -> tuple[dict, int]:
-    """Keep 128 full results; small tombstones prevent expired calls from replaying."""
+    """Bound cached bytes, preserving the original response for its first caller.
+
+    The ledger itself is capped on admission. Never evict a call ID and silently
+    permit it to execute again; a full ledger requires an idle bridge restart.
+    """
     with _DEDUP_LOCK:
         current = _CALLS[call_id]
+        original_http = current["http"]
+        for key in list(_CACHED_CALLS):
+            if key not in _CALLS:
+                del _CACHED_CALLS[key]
+        _CACHED_CALLS.pop(call_id, None)
         current_size = len(json.dumps(response, ensure_ascii=False).encode("utf-8"))
-        if current_size > 2_000_000:
-            current["response"] = {"ok": False, "error": {"code": "result_expired", "message": "Result is too large to cache; call_id cannot be replayed"}, "instance_id": INSTANCE_ID}
+        if current_size > MAX_CACHED_RESULT_BYTES:
+            current["response"] = _error("result_expired", "The tool completed but its result exceeds the replay cache limit. Check Studio; do not execute it again.", completed=True)
             current["http"] = 410
             current["expired"] = True
-        full_results = [(key, entry) for key, entry in _CALLS.items()
-                        if (entry["event"].is_set() or key == call_id) and not entry.get("expired")]
-        while len(full_results) > 128:
-            _, entry = full_results.pop(0)
-            entry["response"] = {"ok": False, "error": {"code": "result_expired", "message": "Cached result has expired; call_id cannot be replayed"}, "instance_id": INSTANCE_ID}
+        else:
+            _CACHED_CALLS[call_id] = current_size
+        cached_bytes = sum(_CACHED_CALLS.values())
+        while len(_CACHED_CALLS) > MAX_CACHED_RESULTS or cached_bytes > MAX_CACHED_BYTES:
+            key, size = _CACHED_CALLS.popitem(last=False)
+            entry = _CALLS[key]
+            entry["response"] = _error("result_expired", "The tool completed but its cached result has expired. Check Studio; do not execute it again.", completed=True)
             entry["http"] = 410
             entry["expired"] = True
-        return current["response"], current["http"]
+            cached_bytes -= size
+        return response, original_http
 
 
-def _run_manual_job(jid: int, code: str, tool_name: Optional[str], arg_name: Optional[str]) -> None:
-    started = time.perf_counter()
-    ok, is_error, output = False, None, ""
-    try:
-        if not tool_name or not arg_name:
-            raise StudioMCPError("Studio MCP does not advertise a code execution tool with a supported source argument")
-        result = _native_call(tool_name, {arg_name: code})
-        is_error = bool(result.get("isError"))
-        ok = not is_error
-        content = result.get("content") if isinstance(result.get("content"), list) else []
-        text_parts = [item.get("text") for item in content if isinstance(item, dict) and isinstance(item.get("text"), str)]
-        if text_parts:
-            output = "\n".join(text_parts)
-        elif "structuredContent" in result:
-            output = json.dumps(result["structuredContent"], ensure_ascii=False)
-        else:
-            output = json.dumps({k: v for k, v in result.items() if k != "content"}, ensure_ascii=False)
-        output = output[:2000]
-    except Exception as exc:
-        output = str(exc)[:2000]
-    elapsed = int((time.perf_counter() - started) * 1000)
-    row = {"id": jid, "ok": ok, "output": output, "elapsed_ms": elapsed, "at": now()}
-    if is_error is not None:
+def _error(code: str, message: str, **details) -> dict:
+    return {"ok": False, "error": {"code": code, "message": message}, "instance_id": INSTANCE_ID, **details}
+
+
+def _unconfirmed(call_id: str, *, pending=True) -> dict:
+    return _error("outcome_unknown", "This action may already have run. Check its original result before retrying; do not issue a new call ID.",
+                  call_id=call_id, outcome_unknown=True, pending=pending)
+
+
+class ToolJobQueue:
+    """One lazy worker with a bounded number of running and queued jobs."""
+    def __init__(self, capacity=MAX_TOOL_JOBS):
+        self.stopping = threading.Event()
+        self._queue = Queue(maxsize=capacity)
+        self._slots = threading.BoundedSemaphore(capacity)
+        self._lock = threading.Lock()
+        self._worker = None
+
+    def submit(self, run, cancel) -> bool:
+        with self._lock:
+            if self.stopping.is_set() or not self._slots.acquire(blocking=False):
+                return False
+            self._queue.put_nowait((run, cancel))
+            if self._worker is None:
+                self._worker = threading.Thread(target=self._run, name="studio-tool-jobs", daemon=True)
+                self._worker.start()
+            return True
+
+    def _run(self):
+        while not self.stopping.is_set():
+            try:
+                run, cancel = self._queue.get(timeout=0.2)
+            except Empty:
+                continue
+            try:
+                cancel() if self.stopping.is_set() else run()
+            except Exception as exc:
+                log("native", f"Tool worker failed: {exc}")
+                cancel()
+            finally:
+                self._slots.release()
+
+    def close(self):
+        with self._lock:
+            self.stopping.set()
+        while True:
+            try:
+                _, cancel = self._queue.get_nowait()
+            except Empty:
+                break
+            try:
+                cancel()
+            finally:
+                self._slots.release()
+        if self._worker and self._worker is not threading.current_thread():
+            self._worker.join(timeout=1)
+
+
+def _manual_result(entry: dict, response: dict, elapsed: int) -> dict:
+    jid = entry["job_id"]
+    result = response.get("result", {})
+    is_error = bool(result.get("isError"))
+    ok = response.get("ok") is True and not is_error
+    content = result.get("content") if isinstance(result.get("content"), list) else []
+    text_parts = [item.get("text") for item in content if isinstance(item, dict) and isinstance(item.get("text"), str)]
+    if not response.get("ok"):
+        output = response["error"]["message"]
+    elif text_parts:
+        output = "\n".join(text_parts)
+    else:
+        output = json.dumps(result.get("structuredContent", result), ensure_ascii=False)
+    row = {"id": jid, "call_id": entry["call_id"], "ok": ok, "output": output[:2000], "elapsed_ms": elapsed, "at": now()}
+    if response.get("ok"):
         row["isError"] = is_error
+    if response.get("outcome_unknown"):
+        row.update(code="outcome_unknown", outcome_unknown=True)
+    return row
+
+
+def _record_manual_result(entry: dict, response: dict, elapsed: int) -> None:
+    row = _manual_result(entry, response, elapsed)
     with _STATE_LOCK:
         RESULTS.append(row)
         del RESULTS[:-50]
-        QUEUE[:] = [j for j in QUEUE if j["id"] != jid]
-    log("native:execute", f"result #{jid}: {'OK' if ok else 'ERR'} {output}")
+        QUEUE[:] = [j for j in QUEUE if j["id"] != row["id"]]
+    log("native:execute", f"result #{row['id']}: {'OK' if row['ok'] else 'ERR'} {row['output'][:500]}")
+
+
+def _finish_job(call_id: str, entry: dict, response: dict, http_code: int, started: float, delivery=None) -> None:
+    entry["elapsed_ms"] = int((time.monotonic() - started) * 1000)
+    if entry.get("job_id") is not None:
+        _record_manual_result(entry, response, entry["elapsed_ms"])
+    entry["response"], entry["http"] = response, http_code
+    original, original_http = _trim_call_cache(call_id, response)
+    entry.pop("pending_response", None)
+    entry["event"].set()
+    if delivery is not None and not entry.get("replied"):
+        entry["replied"] = True
+        delivery.put_nowait((original, original_http))
+
+
+def _cancel_tool_job(call_id, entry, delivery):
+    if entry["event"].is_set():
+        return
+    response = (_unconfirmed(call_id, pending=False) if entry.get("started") else
+                _error("shutting_down", "The bridge stopped before this tool was sent", not_sent=True))
+    _finish_job(call_id, entry, response, 504 if entry.get("started") else 503, time.monotonic(), delivery)
+
+
+def _run_tool_job(server, call_id: str, entry: dict, name: str, arguments: dict, delivery=None) -> None:
+    started = time.monotonic()
+    response, http_code = None, 200
+    try:
+        if server.jobs.stopping.is_set():
+            _cancel_tool_job(call_id, entry, delivery)
+            return
+        remaining = entry["deadline"] - time.monotonic()
+        if remaining <= 0:
+            raise StudioMCPTimeout("Timed out in the bridge queue; the tool was not sent")
+        entry["started"] = True
+        result = _native_call(name, arguments, timeout=remaining)
+    except StudioMCPOutcomeUnknown as exc:
+        entry["pending_response"] = _unconfirmed(call_id, pending=exc.pending)
+        if delivery is not None:
+            entry["replied"] = True
+            delivery.put_nowait((entry["pending_response"], 504))
+            delivery = None
+        while exc.pending and not server.jobs.stopping.is_set():
+            try:
+                result = exc.resolve(timeout=0.25)
+                break
+            except StudioMCPOutcomeUnknown as late:
+                exc = late
+            except Exception as late:
+                response, http_code = _error(getattr(late, "code", "native_call_failed"), str(late)[:1000]), 502
+                break
+        else:
+            response, http_code = _unconfirmed(call_id, pending=False), 504
+    except Exception as exc:
+        code = getattr(exc, "code", "native_call_failed")
+        response = _error(code, str(exc)[:1000], not_sent=isinstance(exc, StudioMCPTimeout))
+        http_code = 504 if isinstance(exc, StudioMCPTimeout) else 502
+    if response is None:
+        if isinstance(result, dict):
+            response = {"ok": True, "result": result, "instance_id": INSTANCE_ID}
+        else:
+            response, http_code = _unconfirmed(call_id, pending=False), 502
+    _finish_job(call_id, entry, response, http_code, started, delivery)
+    log("native:call", f"{name} {'completed' if response.get('ok') else 'unconfirmed' if response.get('outcome_unknown') else 'failed'} ({call_id})")
 
 
 def _code_tool(tools: list[dict]) -> tuple[Optional[str], Optional[str]]:
@@ -367,6 +510,10 @@ class H(BaseHTTPRequestHandler):
         ".lua": "text/plain; charset=utf-8", ".ico": "image/x-icon",
     }
 
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(self.server.request_timeout)
+
     def log_message(self, *args):
         pass
 
@@ -395,12 +542,15 @@ class H(BaseHTTPRequestHandler):
             obj.setdefault("message", obj["error"].get("message", "Request failed"))
             obj.setdefault("instance_id", INSTANCE_ID)
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
-        self.send_response(code)
-        self._cors()
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(code)
+            self._cors()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError, TimeoutError):
+            pass  # The job/result remains available when a caller disconnects.
 
     def _body(self):
         ctype = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
@@ -412,10 +562,28 @@ class H(BaseHTTPRequestHandler):
             return None, {"code": "bad_length", "message": "Invalid Content-Length"}
         if length < 0 or length > MAX_BODY:
             return None, {"code": "body_too_large", "message": "Request body is too large"}
+        deadline = time.monotonic() + self.server.request_timeout
         try:
-            value = json.loads(self.rfile.read(length) or b"{}")
-        except (ValueError, OSError, UnicodeDecodeError):
+            chunks, remaining = [], length
+            while remaining:
+                budget = deadline - time.monotonic()
+                if budget <= 0:
+                    raise TimeoutError()
+                self.connection.settimeout(budget)
+                chunk = self.rfile.read1(min(65536, remaining))
+                if not chunk:
+                    return None, {"code": "invalid_json", "message": "Request body was incomplete"}
+                chunks.append(chunk)
+                remaining -= len(chunk)
+            def reject_constant(_):
+                raise ValueError("Non-finite JSON number")
+            value = json.loads(b"".join(chunks) or b"{}", parse_constant=reject_constant)
+        except TimeoutError:
+            return None, {"code": "request_timeout", "message": "Request body did not arrive before its deadline"}
+        except (ValueError, OSError, UnicodeDecodeError, RecursionError):
             return None, {"code": "invalid_json", "message": "Request body must be valid JSON"}
+        finally:
+            self.connection.settimeout(self.server.request_timeout)
         if not isinstance(value, dict):
             return None, {"code": "invalid_json", "message": "Request body must be a JSON object"}
         return value, None
@@ -454,10 +622,130 @@ class H(BaseHTTPRequestHandler):
             return
         self._file(full, ctype)
 
+    def _reply_job(self, call_id, entry, *, manual=False, delivery=None):
+        if manual:
+            acknowledgement = {"id": entry["job_id"], "call_id": call_id, "instance_id": INSTANCE_ID}
+            if entry["event"].is_set():
+                response = entry["response"]
+                if not response.get("ok"):
+                    self._json(response, entry["http"])
+                    return
+                acknowledgement["completion"] = _manual_result(entry, response, entry["elapsed_ms"])
+            self._json(acknowledgement)
+            return
+        if delivery is not None:
+            try:
+                response, http_code = delivery.get(timeout=TOOL_TIMEOUT + 1)
+                self._json(response, http_code)
+                return
+            except Empty:
+                pass
+        elif not entry.get("pending_response"):
+            entry["event"].wait(TOOL_TIMEOUT + 1)
+        if entry["event"].is_set():
+            self._json(entry["response"], entry["http"])
+        else:
+            self._json(entry.get("pending_response") or _unconfirmed(call_id), 504)
+
+    def _dispatch_tool(self, body, *, manual=False):
+        """Manual code and chat tools share admission, idempotency and workers."""
+        global NEXT_ID
+        call_id = body.get("call_id")
+        if manual and call_id is None:
+            # Compatibility for older manual clients. The current workspace
+            # always supplies a stable ID before its first network request.
+            call_id = "manual:" + secrets.token_hex(16)
+        if not isinstance(call_id, str) or not call_id or len(call_id) > 128 or not re.fullmatch(r"[\w.:/-]+", call_id):
+            self._json(_error("invalid_call_id", "call_id must be 1-128 safe characters"), 400)
+            return
+        if manual:
+            code = body.get("luau", "")
+            if not isinstance(code, str):
+                self._json(_error("invalid_code", "luau must be a string"), 400)
+                return
+            if len(code) > MAX_LUAU:
+                self._json(_error("code_too_large", f"Code exceeds {MAX_LUAU} characters"), 400)
+                return
+            if not code.strip():
+                self._json(_error("empty_code", "Code is empty"), 400)
+                return
+            fingerprint = _call_fingerprint("/api/execute", {"luau": code})
+        else:
+            name, args = body.get("name"), body.get("arguments", {})
+            if not isinstance(name, str) or not name or len(name) > 200:
+                self._json(_error("invalid_name", "Tool name must be a non-empty string up to 200 characters"), 400)
+                return
+            if not isinstance(args, dict):
+                self._json(_error("invalid_arguments", "arguments must be an object"), 400)
+                return
+            fingerprint = _call_fingerprint("/api/tools/call:" + name, args)
+        with _DEDUP_LOCK:
+            prior = _CALLS.get(call_id)
+        if prior:
+            if prior["fingerprint"] != fingerprint:
+                self._json(_error("call_id_conflict", "call_id was already used with different content"), 409)
+            else:
+                self._reply_job(call_id, prior, manual=manual)
+            return
+        offline = _tool_offline()
+        if offline:
+            self._json(offline, 503)
+            return
+        try:
+            catalog = _tool_catalog(refresh=not bool(_NATIVE_TOOLS))
+        except Exception as exc:
+            self._json(_error("tools_list_failed", str(exc)[:1000]), 502)
+            return
+        if manual:
+            name, arg_name = _code_tool(catalog)
+            if not name or not arg_name:
+                self._json(_error("unsupported_code_tool", "Studio does not advertise a supported code execution tool"), 400)
+                return
+            args = {arg_name: code}
+        elif not any(tool.get("name") == name for tool in catalog):
+            self._json(_error("unknown_tool", "Tool is not in the current Studio MCP tools/list"), 404)
+            return
+        reason = _safe_code_arguments(args)
+        if reason:
+            self._json(_error("blocked_by_safe_mode", reason), 403)
+            return
+        delivery = None if manual else Queue(maxsize=1)
+        with _DEDUP_LOCK, _STATE_LOCK:
+            entry = _CALLS.get(call_id)
+            owner = entry is None
+            if entry is not None and entry["fingerprint"] != fingerprint:
+                admission_error = (_error("call_id_conflict", "call_id was already used with different content"), 409)
+            elif entry is not None:
+                admission_error = None
+            elif self.server.stopping.is_set():
+                admission_error = (_error("shutting_down", "The bridge is stopping. Reconnect before running a tool."), 503)
+            elif len(_CALLS) >= MAX_CALL_HISTORY:
+                admission_error = (_error("call_history_full", "Call history is full. Restart the idle bridge before starting a new session; old calls cannot replay."), 429)
+            else:
+                entry = {"fingerprint": fingerprint, "call_id": call_id, "event": threading.Event(), "response": None, "http": 200,
+                         "deadline": time.monotonic() + TOOL_TIMEOUT, "created_at": time.time(), "started": False}
+                if manual:
+                    entry["job_id"] = NEXT_ID
+                _CALLS[call_id] = entry
+                cancel = lambda: _cancel_tool_job(call_id, entry, delivery)
+                if not self.server.jobs.submit(lambda: _run_tool_job(self.server, call_id, entry, name, args, delivery), cancel):
+                    del _CALLS[call_id]
+                    admission_error = (_error("queue_full", "The Studio tool queue is full. Wait for a result before retrying.", not_sent=True), 429)
+                else:
+                    admission_error = None
+                    if manual:
+                        QUEUE.append({"id": NEXT_ID, "ts": time.time(), "src": "api"})
+                        NEXT_ID += 1
+        if admission_error:
+            self._json(*admission_error)
+            return
+        self._reply_job(call_id, entry, manual=manual, delivery=delivery if owner else None)
+
     def _status(self, include_details=False):
-        with _STATE_LOCK:
-            oldest = max((time.time() - j["ts"] for j in QUEUE), default=0)
-            queue_count = len(QUEUE)
+        with _DEDUP_LOCK, _STATE_LOCK:
+            pending = [entry for entry in _CALLS.values() if not entry["event"].is_set()]
+            oldest = max((time.time() - entry.get("created_at", time.time()) for entry in pending), default=0)
+            queue_count = len(pending)
             recent = RECENT[-15:][::-1]
             results = RESULTS[-50:][::-1]
         native = _status_native()
@@ -508,7 +796,7 @@ class H(BaseHTTPRequestHandler):
             return
         body, body_error = self._body()
         if body_error:
-            self._json({"ok": False, "error": body_error}, 400)
+            self._json({"ok": False, "error": body_error}, 408 if body_error["code"] == "request_timeout" else 400)
             return
         if path == "/api/auth":
             if not self._authed(body):
@@ -516,15 +804,31 @@ class H(BaseHTTPRequestHandler):
                 return
             self._json({"ok": True, "instance_id": INSTANCE_ID})
             return
-        if path in {"/api/status", "/api/tools/list", "/api/tools/call", "/api/execute", "/api/usage/event",
+        if path in {"/api/status", "/api/tools/list", "/api/tools/call", "/api/tools/result", "/api/execute", "/api/usage/event",
                     "/api/agent/state", "/api/bridge/shutdown", "/api/ui/claim"} and not self._authed(body):
             self._json({"ok": False, "error": {"code": "unauthorized", "message": "Bad or missing bridge token"}}, 401)
             return
         if path == "/api/status":
             self._status(include_details=True)
             return
-        if path in {"/api/tools/call", "/api/execute"} and body.get("instance_id") != INSTANCE_ID:
+        if path in {"/api/tools/call", "/api/tools/result", "/api/execute"} and body.get("instance_id") != INSTANCE_ID:
             self._json({"ok": False, "error": {"code": "instance_changed", "message": "The bridge changed. Reconnect before running a tool."}}, 409)
+            return
+        if path == "/api/tools/result":
+            call_id = body.get("call_id")
+            if not isinstance(call_id, str) or not call_id or len(call_id) > 128:
+                self._json(_error("invalid_call_id", "A call_id is required"), 400)
+                return
+            with _DEDUP_LOCK:
+                entry = _CALLS.get(call_id)
+            if entry is None:
+                self._json(_error("unknown_call", "No call with this ID was accepted by this bridge"), 404)
+            elif entry["event"].is_set():
+                self._json(entry["response"], entry["http"])
+            elif entry.get("started"):
+                self._json(entry.get("pending_response") or _unconfirmed(call_id), 202)
+            else:
+                self._json(_error("call_pending", "The original call is queued; do not send a new call ID", pending=True, not_sent=True), 202)
             return
         if path == "/api/agent/state":
             try:
@@ -579,114 +883,8 @@ class H(BaseHTTPRequestHandler):
                 return
             self._json({"ok": True, "tools": tools, "instance_id": INSTANCE_ID})
             return
-        if path == "/api/tools/call":
-            name, args, call_id = body.get("name"), body.get("arguments", {}), body.get("call_id")
-            if not isinstance(name, str) or not name or len(name) > 200:
-                self._json({"ok": False, "error": {"code": "invalid_name", "message": "Tool name must be a non-empty string up to 200 characters"}}, 400)
-                return
-            if not isinstance(args, dict):
-                self._json({"ok": False, "error": {"code": "invalid_arguments", "message": "arguments must be an object"}}, 400)
-                return
-            if not isinstance(call_id, str) or not call_id or len(call_id) > 128 or not re.fullmatch(r"[\w.:/-]+", call_id):
-                self._json({"ok": False, "error": {"code": "invalid_call_id", "message": "call_id must be 1-128 safe characters"}}, 400)
-                return
-            fingerprint = _call_fingerprint(name, args)
-            with _DEDUP_LOCK:
-                prior = _CALLS.get(call_id)
-                if prior and prior["fingerprint"] != fingerprint:
-                    self._json({"ok": False, "error": {"code": "call_id_conflict", "message": "call_id was already used with different content"}}, 409)
-                    return
-            if prior:
-                if not prior["event"].wait(65.0):
-                    self._json({"ok": False, "error": {"code": "call_timeout", "message": "The original call is still running"}}, 504)
-                    return
-                self._json(prior["response"], prior["http"])
-                return
-            offline = _tool_offline()
-            if offline:
-                self._json(offline, 503)
-                return
-            try:
-                catalog = _tool_catalog(refresh=not bool(_NATIVE_TOOLS))
-            except Exception:
-                catalog = []
-            tool = next((x for x in catalog if x.get("name") == name), None)
-            if tool is None:
-                self._json({"ok": False, "error": {"code": "unknown_tool", "message": "Tool is not in the current Studio MCP tools/list"}}, 404)
-                return
-            reason = _safe_code_arguments(args)
-            if reason:
-                self._json({"ok": False, "error": {"code": "blocked_by_safe_mode", "message": reason}}, 403)
-                return
-            owner = False
-            with _DEDUP_LOCK:
-                entry = _CALLS.get(call_id)
-                if entry and entry["fingerprint"] != fingerprint:
-                    self._json({"ok": False, "error": {"code": "call_id_conflict", "message": "call_id was already used with different content"}}, 409)
-                    return
-                if entry is None:
-                    if self.server.stopping.is_set():
-                        self._json({"ok": False, "error": {"code": "shutting_down", "message": "The bridge is stopping. Start a new session after reconnecting."}}, 503)
-                        return
-                    entry = {"fingerprint": fingerprint, "event": threading.Event(), "response": None, "http": 200}
-                    _CALLS[call_id] = entry
-                    owner = True
-            if not owner:
-                if not entry["event"].wait(65.0):
-                    self._json({"ok": False, "error": {"code": "call_timeout", "message": "The original call is still running"}}, 504)
-                    return
-                self._json(entry["response"], entry["http"])
-                return
-            try:
-                result = _native_call(name, args, timeout=60.0)
-                response, http_code = {"ok": True, "result": result, "instance_id": INSTANCE_ID}, 200
-                log("native:call", f"{name} completed ({call_id})")
-            except Exception as exc:
-                timed_out = "timed out" in str(exc).lower()
-                response = {"ok": False, "error": {"code": "native_timeout" if timed_out else "native_call_failed",
-                                                       "message": str(exc)[:1000]}, "instance_id": INSTANCE_ID}
-                http_code = 504 if timed_out else 502
-                log("native:call", f"{name} failed ({call_id}): {exc}")
-            entry["response"], entry["http"] = response, http_code
-            response, http_code = _trim_call_cache(call_id, response)
-            entry["event"].set()
-            self._json(response, http_code)
-            return
-        if path == "/api/execute":
-            code = body.get("luau", "")
-            if not isinstance(code, str):
-                self._json({"ok": False, "error": {"code": "invalid_code", "message": "luau must be a string"}}, 400)
-                return
-            if len(code) > MAX_LUAU:
-                self._json({"ok": False, "error": {"code": "code_too_large", "message": f"Code exceeds {MAX_LUAU} characters"}}, 400)
-                return
-            if not code.strip():
-                self._json({"ok": False, "error": {"code": "empty_code", "message": "Code is empty"}}, 400)
-                return
-            reason = check_safe(code)
-            if reason:
-                self._json({"ok": False, "error": {"code": "blocked_by_safe_mode", "message": reason}}, 403)
-                return
-            offline = _tool_offline()
-            if offline:
-                self._json(offline, 503)
-                return
-            try:
-                catalog = _tool_catalog(refresh=not bool(_NATIVE_TOOLS))
-                tool_name, arg_name = _code_tool(catalog)
-            except Exception:
-                tool_name, arg_name = None, None
-            global NEXT_ID
-            with _STATE_LOCK:
-                if self.server.stopping.is_set():
-                    self._json({"ok": False, "error": {"code": "shutting_down", "message": "The bridge is stopping. Reconnect before running code."}}, 503)
-                    return
-                jid = NEXT_ID
-                NEXT_ID += 1
-                QUEUE.append({"id": jid, "ts": time.time(), "src": "api"})
-            worker = threading.Thread(target=_run_manual_job, args=(jid, code, tool_name, arg_name), daemon=True)
-            worker.start()
-            self._json({"id": jid, "instance_id": INSTANCE_ID})
+        if path in {"/api/tools/call", "/api/execute"}:
+            self._dispatch_tool(body, manual=path == "/api/execute")
             return
         self._json({"ok": False, "error": {"code": "not_found", "message": "Route not found"}}, 404)
 
@@ -694,10 +892,34 @@ class H(BaseHTTPRequestHandler):
 class BridgeServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = os.name != "nt"
+    request_timeout = HTTP_TIMEOUT
 
     def __init__(self, *args, **kwargs):
         self.stopping = threading.Event()
+        self.jobs = ToolJobQueue()
+        self._request_slots = threading.BoundedSemaphore(MAX_HTTP_REQUESTS)
         super().__init__(*args, **kwargs)
+
+    def process_request(self, request, client_address):
+        if not self._request_slots.acquire(blocking=False):
+            try:
+                request.settimeout(0.1)
+                request.sendall(b"HTTP/1.0 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+            except OSError:
+                pass
+            self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except Exception:
+            self._request_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._request_slots.release()
 
     def server_bind(self):
         # SO_REUSEADDR permits duplicate listeners on Windows. The bridge must
@@ -708,6 +930,14 @@ class BridgeServer(ThreadingHTTPServer):
 
     def server_close(self):
         try:
+            _MONITOR_STOP.set()
+            self.stopping.set()
+            self.jobs.stopping.set()
+            with _NATIVE_LOCK:
+                client = _NATIVE_CLIENT
+            if client is not None:
+                client.close()
+            self.jobs.close()
             stop_native_client()
         finally:
             super().server_close()
@@ -763,6 +993,8 @@ def main(argv=None):
     parser.add_argument("--allow-assets", default="")
     args = parser.parse_args(argv)
     USAGE = UsageStats(Path(__file__).resolve().parents[1] / ".mcp_cache" / "usage-stats.json")
+    if USAGE.recovery_message:
+        log("usage", USAGE.recovery_message)
     SAFE = not args.no_safe
     ALLOW_ASSETS = {a.strip() for a in args.allow_assets.split(",") if a.strip().isdigit()}
     START = time.time()

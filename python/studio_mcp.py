@@ -89,7 +89,27 @@ def studio_is_running() -> Optional[bool]:
 
 
 class StudioMCPError(RuntimeError):
+    code = "native_call_failed"
+
+
+class StudioMCPTimeout(StudioMCPError):
+    code = "native_timeout"
+
+
+class StudioMCPDisconnected(StudioMCPError):
     pass
+
+
+class StudioMCPOutcomeUnknown(StudioMCPError):
+    """A dispatched tool may have changed Studio; never retry it as a new call."""
+    code = "outcome_unknown"
+
+    def __init__(self, message, client, request_id, *, pending):
+        super().__init__(message)
+        self.client, self.request_id, self.pending = client, request_id, pending
+
+    def resolve(self, timeout=0.25):
+        return self.client.wait_for_pending(self.request_id, timeout=timeout)
 
 
 class StudioMCP:
@@ -110,6 +130,9 @@ class StudioMCP:
         self._responses: Queue = Queue()
         self._reader: Optional[threading.Thread] = None
         self._stderr: Optional[threading.Thread] = None
+        self._writer: Optional[threading.Thread] = None
+        self._pending_request: Optional[int] = None
+        self._operation_deadline: Optional[float] = None
         self._state = "connecting"
         self._message = "Studio MCP connection has not been started"
         self._studio_running: Optional[bool] = None
@@ -123,6 +146,8 @@ class StudioMCP:
                     continue
                 if isinstance(message, dict):
                     responses.put(message)
+        except (OSError, ValueError):
+            pass
         finally:
             responses.put(None)
 
@@ -135,6 +160,55 @@ class StudioMCP:
             except Exception:
                 pass
 
+    def _write_message(self, proc, message: dict, deadline: float) -> None:
+        """Pipe writes can block on Windows too; kill only our child on expiry."""
+        encoded = json.dumps(message, separators=(",", ":")) + "\n"
+        done, errors = threading.Event(), []
+
+        def write():
+            try:
+                proc.stdin.write(encoded)
+                proc.stdin.flush()
+            except (OSError, ValueError) as exc:
+                errors.append(exc)
+            finally:
+                done.set()
+
+        if time.monotonic() >= deadline:
+            raise StudioMCPTimeout("Timed out before writing to Studio MCP")
+        self._writer = threading.Thread(target=write, name="studio-mcp-writer", daemon=True)
+        self._writer.start()
+        if not done.wait(max(0, deadline - time.monotonic())):
+            # Termination releases a writer blocked on a full pipe. Do not try
+            # to close its TextIOWrapper while it still owns the stream lock.
+            try:
+                proc.kill()
+            except OSError:
+                pass
+            self._writer.join(timeout=0.2)
+            raise StudioMCPTimeout("Timed out writing to Studio MCP")
+        if errors:
+            raise StudioMCPDisconnected(f"Could not write to Studio MCP: {errors[0]}")
+
+    def _read_response(self, rid: int, method: str, deadline: float) -> dict:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise StudioMCPTimeout(f"Timed out waiting for Studio MCP method {method}")
+            try:
+                response = self._responses.get(timeout=remaining)
+            except Empty as exc:
+                raise StudioMCPTimeout(f"Timed out waiting for Studio MCP method {method}") from exc
+            if response is None:
+                raise StudioMCPDisconnected("Studio MCP closed its stdout")
+            if response.get("id") != rid:
+                continue
+            if "error" in response:
+                err = response["error"]
+                detail = err.get("message", err) if isinstance(err, dict) else err
+                raise StudioMCPError(f"Studio MCP {method} failed: {detail}")
+            return response.get("result", {})
+
     def _request(self, method: str, params: dict, timeout: Optional[float] = None) -> dict:
         proc = self.proc
         if proc is None or proc.poll() is not None:
@@ -142,31 +216,55 @@ class StudioMCP:
         self._id += 1
         rid = self._id
         request = {"jsonrpc": "2.0", "id": rid, "method": method, "params": params}
+        deadline = time.monotonic() + (self.timeout if timeout is None else max(0.001, timeout))
+        if self._operation_deadline is not None:
+            deadline = min(deadline, self._operation_deadline)
         try:
-            proc.stdin.write(json.dumps(request, separators=(",", ":")) + "\n")
-            proc.stdin.flush()
-        except (OSError, BrokenPipeError) as exc:
-            raise StudioMCPError(f"Could not write to Studio MCP: {exc}") from exc
-        deadline = time.monotonic() + (self.timeout if timeout is None else max(0.1, timeout))
-        while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise StudioMCPError(f"Timed out waiting for Studio MCP method {method}")
+            self._write_message(proc, request, deadline)
+        except StudioMCPError as exc:
+            if method == "tools/call":
+                raise StudioMCPOutcomeUnknown(str(exc), self, rid, pending=False) from exc
+            raise
+        try:
+            return self._read_response(rid, method, deadline)
+        except (StudioMCPTimeout, StudioMCPDisconnected) as exc:
+            if method == "tools/call":
+                pending = isinstance(exc, StudioMCPTimeout)
+                self._pending_request = rid if pending else None
+                raise StudioMCPOutcomeUnknown(str(exc), self, rid, pending=pending) from exc
+            raise
+
+    def wait_for_pending(self, request_id: int, *, timeout: float = 0.25) -> dict:
+        """Collect a late response without sending tools/call a second time."""
+        deadline = time.monotonic() + timeout
+        if not self._lock.acquire(timeout=max(0, timeout)):
+            raise StudioMCPOutcomeUnknown("Studio MCP is still busy", self, request_id, pending=True)
+        try:
+            if self._pending_request != request_id:
+                raise StudioMCPOutcomeUnknown("The original Studio result is unavailable", self, request_id, pending=False)
             try:
-                response = self._responses.get(timeout=remaining)
-            except Empty as exc:
-                raise StudioMCPError(f"Timed out waiting for Studio MCP method {method}") from exc
-            if response is None:
-                raise StudioMCPError("Studio MCP closed its stdout")
-            if response.get("id") != rid:
-                continue
-            if "error" in response:
-                err = response["error"]
-                raise StudioMCPError(f"Studio MCP {method} failed: {err.get('message', err)}")
-            return response.get("result", {})
+                result = self._read_response(request_id, "tools/call", deadline)
+            except StudioMCPTimeout as exc:
+                raise StudioMCPOutcomeUnknown(str(exc), self, request_id, pending=True) from exc
+            except StudioMCPDisconnected as exc:
+                self._pending_request = None
+                self._state, self.last_error = "error", str(exc)
+                raise StudioMCPOutcomeUnknown(str(exc), self, request_id, pending=False) from exc
+            except StudioMCPError:
+                self._pending_request = None
+                self._state = "error"
+                raise
+            self._pending_request = None
+            self.last_error = None
+            self._state, self._message = "ready", "Roblox Studio MCP is ready"
+            return result
+        finally:
+            self._lock.release()
 
     def start_if_needed(self) -> dict:
         with self._lock:
+            if self._pending_request is not None and self.proc is not None and self.proc.poll() is None:
+                return self.status()
             if self.proc is not None and self.proc.poll() is None:
                 if self._state != "error":
                     try:
@@ -241,9 +339,13 @@ class StudioMCP:
         tools: list[dict] = []
         cursor = None
         seen_cursors = set()
+        deadline = time.monotonic() + self.timeout
         while True:
             params = {"cursor": cursor} if cursor is not None else {}
-            result = self._request("tools/list", params)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise StudioMCPTimeout("Timed out listing Studio MCP tools")
+            result = self._request("tools/list", params, timeout=remaining)
             if not isinstance(result, dict) or not isinstance(result.get("tools", []), list):
                 raise StudioMCPError("Studio MCP tools/list returned a malformed tools catalog")
             tools.extend(result.get("tools", []))
@@ -258,8 +360,10 @@ class StudioMCP:
     def _notify(self, method: str) -> None:
         if self.proc is None:
             return
-        self.proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": method}, separators=(",", ":")) + "\n")
-        self.proc.stdin.flush()
+        deadline = time.monotonic() + self.timeout
+        if self._operation_deadline is not None:
+            deadline = min(deadline, self._operation_deadline)
+        self._write_message(self.proc, {"jsonrpc": "2.0", "method": method}, deadline)
 
     def status(self) -> dict:
         return {"bridge": "running", "state": self._state, "ready": self._state == "ready",
@@ -268,7 +372,11 @@ class StudioMCP:
                 "message": self._message, "error": self.last_error}
 
     def list_tools(self) -> list[dict]:
-        with self._lock:
+        if not self._lock.acquire(timeout=self.timeout):
+            raise StudioMCPTimeout("Studio MCP is busy; the tool catalog was not requested")
+        try:
+            if self._pending_request is not None:
+                raise StudioMCPError("A Studio tool has an unconfirmed outcome; check its original result")
             if self._state == "error":
                 self.close()
             if self.proc is None or self.proc.poll() is not None:
@@ -285,14 +393,19 @@ class StudioMCP:
                     self.last_error = str(exc)
                     self._state = "error"
             return list(self.tools)
+        finally:
+            self._lock.release()
 
     def call_tool(self, name: str, arguments: Optional[dict] = None, *, timeout: Optional[float] = None) -> dict:
-        budget = max(0.1, timeout if timeout is not None else
+        budget = max(0.001, timeout if timeout is not None else
                      (60.0 if name.lower() in {"run_code", "run_luau", "run_lua"} else self.timeout))
         deadline = time.monotonic() + budget
         if not self._lock.acquire(timeout=budget):
-            raise StudioMCPError("Timed out waiting for the Studio MCP call queue; the tool was not sent")
+            raise StudioMCPTimeout("Timed out waiting for the Studio MCP call queue; the tool was not sent")
+        self._operation_deadline = deadline
         try:
+            if self._pending_request is not None:
+                raise StudioMCPError("A Studio tool has an unconfirmed outcome; this tool was not sent")
             if self._state == "error":
                 self.close()
             if self.proc is None or self.proc.poll() is not None:
@@ -306,17 +419,31 @@ class StudioMCP:
                 raise StudioMCPError(self.last_error or f"Studio MCP is not ready ({self._state})")
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                raise StudioMCPError("Timed out waiting for the Studio MCP call queue; the tool was not sent")
+                raise StudioMCPTimeout("Timed out waiting for the Studio MCP call queue; the tool was not sent")
             try:
                 return self._request("tools/call", {"name": name, "arguments": arguments or {}}, timeout=remaining)
+            except StudioMCPOutcomeUnknown as exc:
+                self.last_error = str(exc)
+                self._state = "outcome_unknown" if exc.pending else "error"
+                self._message = "A Studio tool may still be running. Check its original result before retrying."
+                raise
             except StudioMCPError as exc:
                 self.last_error = str(exc)
                 self._state = "error"
                 raise
         finally:
+            self._operation_deadline = None
             self._lock.release()
 
     def close(self) -> None:
+        # Interrupt I/O before acquiring the call lock. Waiting for that lock
+        # first would make forced shutdown depend on an unresponsive child.
+        proc = self.proc
+        if proc is not None:
+            try:
+                proc.terminate()
+            except (OSError, AttributeError):
+                pass
         with self._lock:
             proc, self.proc = self.proc, None
             if proc is not None:
@@ -326,11 +453,14 @@ class StudioMCP:
                 except Exception:
                     try:
                         proc.kill()
+                        proc.wait(timeout=1)
                     except Exception:
                         pass
+                if self._writer:
+                    self._writer.join(timeout=0.2)
                 for stream in (getattr(proc, "stdin", None), getattr(proc, "stdout", None), getattr(proc, "stderr", None)):
                     try:
-                        if stream:
+                        if stream and not (stream is getattr(proc, "stdin", None) and self._writer and self._writer.is_alive()):
                             stream.close()
                     except Exception:
                         pass
@@ -338,3 +468,4 @@ class StudioMCP:
                     if thread and thread is not threading.current_thread():
                         thread.join(timeout=0.2)
             self.tools = [] if self._state != "ready" else self.tools
+            self._pending_request = None
