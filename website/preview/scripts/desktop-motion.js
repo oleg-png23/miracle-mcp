@@ -4,70 +4,27 @@
   const root=document.documentElement;
   const desktop=matchMedia('(min-width:651px) and (hover:hover) and (pointer:fine)');
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
-  const controls='button, a, summary';
-  const touchControls='.switch,.segmented-control button,.wallpaper-option,.input-action,.motion-toggle,.welcome-motion-toggle';
-  const excluded='.nav-link,.rail-brand,.brand,.desktop-brand,.welcome-wordmark,.skip,.skip-link,[data-no-motion]';
-  const values='.metric > strong:not(#stUptime),.usage-metrics strong,.usage-directions b,#agentState';
-  const effects=new Set(),channels=new WeakMap(),seen=new WeakSet(),previous=new WeakMap();
+  const effects=new Set(),seen=new WeakSet();
+  root.dataset.motionInput='keyboard';
   const ambient=[...document.querySelectorAll('.live-dot,.demo-line,.scroll-cue')];
   let paused=root.dataset.motion==='paused';
   const motionAllowed=()=>!reduced.matches&&!paused&&!document.hidden;
   const allowed=()=>desktop.matches&&motionAllowed();
   const optical=el=>el.matches('.glass,.welcome-connect')||Boolean(el.querySelector('.glass,.welcome-connect'));
-  function animate(el,frames,options,channel='feedback',cleanup=()=>{}){
-    const interaction=channel==='selection'||channel==='press';
-    if(!(interaction?motionAllowed():allowed())||!el?.animate||optical(el))return;
-    let own=channels.get(el);if(!own){own=new Map();channels.set(el,own);}
-    own.get(channel)?.finish();
-    const animation=el.animate(frames,{duration:360,easing:'cubic-bezier(.2,.8,.2,1)',fill:'backwards',...options});
-    const effect={finish(){animation.cancel();cleanup();effects.delete(effect);if(own.get(channel)===effect)own.delete(channel);}};
-    own.set(channel,effect);effects.add(effect);animation.onfinish=effect.finish;return animation;
+  function animate(el,frames,options){
+    if(!allowed()||!el?.animate||optical(el))return;
+    const animation=el.animate(frames,{duration:200,easing:'cubic-bezier(.23,1,.32,1)',fill:'backwards',...options});
+    const effect={finish(){animation.cancel();effects.delete(effect);}};
+    effects.add(effect);animation.onfinish=effect.finish;return animation;
   }
   function settle(){for(const effect of [...effects])effect.finish();}
-  function control(target){
-    const el=target?.closest?.(controls);
-    return el&&!el.matches(excluded)&&!el.disabled&&el.getAttribute('aria-disabled')!=='true'?el:null;
-  }
-  function press(el){
-    if(!el||!motionAllowed()||(!desktop.matches&&!el.matches(touchControls))||typeof el.animate!=='function'||optical(el))return;
-    animate(el,[{scale:'1'},{scale:'.985',offset:.35},{scale:'1'}],{duration:240},'press');
-  }
+  // CSS owns pointer press/release feedback. Keyboard activation stays instant.
   document.addEventListener('pointerdown',event=>{
-    if(event.defaultPrevented||event.button!==0)return;
-    const el=control(event.target);
-    if(event.pointerType==='touch'&&!el?.matches(touchControls))return;
-    press(el);
-  });
-  document.addEventListener('keydown',event=>{
-    if(event.defaultPrevented||event.repeat||!['Enter',' '].includes(event.key))return;
-    const el=control(event.target);if(event.key===' '&&el?.tagName==='A')return;press(el);
-  });
-  function feedback(record){
-    const el=record.target;
-    if(record.type==='attributes'){
-      if(!el.getClientRects().length)return;
-      const rect=el.getBoundingClientRect();
-      if(rect.bottom<=0||rect.top>=window.innerHeight)return;
-      const value=el.getAttribute(record.attributeName);if(record.oldValue===value)return;
-      if(record.attributeName==='aria-checked'){
-        const thumb=el.matches('.switch')?el.querySelector('span'):null;
-        if(thumb)animate(thumb,[{scale:'.9'},{scale:'1'}],{duration:260},'selection');
-      }else if(value==='true'&&el.matches('.segmented-control button,.wallpaper-option,.scene,.landscape-card')){
-        const image=el.querySelector('img,.scene-swatch')||el;
-        animate(image,[{opacity:.7},{opacity:1}],{duration:220},'selection');
-      }
-    }else if(el.matches?.(values)){
-      const text=el.textContent,old=previous.get(el);previous.set(el,text);
-      if(old===text||old===undefined||!el.getClientRects().length||el.getAnimations?.().some(a=>a.playState==='running'))return;
-      if(el.id==='agentState'&&el.parentElement?.getAnimations?.().some(a=>a.playState==='running'))return;
-      const rect=el.getBoundingClientRect();
-      if(rect.bottom<=0||rect.top>=window.innerHeight)return;
-      animate(el,[{opacity:.55,translate:'0px 5px'},{opacity:1,translate:'0px 0px'}],{duration:300},'value');
-    }
-  }
-  document.querySelectorAll(values).forEach(el=>previous.set(el,el.textContent));
-  const updates='MutationObserver'in window?new MutationObserver(records=>records.forEach(feedback)):null;
-  const watch=()=>updates?.observe(document.body,{subtree:true,childList:true,attributes:true,attributeOldValue:true,attributeFilter:['aria-pressed','aria-checked']});
+    if(!event.defaultPrevented&&event.button===0)root.dataset.motionInput='pointer';
+  },true);
+  document.addEventListener('keydown',()=>{
+    root.dataset.motionInput='keyboard';settle();arrivals?.disconnect();pageNodes.forEach(el=>seen.add(el));
+  },true);
 
   const landing='.nav > *, .hero-copy > *, .preview-top > *, .preview-rail > *, .preview-main > *, .chat-note > *, .hero-bottom > :not(.glass), .scenery-switch > *, .compatibility-inner > *, .section-heading > *, .workflow-illustration > *, .feature-list > article, .atmosphere-heading > *, .landscape-grid > *, #preview > :not(.demo-grid), .demo-grid > a, .setup-intro > *, .setup > .setup-steps > li, .questions > div:not(.faq-list) > *, .faq-list > details, .closing > *, .footer > *';
   const welcome='.welcome-connect > :not(.welcome-steps):not(.welcome-bridge-visual), .welcome-steps > li, .welcome-bridge-visual > *';
@@ -75,7 +32,7 @@
   function reveal(el,index){
     if(seen.has(el)||optical(el))return;seen.add(el);
     if(el.contains(document.activeElement))return;
-    animate(el,[{opacity:0,translate:'0px 10px'},{opacity:1,translate:'0px 0px'}],{duration:420,delay:Math.min(index*28,140)},'reveal');
+    animate(el,[{opacity:0,translate:'0px 10px'},{opacity:1,translate:'0px 0px'}],{delay:Math.min(index*50,100)});
   }
   const arrivals='IntersectionObserver'in window?new IntersectionObserver(entries=>{
     let index=0;
@@ -107,7 +64,7 @@
   document.addEventListener('visibilitychange',sync);
   desktop.addEventListener('change',sync);reduced.addEventListener('change',sync);
   window.addEventListener('pagehide',()=>{settle();arrivals?.disconnect();ambience?.disconnect();
-      document.querySelectorAll('#bgPhoto,#heroWallpaper').forEach(el=>el.getAnimations?.().forEach(animation=>animation.cancel()));updates?.disconnect();});
-  window.addEventListener('pageshow',()=>{watch();sync();});
-  watch();sync();
+      document.querySelectorAll('#bgPhoto,#heroWallpaper').forEach(el=>el.getAnimations?.().forEach(animation=>animation.cancel()));});
+  window.addEventListener('pageshow',sync);
+  sync();
 })();

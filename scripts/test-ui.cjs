@@ -94,7 +94,7 @@ const tool = (id, name, args = {}) => ({ argon_tool: { id, name, arguments: args
       assert.equal(await page.locator('feDisplacementMap').count(),2);
       assert.match(await hero.evaluate(el => getComputedStyle(el,'::before').backgroundImage),/255, 255, 255/);
     });
-    await check('rail hover gives subtle feedback and the tooltip sits above the hero card', async () => {
+    await check('rail labels stay above the hero without magnifying navigation icons', async () => {
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
       const heroBox=await page.locator('.hero-card').boundingBox();
@@ -106,8 +106,8 @@ const tool = (id, name, args = {}) => ({ argon_tool: { id, name, arguments: args
       const before = await icon.boundingBox();
       await control.hover();
       await page.waitForFunction(() => document.querySelector('#railTooltip')?.matches(':popover-open'));
-      await page.waitForFunction(element => element.getBoundingClientRect().width > 39, await icon.elementHandle());
-      assert((await icon.boundingBox()).width > before.width * 1.01 && (await icon.boundingBox()).width <= before.width * 1.08);
+      assert(Math.abs((await icon.boundingBox()).width-before.width)<.5);
+      assert.equal(await icon.evaluate(el=>el.getAnimations().length),0);
       assert.equal(await page.locator('#railTooltip').innerText(), label);
       const tooltip = await page.locator('#railTooltip').boundingBox();
       const hero = await page.locator('.hero-card').boundingBox();
@@ -148,31 +148,22 @@ const tool = (id, name, args = {}) => ({ argon_tool: { id, name, arguments: args
       assert.equal(await page.locator('#luauCode').inputValue(), '-- section draft');
       await openSection(page, 'overview');
     });
-    await check('instructions expand smoothly, reverse mid-animation and respect reduced motion', async () => {
+    await check('native disclosures open instantly for pointer, keyboard and programmatic changes', async () => {
       await openSection(page, 'executor');
-      const details = page.locator('#aiPromptDetails'), summary = details.locator('summary');
-      const content = details.locator('.fold-content');
-      await summary.click();
-      await page.waitForFunction(() => { const el = document.querySelector('#aiPromptDetails .fold-content'); const h = el.getBoundingClientRect().height; return h > 0 && h < el.scrollHeight - 5; });
-      const partial = await content.evaluate(el => ({ height: el.getBoundingClientRect().height, full: el.scrollHeight }));
-      assert(partial.height > 0 && partial.height < partial.full - 5);
-      await page.waitForFunction(() => document.querySelector('#aiPromptDetails .fold-content').getAnimations().length === 0);
-      const full = (await content.boundingBox()).height;
-      await summary.click();
-      await page.waitForFunction(() => { const d = document.querySelector('#aiPromptDetails'), el = d.querySelector('.fold-content'); return d.open && el.getBoundingClientRect().height < el.scrollHeight - 5; });
-      assert(await details.getAttribute('open') !== null);
-      const closing = await content.evaluate(el => ({ height: el.getBoundingClientRect().height, animations: el.getAnimations().map(a => ({ time: a.currentTime, frames: a.effect.getKeyframes() })) }));
-      assert(closing.height < full, JSON.stringify({ full, closing }));
-      await summary.click(); await page.waitForTimeout(60); await summary.click();
-      await page.waitForFunction(() => !document.querySelector('#aiPromptDetails').open);
-      await details.evaluate(el => { el.open = true; });
-      await page.waitForFunction(() => document.querySelector('#aiPromptDetails .fold-content').getAnimations().length > 0);
-      await page.waitForFunction(() => document.querySelector('#aiPromptDetails .fold-content').getAnimations().length === 0);
-      assert((await content.boundingBox()).height >= full - 1);
-      await page.emulateMedia({ reducedMotion: 'reduce' });
-      await summary.click(); assert.equal(await details.getAttribute('open'), null);
-      await summary.click(); assert((await content.boundingBox()).height >= full - 1);
-      await summary.click(); await page.emulateMedia({ reducedMotion: 'no-preference' });
+      const details=page.locator('#aiPromptDetails'),summary=details.locator('summary');
+      const content=details.locator('.fold-content');
+      await summary.click();assert.notEqual(await details.getAttribute('open'),null);
+      assert.equal(await content.evaluate(el=>el.getAnimations().length),0);
+      const full=(await content.boundingBox()).height;assert(full>0);
+      await summary.focus();await summary.press('Enter');assert.equal(await details.getAttribute('open'),null);
+      await summary.press('Space');assert.notEqual(await details.getAttribute('open'),null);
+      await details.evaluate(el=>{el.open=false;el.open=true;});
+      assert.equal(await content.evaluate(el=>el.getAnimations().length),0);
+      assert(Math.abs((await content.boundingBox()).height-full)<1);
+      await page.emulateMedia({reducedMotion:'reduce'});
+      await summary.click();assert.equal(await details.getAttribute('open'),null);
+      await summary.click();assert(Math.abs((await content.boundingBox()).height-full)<1);
+      await summary.click();await page.emulateMedia({reducedMotion:'no-preference'});
     });
     await check('optional editor executes through the native tool and shows true errors', async () => {
       await page.locator('#luauCode').fill('return "native test"'); await page.locator('#runCode').click();

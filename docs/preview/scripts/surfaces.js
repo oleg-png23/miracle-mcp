@@ -37,45 +37,15 @@
     window.addEventListener('resize',reset,{passive:true});
   });
 
-  const duration=360,bound=new WeakSet(),running=new Set();
-  const motionAllowed=()=>!reduced.matches&&document.documentElement.dataset.motion!=='paused'&&!document.hidden;
+  // Preserve the content wrapper for styling, and let native details own
+  // pointer, keyboard, programmatic state, focus and accessibility.
+  const bound=new WeakSet();
   function bindDetails(details){
     if(bound.has(details))return;
     const summary=details.querySelector(':scope > summary');if(!summary)return;
     bound.add(details);
     const body=document.createElement('div');body.className='fold-content';
     [...details.childNodes].filter(node=>node!==summary).forEach(node=>body.append(node));details.append(body);
-    let animation=null,closing=false;
-    function clean(){body.style.removeProperty('height');body.style.removeProperty('overflow');body.style.removeProperty('opacity');}
-    function settle(){
-      if(!animation)return;
-      const open=!closing;animation.cancel();animation=null;closing=false;details.open=open;clean();running.delete(settle);
-    }
-    function play(open){
-      const from=details.open?body.getBoundingClientRect().height:0;
-      const opacity=animation?Number.parseFloat(getComputedStyle(body).opacity):(open ? .35 : 1);
-      animation?.cancel();animation=null;closing=!open;running.delete(settle);
-      if(!motionAllowed()||typeof body.animate!=='function'){details.open=open;closing=false;clean();return;}
-      if(!details.open)details.open=true;
-      body.style.height='auto';const to=open?body.getBoundingClientRect().height:0;
-      body.style.overflow='hidden';
-      animation=body.animate([{height:`${from}px`,opacity},{height:`${to}px`,opacity:open?1:0}],{duration,easing:'cubic-bezier(.22,.8,.25,1)',fill:'both'});
-      running.add(settle);
-      const current=animation;
-      current.onfinish=()=>{
-        if(animation!==current)return;
-        if(!open)details.open=false;
-        current.cancel();animation=null;closing=false;clean();running.delete(settle);
-      };
-    }
-    summary.addEventListener('click',event=>{
-      if(event.target.closest('a,button,input'))return;
-      event.preventDefault();play(!details.open||closing);
-    });
-    details.addEventListener('toggle',()=>{
-      if(!details.open){animation?.cancel();animation=null;closing=false;clean();running.delete(settle);return;}
-      if(!animation&&motionAllowed()){body.style.height='0px';play(true);}
-    });
   }
   document.querySelectorAll('details').forEach(bindDetails);
   if('MutationObserver'in window)new MutationObserver(records=>{
@@ -85,9 +55,4 @@
       node.querySelectorAll('details').forEach(bindDetails);
     }
   }).observe(document.body,{childList:true,subtree:true});
-  const settleDetails=()=>{for(const settle of [...running])settle();};
-  reduced.addEventListener('change',()=>{if(!motionAllowed())settleDetails();});
-  document.addEventListener('miracle:motion',()=>{if(!motionAllowed())settleDetails();});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)settleDetails();});
-  window.addEventListener('pagehide',settleDetails);
 })();
