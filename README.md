@@ -94,6 +94,7 @@ For Notion, open **Notion AI chat** first. For ClickUp, open **Brain Chat**. Arg
 - `POST /api/status`: authenticated results, events, usage and agent status.
 - `POST /api/tools/list`: current Studio tool catalog.
 - `POST /api/tools/call`: call an advertised tool.
+- `POST /api/tools/result`: retrieve the original call's result without executing it again; requires `call_id`, token and the original `instance_id`.
 - `POST /api/execute`: optional manual Luau execution.
 - `POST /api/usage/event`: authenticated aggregate usage event.
 - `POST /api/agent/state`: bounded, in-memory chat-agent diagnostics.
@@ -101,6 +102,16 @@ For Notion, open **Notion AI chat** first. For ClickUp, open **Brain Chat**. Arg
 - `POST /api/ui/claim`: coalesce duplicate launcher requests to open the workspace.
 
 Mutation requests require the local token. Tool calls and manual execution also require the current `instance_id` returned by status or the tool catalog. The server validates loopback hosts, origins, request sizes and call IDs. Code checks on the server and in the editor are best-effort pattern checks, not a sandbox or a guarantee against unsafe Luau or tool behavior. Review the AI's actions and only connect a Studio project you are comfortable allowing it to modify. A successful transport response does not imply a successful Studio tool result; tool errors remain visible to the chat agent.
+
+Manual and chat tools share one worker with space for eight running or queued jobs. Excess jobs return `429 queue_full` with `not_sent: true` and do not consume the call ID. The execution deadline includes time spent in the queue and transport writes. HTTP handling is capped at 32 simultaneous requests, with a ten-second body-read deadline.
+
+A tool that times out after dispatch returns `outcome_unknown`: it may already have changed Studio. The chat pauses without sending a retryable error to the model. **Check tool result** retrieves the original response, including a late response, without another execution. Do not issue a fresh call ID for an unconfirmed action. Graceful shutdown remains blocked while that action is still awaiting a response. If the transport exits before confirming the result, inspect Studio before deciding what to do next.
+
+The manual editor saves its `call_id` before sending code, including across page reloads. Retrying the same pending code reuses that ID; conflicting code is rejected. Older API clients may omit a manual call ID, but retries are only idempotent when the caller supplies the same ID and code.
+
+The replay cache retains at most 128 full responses and eight MB in total. Responses above two MB are delivered to their first caller without being retained; a later lookup reports `result_expired` and cannot execute the call again. Up to 4,096 accepted IDs are retained per bridge instance. Once this ledger is full, new calls return `call_history_full`; restart the idle bridge to begin a new instance. Completed IDs are never silently evicted and replayed.
+
+Damaged usage-statistics files are preserved with a `.corrupt-<timestamp>` suffix and counters restart from zero. If the file cannot be read or preserved, tracking runs in memory and an event reports the recovery; Studio access remains available.
 
 The default port is `19731`. Optional environment variables:
 

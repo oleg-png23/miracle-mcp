@@ -38,6 +38,9 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
   if (message.type === 'MCP_CALL') {
     callTool(message).then(reply, error => reply({ok:false,code:'TOOL_FAILED',message:error.message})); return true;
   }
+  if (message.type === 'MCP_RESULT') {
+    toolResult(message).then(reply, error => reply({ok:false,code:'RESULT_FAILED',message:error.message})); return true;
+  }
   if (message.type === 'MCP_OPEN_PANEL') {
     openDashboard().then(() => reply({ ok: true }), () => reply({ ok: false, code: 'OPEN_FAILED', message: 'Could not open the workspace. Use the Argon icon in the browser toolbar.' }));
     return true;
@@ -93,7 +96,8 @@ async function checkBridgeHealth() {
         studio_closed:'The bridge is online. Open a place in Roblox Studio to connect MCP.',
         mcp_disabled:'In Roblox Studio, open Assistant → … → Manage MCP Servers → Enable Studio as MCP Server.',
         connecting:'Roblox Studio is connecting to MCP. Please wait and check again.',
-        error:'Roblox Studio MCP returned an error. Check the connection and try again.'
+        error:'Roblox Studio MCP returned an error. Check the connection and try again.',
+        outcome_unknown:'A Roblox Studio action is unconfirmed. Use Check tool result in its original chat before retrying.'
       };
       const message=messages[state]||'Studio MCP is not ready (state: '+state+'). Check Studio MCP.';
       return {online:true,authenticated:true,info,instance_id:info.instance_id,native_state:state,studio_linked:info.studio_linked===true,code:state,message};
@@ -141,7 +145,7 @@ async function apiPost(path, body, retryAfterBootstrap=true) {
     if (path.endsWith('/call')) throw Object.assign(new Error('The bridge token or instance changed. Start a new session.'),{code:'BRIDGE_RESTARTED',instance_id:boot.instance_id});
     return apiPost(path,body,false);
   }
-  if (!response.ok) throw Object.assign(new Error(data?.message||`The bridge returned HTTP ${response.status}`),{code:data?.code||'HTTP_'+response.status,instance_id:data?.instance_id||config.instance_id});
+  if (!response.ok) throw Object.assign(new Error(data?.message||`The bridge returned HTTP ${response.status}`),{code:data?.code||'HTTP_'+response.status,instance_id:data?.instance_id||config.instance_id,outcome_unknown:data?.outcome_unknown===true,pending:data?.pending,not_sent:data?.not_sent===true});
   return {...data,instance_id:data?.instance_id||config.instance_id};
 }
 async function toolsList() {
@@ -153,12 +157,24 @@ async function toolsList() {
 async function callTool(message) {
   if(typeof message.name!=='string'||!message.name||!message.arguments||typeof message.arguments!=='object'||Array.isArray(message.arguments)||typeof message.call_id!=='string'||!message.call_id||typeof message.instance_id!=='string'||!message.instance_id)
     return {ok:false,code:'INVALID_CALL',message:'A tool name, arguments object, call ID and bridge instance are required.'};
+  let dispatched=false;
   try {
     if(message.instance_id) { const latest=await fetch((await bridgeConfig(true)).base+'/api/status',{cache:'no-store',signal:AbortSignal.timeout(5000)}); const state=await latest.json();
       if(state.instance_id&&state.instance_id!==message.instance_id) return {ok:false,code:'BRIDGE_RESTARTED',message:'The bridge instance changed. Start a new session before using tools.',instance_id:state.instance_id}; }
+    dispatched=true;
     const data=await apiPost('/api/tools/call',{name:message.name,arguments:message.arguments,call_id:message.call_id,instance_id:message.instance_id});
-    if(data?.ok!==true) return {ok:false,code:data?.code||'TOOL_FAILED',message:data?.message||'Tool call failed.',instance_id:data?.instance_id};
+    if(data?.ok!==true) return {...data,ok:false,code:data?.code||'TOOL_FAILED',message:data?.message||'Tool call failed.',instance_id:data?.instance_id};
     if(message.instance_id&&data.instance_id&&message.instance_id!==data.instance_id) return {ok:false,code:'BRIDGE_RESTARTED',message:'The bridge restarted during the call. The result is unconfirmed.',instance_id:data.instance_id};
     return {ok:true,result:data.result,instance_id:data.instance_id};
-  } catch(e) { return {ok:false,code:e.code==='instance_changed'?'BRIDGE_RESTARTED':e.code||'TOOL_FAILED',message:e.message,instance_id:e.instance_id}; }
+  } catch(e) {
+    if(dispatched&&['BRIDGE_OFFLINE','INVALID_RESPONSE'].includes(e.code))return {ok:false,code:'outcome_unknown',message:'The action may already have run. Check its original result before retrying.',outcome_unknown:true,pending:true,instance_id:message.instance_id};
+    return {ok:false,code:e.code==='instance_changed'?'BRIDGE_RESTARTED':e.code||'TOOL_FAILED',message:e.message,instance_id:e.instance_id,outcome_unknown:e.outcome_unknown===true,pending:e.pending,not_sent:e.not_sent===true};
+  }
+}
+
+async function toolResult(message) {
+  if(typeof message.call_id!=='string'||!message.call_id||typeof message.instance_id!=='string'||!message.instance_id)
+    return {ok:false,code:'INVALID_CALL',message:'The original call ID and bridge instance are required.'};
+  try { return await apiPost('/api/tools/result',{call_id:message.call_id,instance_id:message.instance_id}); }
+  catch(e) { return {ok:false,code:e.code==='instance_changed'?'BRIDGE_RESTARTED':e.code||'RESULT_FAILED',message:e.message,instance_id:e.instance_id,outcome_unknown:e.outcome_unknown===true,pending:e.pending}; }
 }

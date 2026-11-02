@@ -56,7 +56,8 @@
         const message = response.status === 401 ? "The connection expired. Reload the workspace to reconnect."
           : response.status === 403 ? "Request blocked (403): " + (data.pattern || detail)
           : `HTTP ${response.status}: ${detail}`;
-        throw new Error(message);
+        throw Object.assign(new Error(message), {code:data.code||data.error?.code,httpStatus:response.status,
+          outcome_unknown:data.outcome_unknown===true,pending:data.pending,not_sent:data.not_sent===true});
       }
       return data;
     } catch (error) {
@@ -102,7 +103,8 @@
         studio_closed: ["Studio closed", "Open your place in Roblox Studio."],
         mcp_disabled: ["Enable Studio MCP", setup],
         connecting: ["Connecting to Studio MCP", "Roblox Studio is connecting. Please wait."],
-        error: ["Studio MCP error", native.message || "Roblox Studio MCP reported an error."]
+        error: ["Studio MCP error", native.message || "Roblox Studio MCP reported an error."],
+        outcome_unknown: ["Studio action unconfirmed", "Check the original task result before retrying. The action may already have run."]
       };
       const [title, message] = states[native.state] || ["Studio MCP: unknown status", native.message || setup];
       return { state: native.state === "ready" ? "linked" : native.state || "connecting", title, message };

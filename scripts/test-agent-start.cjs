@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 
 // Run the actual content scripts with a deterministic chat DOM and clock.
-function chat({rich=false,hold='',paste=true,toolCount=1}={}) {
+function chat({rich=false,hold='',paste=true,toolCount=1,toolResponse=null,resultResponse=null}={}) {
   let now=0,nextTimer=0,readerScans=0,fullScans=0,execCalls=0,pastes=0,inputs=0,observer;
   const timers=new Map(), pending={}, sent=[], requests=[], messages=[], assistants=[], users=[], elements=new Map();
   let blockResultSend=false, streaming=false;
@@ -46,7 +46,7 @@ function chat({rich=false,hold='',paste=true,toolCount=1}={}) {
       if(q==='[data-testid="stop-button"]')return streaming?[send]:[];
       return [];
     },execCommand:(_cmd,_ui,value)=>{execCalls++;composer.innerText=value;inputs++;return true;}};
-  const runtime={sendMessage(message,callback){requests.push(message.type);messages.push(message);const respond=()=>callback(message.type==='MCP_HEALTH'?{online:true,authenticated:true,code:'READY',instance_id:'a'}:message.type==='MCP_TOOLS'?{ok:true,instance_id:'a',tools:Array.from({length:toolCount},(_,i)=>({name:'inspect_'+i,inputSchema:{type:'object',properties:{target:{type:'string'}}}}))}:message.type==='MCP_CALL'?{ok:true,instance_id:'a',result:{content:[{type:'text',text:'Tool result from Studio'}],isError:false}}:{ok:true});
+  const runtime={sendMessage(message,callback){requests.push(message.type);messages.push(message);const result={ok:true,instance_id:'a',result:{content:[{type:'text',text:'Tool result from Studio'}],isError:false}};const respond=()=>callback(message.type==='MCP_HEALTH'?{online:true,authenticated:true,code:'READY',instance_id:'a'}:message.type==='MCP_TOOLS'?{ok:true,instance_id:'a',tools:Array.from({length:toolCount},(_,i)=>({name:'inspect_'+i,inputSchema:{type:'object',properties:{target:{type:'string'}}}}))}:message.type==='MCP_CALL'?(toolResponse||result):message.type==='MCP_RESULT'?(resultResponse||result):{ok:true});
     if(message.type===hold) pending[message.type]=respond;else respond();}};
   class Event {constructor(type,options={}){this.type=type;Object.assign(this,options);}preventDefault(){this.defaultPrevented=true;}}
   const context={document,Element,HTMLTextAreaElement:Element,HTMLInputElement:Element,InputEvent:Event,ClipboardEvent:Event,
@@ -127,6 +127,38 @@ test('stopping with a pending reader does not disable observation on the next se
 const command=(id='call-1',code='return 1')=>JSON.stringify({helium_tool:{id,name:'inspect_0',arguments:{code}}});
 const calls=c=>c.messages.filter(message=>message.type==='MCP_CALL');
 async function started(c){const task=c.start();await c.advance(1700);await task;}
+
+test('an unconfirmed tool pauses without posting an error and recovers only its original result',async()=>{
+  const c=chat({toolResponse:{ok:false,code:'outcome_unknown',outcome_unknown:true,pending:true,instance_id:'a'}});
+  await started(c);c.reply(command('uncertain'));await c.advance(3000);
+  assert.equal(calls(c).length,1);assert.equal(c.sent.length,1,'Only session instructions were sent');
+  assert.equal(c.elements.get('retry-result').textContent,'Check tool result');
+  assert.match(c.elements.get('status').textContent,/may already have run/);
+  const retry=c.retry();await c.advance(2500);await retry;
+  assert.equal(calls(c).length,1,'Recovery must never issue MCP_CALL again');
+  const lookup=c.messages.find(message=>message.type==='MCP_RESULT');
+  assert.equal(lookup.call_id,'session:uncertain');assert.equal(lookup.instance_id,'a');
+  assert.equal(c.sent.length,2);assert.match(c.sent[1],/Tool result from Studio/);c.stop();
+});
+
+test('a missing extension call response remains recoverable without inviting a fresh call',async()=>{
+  const c=chat({hold:'MCP_CALL'});await started(c);c.reply(command('lost-response'));
+  await c.advance(90000);
+  assert.equal(calls(c).length,1);assert.equal(c.sent.length,1);
+  assert.equal(c.elements.get('retry-result').textContent,'Check tool result');
+  const retry=c.retry();await c.advance(2500);await retry;
+  assert.equal(calls(c).length,1);assert.match(c.sent.at(-1),/Tool result from Studio/);c.stop();
+});
+
+test('checking a still-pending tool preserves its saved request and keeps the reader paused',async()=>{
+  const uncertain={ok:false,code:'outcome_unknown',outcome_unknown:true,pending:true,instance_id:'a',message:'Original action is still unconfirmed.'};
+  const c=chat({toolResponse:uncertain,resultResponse:uncertain});await started(c);c.reply(command('still-running'));await c.advance(3000);
+  const retry=c.retry();await c.advance(1000);await retry;
+  assert.equal(calls(c).length,1);assert.equal(c.sent.length,1);
+  assert.equal(c.elements.get('retry-result').textContent,'Check tool result');
+  assert.equal(c.elements.get('last-result').hidden,false);
+  assert.match(c.elements.get('status').textContent,/unconfirmed/);c.stop();
+});
 
 test('a streamed JSON reply longer than 12 KB is not lost after a partial read',async()=>{
   const c=chat({hold:'MCP_USAGE'});await started(c);

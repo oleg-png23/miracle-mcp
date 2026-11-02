@@ -158,7 +158,8 @@ class BridgeFlowTests(unittest.TestCase):
         code, body = self.request("/api/tools/call", {"name": "echo", "arguments": {"fail": True}, "call_id": "a3"})
         self.assertEqual(code, 200)
         self.assertTrue(body["result"]["isError"])
-        self.assertEqual(self.native.calls[-1][2], 60.0)
+        self.assertGreater(self.native.calls[-1][2], 0)
+        self.assertLessEqual(self.native.calls[-1][2], 60.0)
 
     def test_call_dedup_cached_and_conflicting_content_rejected(self):
         args = {"name": "echo", "arguments": {"value": 7}, "call_id": "same-id"}
